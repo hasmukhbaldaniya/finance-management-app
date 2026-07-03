@@ -2,7 +2,7 @@
 
 import Link from "next/link";
 import { useRouter } from "next/navigation";
-import { useEffect, useState, type FormEvent } from "react";
+import { useEffect, useRef, useState, type FormEvent } from "react";
 import { toast } from "sonner";
 import { AuthCard } from "@/components/auth-card";
 import { Button } from "@/components/ui/button";
@@ -25,12 +25,18 @@ export default function ForgotPasswordStep2Page() {
   const [isSubmitting, setIsSubmitting] = useState(false);
   const [isResending, setIsResending] = useState(false);
   const [secondsLeft, setSecondsLeft] = useState(RESEND_COOLDOWN_SECONDS);
+  const isLeavingRef = useRef(false);
 
   useEffect(() => {
-    if (!email) {
+    if (!email && !isLeavingRef.current) {
       router.replace(ROUTES.FORGOT_PASSWORD.REQUEST);
     }
   }, [email, router]);
+
+  function leaveAndReset(): void {
+    isLeavingRef.current = true;
+    reset();
+  }
 
   useEffect(() => {
     if (secondsLeft <= 0) return;
@@ -128,7 +134,7 @@ export default function ForgotPasswordStep2Page() {
           <Link href={ROUTES.FORGOT_PASSWORD.REQUEST} className="text-primary underline-offset-4 hover:underline">
             ← Change email
           </Link>
-          <Link href={ROUTES.LOGIN} onClick={reset} className="text-primary underline-offset-4 hover:underline">
+          <Link href={ROUTES.LOGIN} onClick={leaveAndReset} className="text-primary underline-offset-4 hover:underline">
             Back to Login
           </Link>
         </div>
