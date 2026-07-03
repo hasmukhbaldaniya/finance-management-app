@@ -155,7 +155,7 @@ This is a 3-step flow, each step its own screen.
 |----------|---------|
 | Incorrect OTP | "Invalid OTP. Please try again." |
 | Expired OTP | "This OTP has expired. Please request a new one." |
-| Resend success | "A new OTP has been sent to your email." |
+| Resend success | "An OTP has been sent to your email." (resend re-triggers the same request-OTP endpoint as Step 1, so it returns the identical message — not a distinct "new OTP" string) |
 | Server/network error | "Something went wrong. Please try again." |
 
 ### Step 3 — Reset Password

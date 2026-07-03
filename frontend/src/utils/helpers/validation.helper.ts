@@ -1,4 +1,4 @@
-import { EMAIL_REGEX, OTP_REGEX, PASSWORD_REGEX, PHONE_REGEX } from "./constants/regex.constant";
+import { EMAIL_REGEX, OTP_REGEX, PASSWORD_REGEX, PHONE_REGEX } from "@/utils/constants/regex.constant";
 
 export function isEmail(value: string): boolean {
   return EMAIL_REGEX.test(value);
