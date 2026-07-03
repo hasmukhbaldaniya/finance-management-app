@@ -1,48 +1,59 @@
 import { DataTypes, Model, type InferAttributes, type InferCreationAttributes, type CreationOptional } from "sequelize";
 import { sequelize } from "../config/database";
 
-export class User extends Model<InferAttributes<User>, InferCreationAttributes<User>> {
+export class PasswordResetOtp extends Model<
+  InferAttributes<PasswordResetOtp>,
+  InferCreationAttributes<PasswordResetOtp>
+> {
   declare id: CreationOptional<number>;
-  declare name: string;
   declare email: string;
-  declare phone: string | null;
-  declare passwordHash: string;
+  declare otpHash: string;
+  declare expiresAt: Date;
+  declare verifiedAt: Date | null;
+  declare consumedAt: Date | null;
+  declare attempts: CreationOptional<number>;
   declare createdAt: CreationOptional<Date>;
   declare updatedAt: CreationOptional<Date>;
 }
 
-User.init(
+PasswordResetOtp.init(
   {
     id: {
       type: DataTypes.INTEGER,
       autoIncrement: true,
       primaryKey: true,
     },
-    name: {
-      type: DataTypes.STRING,
-      allowNull: false,
-    },
     email: {
       type: DataTypes.STRING,
       allowNull: false,
-      unique: true,
-      validate: { isEmail: true },
     },
-    phone: {
-      type: DataTypes.STRING,
-      allowNull: true,
-      unique: true,
-    },
-    passwordHash: {
+    otpHash: {
       type: DataTypes.STRING,
       allowNull: false,
+    },
+    expiresAt: {
+      type: DataTypes.DATE,
+      allowNull: false,
+    },
+    verifiedAt: {
+      type: DataTypes.DATE,
+      allowNull: true,
+    },
+    consumedAt: {
+      type: DataTypes.DATE,
+      allowNull: true,
+    },
+    attempts: {
+      type: DataTypes.INTEGER,
+      allowNull: false,
+      defaultValue: 0,
     },
     createdAt: DataTypes.DATE,
     updatedAt: DataTypes.DATE,
   },
   {
     sequelize,
-    tableName: "users",
-    modelName: "User",
+    tableName: "password_reset_otps",
+    modelName: "PasswordResetOtp",
   }
 );

@@ -6,6 +6,8 @@ This file provides guidance to Claude Code (claude.ai/code) when working with co
 
 Node.js + Express 5 + TypeScript backend (`strict: true`, `moduleResolution: nodenext`), ORM Sequelize over PostgreSQL (`pg`/`pg-hstore`). Early-stage skeleton — one model (`User`), one health-check route, no auth, no service/repository layer.
 
+Email (OTP delivery) goes through `nodemailer` in `src/utils/mailer.ts`, configured via `SMTP_HOST`/`SMTP_PORT`/`SMTP_USER`/`SMTP_PASSWORD`/`SMTP_FROM` in `.env` (see `.env.example`; defaults point at Gmail's SMTP host/port, but `SMTP_USER`/`SMTP_PASSWORD` have no fallback and must be set locally — Gmail requires a 16-char App Password, not the account password). No queue/retry — send failures currently throw straight out of the controller.
+
 ## Common Commands
 
 ```

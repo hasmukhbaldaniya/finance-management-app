@@ -12,9 +12,11 @@ Product requirements for Finance Management, written as user stories before any 
   - `In Progress` — implementation under way.
   - `Done` — shipped.
 - **Adding a new story**: copy `TEMPLATE.md` to the next `NNN-epic-name.md`, fill it in, and set `Status: Draft` until it's reviewed.
+- **Navigation**: every screen in a multi-step/wizard flow must explicitly specify, as its own Screens & Fields row, how the user leaves it — back to the previous step and/or back to a natural entry point (e.g. Login) — with the resulting behavior covered in Acceptance Criteria. Don't rely on the browser's back button as the only way out; it was missed in the first pass of `001-authentication.md` and had to be retrofitted after manual testing.
 
 ## Index
 
 | # | File | Status |
 |---|------|--------|
 | 001 | [Authentication](./001-authentication.md) | Draft |
+| 002 | [Organization Signup](./002-organization-signup.md) | Draft |
