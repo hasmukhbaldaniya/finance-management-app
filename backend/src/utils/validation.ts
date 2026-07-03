@@ -12,6 +12,10 @@ export function isValidIdentifier(value: string): boolean {
   return isEmail(value) || isPhone(value);
 }
 
+export function normalizePhone(value: string): string {
+  return value.startsWith("+91") ? value.slice(3) : value;
+}
+
 export function isValidOtp(value: string): boolean {
   return OTP_REGEX.test(value);
 }

@@ -7,7 +7,7 @@ import { signAccessToken, signResetToken, verifyResetToken } from "../utils/jwt"
 import { sendOtpEmail } from "../utils/mailer";
 import { generateOtp, hashOtp, verifyOtp as compareOtp } from "../utils/otp";
 import { hashPassword, verifyPassword } from "../utils/password";
-import { isEmail, isStrongPassword, isValidIdentifier, isValidOtp } from "../utils/validation";
+import { isEmail, isStrongPassword, isValidIdentifier, isValidOtp, normalizePhone } from "../utils/validation";
 
 const INVALID_CREDENTIALS_MESSAGE = "Invalid email/phone number or password.";
 const EMAIL_NOT_REGISTERED_MESSAGE = "This email is not registered.";
@@ -37,7 +37,7 @@ export async function login(req: Request, res: Response): Promise<void> {
   }
 
   const user = await User.findOne({
-    where: { [Op.or]: [{ email: identifier }, { phone: identifier }] },
+    where: { [Op.or]: [{ email: identifier }, { phone: normalizePhone(identifier) }] },
   });
 
   const passwordMatches = user ? await verifyPassword(password, user.passwordHash) : false;

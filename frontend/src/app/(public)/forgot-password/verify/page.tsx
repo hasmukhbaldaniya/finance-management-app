@@ -19,7 +19,7 @@ const RESEND_COOLDOWN_SECONDS = 30;
 
 export default function ForgotPasswordStep2Page() {
   const router = useRouter();
-  const { email, setResetToken } = useForgotPassword();
+  const { email, setResetToken, reset } = useForgotPassword();
   const [otp, setOtp] = useState("");
   const [error, setError] = useState<string | undefined>();
   const [isSubmitting, setIsSubmitting] = useState(false);
@@ -128,7 +128,7 @@ export default function ForgotPasswordStep2Page() {
           <Link href={ROUTES.FORGOT_PASSWORD.REQUEST} className="text-primary underline-offset-4 hover:underline">
             ← Change email
           </Link>
-          <Link href={ROUTES.LOGIN} className="text-primary underline-offset-4 hover:underline">
+          <Link href={ROUTES.LOGIN} onClick={reset} className="text-primary underline-offset-4 hover:underline">
             Back to Login
           </Link>
         </div>
