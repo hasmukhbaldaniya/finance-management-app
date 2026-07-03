@@ -21,4 +21,20 @@ export const env = {
     user: requireEnv("DB_USER", "postgres"),
     password: requireEnv("DB_PASSWORD", "postgres"),
   },
+  auth: {
+    jwtSecret: requireEnv("JWT_SECRET", "dev-only-insecure-secret-change-me"),
+    accessTokenExpiresIn: requireEnv("ACCESS_TOKEN_EXPIRES_IN", "1d"),
+    accessTokenCookieMaxAgeMs: Number(requireEnv("ACCESS_TOKEN_COOKIE_MAX_AGE_MS", String(24 * 60 * 60 * 1000))),
+    cookieName: requireEnv("AUTH_COOKIE_NAME", "auth_token"),
+    otpExpiryMinutes: Number(requireEnv("OTP_EXPIRY_MINUTES", "10")),
+    otpResendCooldownSeconds: Number(requireEnv("OTP_RESEND_COOLDOWN_SECONDS", "30")),
+    resetTokenExpiresIn: requireEnv("RESET_TOKEN_EXPIRES_IN", "10m"),
+  },
+  smtp: {
+    host: requireEnv("SMTP_HOST", "smtp.gmail.com"),
+    port: Number(requireEnv("SMTP_PORT", "587")),
+    user: requireEnv("SMTP_USER"),
+    password: requireEnv("SMTP_PASSWORD"),
+    from: requireEnv("SMTP_FROM", "no-reply@finance-management.local"),
+  },
 };

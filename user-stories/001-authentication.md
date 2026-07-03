@@ -74,6 +74,7 @@ This is a 3-step flow, each step its own screen.
 |--------|-------|------|----------|
 | Forgot Password – Step 1 | Email | text (email) | Yes |
 | Forgot Password – Step 1 | Submit button | button | — |
+| Forgot Password – Step 1 | "Back to Login" link | link → Login | — |
 
 **Flow**
 
@@ -82,8 +83,9 @@ This is a 3-step flow, each step its own screen.
 3. Frontend calls backend "request OTP" API with the email.
 4. Backend checks whether the email belongs to a registered user:
    - **Exists** → backend generates a 6-digit OTP, stores it with an expiry, emails it to the user, and returns success. Frontend advances to Step 2.
-   - **Does not exist** → see [Open Questions](#open-questions--assumptions) — exact response behavior (generic vs. explicit "not found") is not finalized yet.
+   - **Does not exist** → backend returns 404 with an explicit "not registered" message (see [Open Questions](#open-questions--assumptions) for the account-enumeration trade-off this implies); frontend shows it as an error toast and the user stays on Step 1.
 5. Server/network error → generic error toast, user stays on Step 1.
+6. At any point, the user can click **"Back to Login"** to leave the flow and return to the Login screen.
 
 **Validation Rules**
 
@@ -96,14 +98,16 @@ This is a 3-step flow, each step its own screen.
 - **Given** a registered email, **when** the user submits it, **then** an OTP is emailed to that address and the UI advances to Step 2 (Verify OTP).
 - **Given** an empty or malformed email, **when** the user attempts to submit, **then** the form is blocked client-side with an inline validation error.
 - **Given** a server/network error, **when** the user submits a valid email, **then** an error toast is shown and the user remains on Step 1.
+- **Given** an email that is not registered, **when** the user submits it, **then** an error toast with an explicit "not registered" message is shown and the user remains on Step 1.
+- **Given** the user is on Step 1, **when** they click "Back to Login", **then** they are navigated to the Login screen.
 
 **Error / Toast Messages**
 
 | Scenario | Message |
 |----------|---------|
-| Email not registered | *TBD — see Open Questions* |
+| Email not registered | "This email is not registered." |
 | Server/network error | "Something went wrong. Please try again." |
-| OTP sent successfully | "OTP sent to your email." |
+| OTP sent successfully | "An OTP has been sent to your email." |
 
 ### Step 2 — Verify OTP
 
@@ -114,6 +118,8 @@ This is a 3-step flow, each step its own screen.
 | Forgot Password – Step 2 | OTP | text (numeric, 6 digits) | Yes |
 | Forgot Password – Step 2 | Verify button | button | — |
 | Forgot Password – Step 2 | Resend OTP link | link/button, disabled during cooldown | — |
+| Forgot Password – Step 2 | "← Change email" link | link → Step 1 | — |
+| Forgot Password – Step 2 | "Back to Login" link | link → Login | — |
 
 **Flow**
 
@@ -125,6 +131,7 @@ This is a 3-step flow, each step its own screen.
    - **Expired** → backend returns an "expired" error; frontend shows a toast prompting the user to resend.
 4. **Resend OTP**: disabled for 30 seconds after each send (countdown shown). When enabled and clicked, re-triggers the Step 1 "request OTP" API for the same email and restarts the OTP expiry.
 5. OTP expires 10 minutes after being sent.
+6. The user can click **"← Change email"** to return to Step 1 (the previously entered email is preserved so it doesn't need retyping), or **"Back to Login"** to leave the flow entirely.
 
 **Validation Rules**
 
@@ -139,6 +146,8 @@ This is a 3-step flow, each step its own screen.
 - **Given** an OTP older than 10 minutes, **when** the user submits it, **then** an "OTP expired" toast is shown and the user is prompted to resend.
 - **Given** the OTP was just sent (< 30 seconds ago), **when** the user views Step 2, **then** the Resend OTP control is disabled with a visible countdown.
 - **Given** the 30-second cooldown has elapsed, **when** the user clicks Resend OTP, **then** a new OTP is emailed, the expiry timer resets, and the cooldown restarts.
+- **Given** the user is on Step 2, **when** they click "← Change email", **then** they are returned to Step 1 with their previously entered email pre-filled.
+- **Given** the user is on Step 2, **when** they click "Back to Login", **then** they are navigated to the Login screen and the in-progress flow state is cleared.
 
 **Error / Toast Messages**
 
@@ -158,6 +167,8 @@ This is a 3-step flow, each step its own screen.
 | Forgot Password – Step 3 | New Password | password (masked, show/hide toggle) | Yes |
 | Forgot Password – Step 3 | Confirm Password | password (masked, show/hide toggle) | Yes |
 | Forgot Password – Step 3 | Submit button | button | — |
+| Forgot Password – Step 3 | "← Back" link | link → Step 2 | — |
+| Forgot Password – Step 3 | "Back to Login" link | link → Login | — |
 
 **Flow**
 
@@ -166,6 +177,7 @@ This is a 3-step flow, each step its own screen.
 3. Frontend calls backend "reset password" API with the new password and the reset token obtained in Step 2.
    - **Success** → backend updates the password, invalidates the reset token and any outstanding OTP. Frontend shows a success toast and redirects to the Login screen.
    - **Failure** (e.g. reset token expired/invalid) → error toast; user is sent back to Step 1 to restart the flow.
+4. The user can click **"← Back"** to return to Step 2 (re-verify the OTP; this is a safe no-op since verifying doesn't consume the OTP), or **"Back to Login"** to leave the flow entirely.
 
 **Validation Rules**
 
@@ -180,6 +192,8 @@ This is a 3-step flow, each step its own screen.
 - **Given** a New Password that does not meet the strength policy, **when** the user attempts to submit, **then** the form is blocked client-side with an inline validation error describing the unmet rule(s).
 - **Given** a Confirm Password that does not match New Password, **when** the user attempts to submit, **then** the form is blocked client-side with an inline "passwords do not match" error.
 - **Given** the reset token/OTP session has expired or is invalid by the time of submission, **when** the user submits, **then** an error toast is shown and the user is returned to Step 1.
+- **Given** the user is on Step 3, **when** they click "← Back", **then** they are returned to Step 2.
+- **Given** the user is on Step 3, **when** they click "Back to Login", **then** they are navigated to the Login screen and the in-progress flow state is cleared.
 
 **Error / Toast Messages**
 
@@ -210,7 +224,8 @@ This is a 3-step flow, each step its own screen.
 
 ## Open Questions / Assumptions
 
-- **Account enumeration on Forgot Password Step 1**: this doc currently leaves the "email not found" response as TBD. Security best practice is a generic response regardless of whether the email exists (e.g. "If this email is registered, an OTP has been sent."), rather than an explicit "email not found" message. Needs a decision before backend implementation.
-- **Session/token strategy** for a successful login (JWT vs. server-side session/cookie) is not specified here — deferred to the implementation plan.
+- **Account enumeration on Forgot Password Step 1 — resolved**: implemented as an explicit "This email is not registered." response (404) rather than a generic message, prioritizing user-friendly feedback over anti-enumeration hardening. This is a deliberate trade-off made during implementation, not the security best practice originally recommended here — revisit if this flow ever becomes a target for account discovery.
+- **Session/token strategy — resolved**: implemented as a JWT in an httpOnly, `SameSite=Lax` cookie, issued on login (password reset does not itself establish a session — the user logs in afterward, per the Reset Password success flow above).
 - **Rate limiting** on login attempts and OTP requests/verification is not specified — should be decided before implementation to prevent brute-force abuse.
-- **Reset token transport** for Step 2 → Step 3 (e.g. short-lived JWT vs. server-side session tied to the verified OTP) is not specified — deferred to implementation.
+- **Reset token transport — resolved**: implemented as a short-lived JWT (10 minutes) returned to the frontend after OTP verification, carried in-memory through Step 3's submission — not a server-side session.
+- **Navigation/back-out affordances**: every screen in the Forgot Password flow now has an explicit "Back to Login" (and, for Steps 2–3, a "← Back" to the previous step) link rather than relying on the browser's back button — added after this was found missing during manual testing. See the updated convention in `user-stories/README.md`; new multi-step stories should specify this up front instead of retrofitting it.
