@@ -127,7 +127,7 @@ export default function ForgotPasswordStep3Page() {
           <Link href={ROUTES.FORGOT_PASSWORD.VERIFY} className="text-primary underline-offset-4 hover:underline">
             ← Back
           </Link>
-          <Link href={ROUTES.LOGIN} className="text-primary underline-offset-4 hover:underline">
+          <Link href={ROUTES.LOGIN} onClick={reset} className="text-primary underline-offset-4 hover:underline">
             Back to Login
           </Link>
         </div>

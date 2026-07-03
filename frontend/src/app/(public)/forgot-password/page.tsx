@@ -17,7 +17,7 @@ import { useForgotPassword } from "@/contexts/ForgotPasswordContext";
 
 export default function ForgotPasswordStep1Page() {
   const router = useRouter();
-  const { email: contextEmail, setEmail: setContextEmail } = useForgotPassword();
+  const { email: contextEmail, setEmail: setContextEmail, reset } = useForgotPassword();
   const [email, setEmail] = useState(contextEmail);
   const [error, setError] = useState<string | undefined>();
   const [isSubmitting, setIsSubmitting] = useState(false);
@@ -74,7 +74,7 @@ export default function ForgotPasswordStep1Page() {
         </Button>
 
         <p className="text-center text-sm">
-          <Link href={ROUTES.LOGIN} className="text-primary underline-offset-4 hover:underline">
+          <Link href={ROUTES.LOGIN} onClick={reset} className="text-primary underline-offset-4 hover:underline">
             Back to Login
           </Link>
         </p>
