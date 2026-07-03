@@ -2,7 +2,7 @@
 
 import Link from "next/link";
 import { useRouter } from "next/navigation";
-import { useEffect, useState, type FormEvent } from "react";
+import { useEffect, useRef, useState, type FormEvent } from "react";
 import { toast } from "sonner";
 import { AuthCard } from "@/components/auth-card";
 import { PasswordInput } from "@/components/password-input";
@@ -27,12 +27,18 @@ export default function ForgotPasswordStep3Page() {
   const [confirmPassword, setConfirmPassword] = useState("");
   const [errors, setErrors] = useState<FieldErrors>({});
   const [isSubmitting, setIsSubmitting] = useState(false);
+  const isLeavingRef = useRef(false);
 
   useEffect(() => {
-    if (!resetToken) {
+    if (!resetToken && !isLeavingRef.current) {
       router.replace(ROUTES.FORGOT_PASSWORD.REQUEST);
     }
   }, [resetToken, router]);
+
+  function leaveAndReset(): void {
+    isLeavingRef.current = true;
+    reset();
+  }
 
   function validate(): boolean {
     const nextErrors: FieldErrors = {};
@@ -61,13 +67,13 @@ export default function ForgotPasswordStep3Page() {
     try {
       const { message } = await resetPassword(resetToken, newPassword);
       toast.success(message);
-      reset();
+      leaveAndReset();
       router.push(ROUTES.LOGIN);
     } catch (err) {
       const message = err instanceof ApiError ? err.message : GENERIC_ERROR_MESSAGE;
       toast.error(message);
       if (err instanceof ApiError && err.status === 401) {
-        reset();
+        leaveAndReset();
         router.push(ROUTES.FORGOT_PASSWORD.REQUEST);
       }
     } finally {
@@ -127,7 +133,7 @@ export default function ForgotPasswordStep3Page() {
           <Link href={ROUTES.FORGOT_PASSWORD.VERIFY} className="text-primary underline-offset-4 hover:underline">
             ← Back
           </Link>
-          <Link href={ROUTES.LOGIN} onClick={reset} className="text-primary underline-offset-4 hover:underline">
+          <Link href={ROUTES.LOGIN} onClick={leaveAndReset} className="text-primary underline-offset-4 hover:underline">
             Back to Login
           </Link>
         </div>
