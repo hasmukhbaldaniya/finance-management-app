@@ -205,6 +205,23 @@ This is a 3-step flow, each step its own screen.
 
 ---
 
+## API Design
+
+All endpoints are sub-resources of `/api/auth/*`. `GET /me` is the only authenticated endpoint (relies on the session cookie set by Login) and is what route protection uses to check an existing session; every other endpoint here is unauthenticated by design (either establishing a session or recovering access to one).
+
+| Method | Path | Body | Response (success) |
+|--------|------|------|---------------------|
+| POST | `/api/auth/login` | `{ identifier, password }` | `{ user }` (+ sets the httpOnly session cookie) |
+| POST | `/api/auth/logout` | — | `{ message }` (clears the session cookie) |
+| GET | `/api/auth/me` | — (session cookie) | `{ user }` |
+| POST | `/api/auth/forgot-password/request-otp` | `{ email }` | `{ message }` |
+| POST | `/api/auth/forgot-password/verify-otp` | `{ email, otp }` | `{ resetToken }` |
+| POST | `/api/auth/forgot-password/reset-password` | `{ resetToken, newPassword }` | `{ message }` |
+
+Error responses follow the existing convention (`{ error: string }`, appropriate HTTP status — 400 validation, 401 invalid credentials/no session/expired reset token, 404 email not registered on `request-otp`, 500 unexpected). `user` is `{ id, name, email, phone }` — never includes the password hash.
+
+---
+
 ## Validation Rules Summary
 
 | Field type | Rule |
