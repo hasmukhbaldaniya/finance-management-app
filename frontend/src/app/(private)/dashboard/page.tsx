@@ -19,6 +19,7 @@ export default function DashboardPage() {
 
   useEffect(() => {
     let isMounted = true;
+    let isRedirecting = false;
 
     getMe()
       .then(({ user: fetchedUser }) => {
@@ -27,13 +28,14 @@ export default function DashboardPage() {
       .catch((error: unknown) => {
         if (!isMounted) return;
         if (error instanceof ApiError && error.status === 401) {
+          isRedirecting = true;
           router.replace(ROUTES.LOGIN);
           return;
         }
         setLoadError(error instanceof ApiError ? error.message : GENERIC_ERROR_MESSAGE);
       })
       .finally(() => {
-        if (isMounted) setIsLoading(false);
+        if (isMounted && !isRedirecting) setIsLoading(false);
       });
 
     return () => {

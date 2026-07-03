@@ -45,3 +45,10 @@ export async function apiCall<T>(path: string, options: RequestInit = {}): Promi
 
   return body as T;
 }
+
+export function postJson<T>(path: string, body: Record<string, unknown> = {}): Promise<T> {
+  return apiCall<T>(path, {
+    method: "POST",
+    body: JSON.stringify(body),
+  });
+}

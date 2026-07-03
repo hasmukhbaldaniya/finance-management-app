@@ -41,7 +41,7 @@ Two route groups (groups don't affect the URL — `/login` and `/dashboard` are 
 
 Route paths are centralized in `src/utils/constants/route.constant.ts` (`ROUTES` object) — never hardcode a path in `href`, `router.push`/`replace`, or a `new URL(...)` call.
 
-Route protection: `src/proxy.ts` (Next 16 renamed Middleware to Proxy; it defaults to the Node.js runtime, not Edge) verifies the session JWT itself via `jsonwebtoken` before allowing access to matched routes — it doesn't just check cookie presence. `AUTH_COOKIE_NAME` and `JWT_SECRET` env vars must match the backend's exactly (see `.env.example`); a mismatch fails safe (redirect to `/login`) but locks out every user if only one side is updated.
+Route protection: `src/proxy.ts` (Next 16 renamed Middleware to Proxy; it defaults to the Node.js runtime, not Edge) verifies the session JWT itself via `jsonwebtoken` before allowing access to matched routes — it doesn't just check cookie presence. `AUTH_COOKIE_NAME` and `JWT_SECRET` env vars must match the backend's exactly (see `.env.example`); a mismatch fails safe (redirect to `/login`) but locks out every user if only one side is updated. `JWT_SECRET` has no fallback — the app throws at startup if it's unset, same as the backend — so an insecure default can't accidentally ship to production.
 
 ### `src/components/` — Components
 

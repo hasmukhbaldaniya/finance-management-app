@@ -214,6 +214,46 @@ This is a 3-step flow, each step its own screen.
 | Password (strength, applies to New Password only — not login) | Minimum 8 characters, at least 1 uppercase letter, 1 lowercase letter, 1 number, and 1 special character, e.g. `^(?=.*[a-z])(?=.*[A-Z])(?=.*\d)(?=.*[^A-Za-z0-9]).{8,}$` |
 | OTP | Exactly 6 numeric digits, e.g. `^\d{6}$` |
 
+## Test Cases
+
+| ID | Scenario | Steps | Expected Result |
+|----|----------|-------|------------------|
+| TC-01 | Valid login via email | Login: enter registered email + correct password, click Login | Redirected to Dashboard |
+| TC-02 | Valid login via phone | Login: enter registered India phone number + correct password, click Login | Redirected to Dashboard |
+| TC-03 | Wrong password | Login: enter registered identifier + incorrect password | "Invalid email/phone number or password." toast; stays on Login |
+| TC-04 | Unknown identifier | Login: enter an identifier with no matching account | Same "Invalid email/phone number or password." toast as TC-03 (no enumeration); stays on Login |
+| TC-05 | Malformed identifier | Login: enter e.g. `not-an-email-or-phone` | Blocked client-side with inline error, no API call |
+| TC-06 | Empty identifier or password | Login: leave one or both fields blank, click Login | Blocked client-side with inline "required" errors, no API call |
+| TC-07 | Server/network error at login | Login: submit valid-looking credentials while the backend is unreachable | Generic error toast; stays on Login |
+| TC-08 | Registered email requests OTP | Forgot Password Step 1: enter a registered email, submit | OTP emailed; advances to Step 2 |
+| TC-09 | Unregistered email requests OTP | Forgot Password Step 1: enter an email with no account | 404 "This email is not registered." toast; stays on Step 1 |
+| TC-10 | Malformed email at Step 1 | Forgot Password Step 1: enter e.g. `foo@bar` | Blocked client-side with inline error, no API call |
+| TC-11 | Server/network error at Step 1 | Forgot Password Step 1: submit a valid email while the backend is unreachable | Generic error toast; stays on Step 1 |
+| TC-12 | "Back to Login" from Step 1 | Forgot Password Step 1: click "Back to Login" | Navigated to Login |
+| TC-13 | Correct, unexpired OTP | Forgot Password Step 2: enter the emailed code, click Verify | Advances to Step 3 |
+| TC-14 | Incorrect OTP | Forgot Password Step 2: enter a wrong 6-digit code | "Invalid OTP. Please try again." toast; stays on Step 2 |
+| TC-15 | Expired OTP | Forgot Password Step 2: wait 10+ minutes, then submit the original code | "This OTP has expired." toast; prompted to resend |
+| TC-16 | Resend before cooldown elapses | Forgot Password Step 2: click Resend within 30s of the last send | Control stays disabled with a visible countdown; no new OTP sent |
+| TC-17 | Resend after cooldown | Forgot Password Step 2: click Resend after 30s | New OTP emailed; expiry and cooldown both reset |
+| TC-18 | "← Change email" from Step 2 | Forgot Password Step 2: click "← Change email" | Returned to Step 1 with the previously entered email pre-filled |
+| TC-19 | "Back to Login" from Step 2 | Forgot Password Step 2: click "Back to Login" | Navigated to Login; in-progress flow state cleared |
+| TC-20 | Valid password reset | Forgot Password Step 3: enter a New Password meeting the strength policy and a matching Confirm Password, submit | Password updated; success toast; redirected to Login |
+| TC-21 | Weak new password | Forgot Password Step 3: enter a password missing a required character class | Blocked client-side with inline error describing the unmet rule(s) |
+| TC-22 | Confirm password mismatch | Forgot Password Step 3: Confirm Password ≠ New Password | Blocked client-side with inline "passwords do not match" error |
+| TC-23 | Expired/invalid reset session at submit | Forgot Password Step 3: wait for the reset token to expire (or reuse an already-consumed one), then submit | Error toast; returned to Step 1 |
+| TC-24 | "← Back" from Step 3 | Forgot Password Step 3: click "← Back" | Returned to Step 2 (OTP re-verification is a safe no-op) |
+| TC-25 | "Back to Login" from Step 3 | Forgot Password Step 3: click "Back to Login" | Navigated to Login; in-progress flow state cleared |
+
+## Edge Cases
+
+- **Browser refresh mid-flow**: the Forgot Password flow's in-progress state (the email from Step 1, feeding Steps 2–3) lives in a route-scoped frontend context, not the URL or a server session. A refresh on Step 2 or Step 3 loses it — those screens must detect the missing email/reset-token and bounce the user back to Step 1 rather than rendering in a broken half-state.
+- **Resend OTP invalidates the previous one**: Resend re-triggers the same request-OTP call as Step 1, so the OTP that was emailed earlier becomes stale the moment a new one is sent. Submitting the older code should behave identically to "incorrect OTP" (TC-14), not surface a distinct error.
+- **Verifying an OTP does not consume it**: Step 3's "← Back" link relies on this — a user can return to Step 2 and re-verify the same code without it being treated as already used (TC-24). The only thing actually single-use is the reset token issued *after* verification, and both the reset token and any outstanding OTP are invalidated together the moment Step 3 succeeds.
+- **Two tabs racing the same reset**: if a user has Forgot Password open in two tabs for the same email and completes the reset in one, the other tab's reset token/OTP is invalidated by that success. The second tab's next action (Verify or Submit) must fail via the same "expired/invalid" path as TC-15/TC-23, not a different error.
+- **Login and Forgot Password deliberately disagree on enumeration**: Login intentionally returns the identical message whether the identifier is unknown or the password is wrong (TC-03/TC-04), while Forgot Password Step 1 intentionally does the opposite and states outright that the email isn't registered (TC-09). This asymmetry is a deliberate, already-made trade-off (see [Open Questions](#open-questions--assumptions)), not an inconsistency to "fix" — the two screens should not be made to match each other.
+- **India-only phone format**: the Identifier field only recognizes India-formatted numbers (`^(\+91)?[6-9]\d{9}$`); a correctly-formatted phone number from another country is indistinguishable from a typo and is rejected client-side as malformed (TC-05), with no messaging that specifically calls out the country restriction.
+- **Returning to `/forgot-password` after "Back to Login"**: since "Back to Login" explicitly clears flow state (TC-19/TC-25), a user who navigates back to the Forgot Password URL afterward (e.g. via browser history) must land on a fresh Step 1, never resuming the cleared flow — the same guard as the browser-refresh case above.
+
 ## Out of Scope
 
 - Signup / account registration (assumed the user already exists).

@@ -1,6 +1,10 @@
 import type { ReactNode } from "react";
 import { ForgotPasswordProvider } from "@/contexts/ForgotPasswordContext";
 
-export default function ForgotPasswordLayout({ children }: { children: ReactNode }) {
+type ForgotPasswordLayoutProps = {
+  children: ReactNode;
+};
+
+export default function ForgotPasswordLayout({ children }: ForgotPasswordLayoutProps) {
   return <ForgotPasswordProvider>{children}</ForgotPasswordProvider>;
 }
