@@ -22,7 +22,7 @@ export const env = {
     password: requireEnv("DB_PASSWORD", "postgres"),
   },
   auth: {
-    jwtSecret: requireEnv("JWT_SECRET", "dev-only-insecure-secret-change-me"),
+    jwtSecret: requireEnv("JWT_SECRET"),
     accessTokenExpiresIn: requireEnv("ACCESS_TOKEN_EXPIRES_IN", "1d"),
     accessTokenCookieMaxAgeMs: Number(requireEnv("ACCESS_TOKEN_COOKIE_MAX_AGE_MS", String(24 * 60 * 60 * 1000))),
     cookieName: requireEnv("AUTH_COOKIE_NAME", "auth_token"),

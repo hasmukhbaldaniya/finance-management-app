@@ -4,7 +4,7 @@ This file provides guidance to Claude Code (claude.ai/code) when working with co
 
 ## Overview
 
-Node.js + Express 5 + TypeScript backend (`strict: true`, `moduleResolution: nodenext`), ORM Sequelize over PostgreSQL (`pg`/`pg-hstore`). Early-stage skeleton — one model (`User`), one health-check route, no auth, no service/repository layer.
+Node.js + Express 5 + TypeScript backend (`strict: true`, `moduleResolution: nodenext`), ORM Sequelize over PostgreSQL (`pg`/`pg-hstore`). Implements the full authentication flow (`User`, `PasswordResetOtp` models; login, forgot-password/OTP, JWT session) per `user-stories/001-authentication.md` — no service/repository layer yet, controllers talk to models directly.
 
 Email (OTP delivery) goes through `nodemailer` in `src/utils/mailer.ts`, configured via `SMTP_HOST`/`SMTP_PORT`/`SMTP_USER`/`SMTP_PASSWORD`/`SMTP_FROM` in `.env` (see `.env.example`; defaults point at Gmail's SMTP host/port, but `SMTP_USER`/`SMTP_PASSWORD` have no fallback and must be set locally — Gmail requires a 16-char App Password, not the account password). No queue/retry — send failures currently throw straight out of the controller.
 
@@ -35,6 +35,9 @@ If you add a new env var the app needs, decide whether `config.js` also needs it
 
 ### Models and migrations
 Migrations/seeders are plain `.js` (CLI-only, see `.sequelizerc`); models and all other app code are `.ts`. Columns are camelCase end-to-end (`createdAt`/`updatedAt`, not snake_case) — migrations and `Model.init()` column defs must match exactly, and there's no `underscored: true` anywhere. New models: add a migration in `src/migrations/`, define the class in `src/models/`, then re-export it from `src/models/index.ts` (see `user.model.ts` for the `InferAttributes`/`InferCreationAttributes`/`CreationOptional` pattern).
+
+### `src/utils/`
+Flat files (`jwt.ts`, `otp.ts`, `password.ts`, `mailer.ts`, `validation.ts`) plus one subfolder, `src/utils/constants/`, for pure constant values — currently `regex.constant.ts` (email/phone/OTP/password patterns), imported by `validation.ts`'s helper functions rather than inlined there. This mirrors the frontend's `src/utils/constants/` + `src/utils/helpers/` split (see `frontend/CLAUDE.md`) at the scale this backend actually needs — a `helpers/` subfolder isn't split out yet since `validation.ts` is still the only helper module; move it into `src/utils/helpers/validation.helper.ts` if/when a second one shows up.
 
 ## Conventions
 
