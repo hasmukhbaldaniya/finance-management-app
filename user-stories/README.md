@@ -20,3 +20,4 @@ Product requirements for Finance Management, written as user stories before any 
 |---|------|--------|
 | 001 | [Authentication](./001-authentication.md) | Draft |
 | 002 | [Organization Signup](./002-organization-signup.md) | Draft |
+| 003 | [Header Navigation](./003-header-navigation.md) | Draft |
