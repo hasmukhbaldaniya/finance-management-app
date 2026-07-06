@@ -28,6 +28,7 @@ Covers full CRUD for **Departments** — the organizational units (e.g. "Enginee
 | Edit Department dialog only | Delete button | button → opens delete-confirmation, disabled when the department has ≥1 assigned member | — |
 | Members dialog (opened by clicking a department's Members count) | Member list (name + email) | read-only list | — |
 | Members dialog | Close | button → closes dialog | — |
+| Status confirmation dialog (opened by flipping the Actions-column Switch) | "Enable/Disable this department?" with Cancel / Enable/Disable | dialog | — |
 
 **Table columns:**
 
@@ -42,14 +43,14 @@ Covers full CRUD for **Departments** — the organizational units (e.g. "Enginee
 1. On load, the screen fetches the first page of the current organization's departments (default sort: Department name, ascending), each row showing its name, member count, current active/inactive state, and an Edit action.
 2. **Search**: typing in the search box (debounced) re-queries the list filtered by department name (server-side substring match, case-insensitive) — it does not just filter whatever rows are already loaded, since not all rows are loaded at once (see Pagination below). Changing the search term resets the loaded set back to page 1.
 3. **Sorting**: clicking the Departments or Members column header toggles that column's sort direction (ascending → descending → ascending) and re-queries from page 1 with the new `sortBy`/`sortDir`. Only one column is sorted at a time.
-4. **Pagination**: the table loads a fixed page size (20) at a time; scrolling to the bottom of the loaded rows (or clicking a "Load more" control) fetches and appends the next page. This resets to page 1 whenever search or sort changes.
+4. **Pagination**: the table loads a fixed page size (20) at a time; scrolling to the bottom of the loaded rows automatically fetches and appends the next page (true infinite scroll — there is no "Load more" button). A small loading indicator appears at the bottom while the next page is being fetched. This resets to page 1 whenever search or sort changes.
 5. **Add**: clicking "New Department" opens a dialog with an empty Department Name field. Client-side validation runs on submit (required, length). On submit, the frontend calls the create API.
    - **Success** → new department appears in the table (member count 0, active by default); dialog closes; success toast shown.
    - **Duplicate name** (case-insensitive, within this organization) → backend rejects with 409; frontend shows it as an inline field error on Department Name; dialog stays open.
    - **Unexpected server error** → generic error toast; dialog stays open with the entered value intact.
 6. **Edit**: clicking a row's Edit icon opens the same dialog pre-filled with that department's current name, plus a Delete button. Submitting Save behaves the same as Add (validation, duplicate-name handling) but calls the update API instead, keyed to that department's id.
 7. **Delete** (from within the Edit dialog only — there is no delete action directly in the table row): clicking Delete shows a confirmation step. If the department currently has zero assigned members, confirming calls the delete API and removes the row on success. If the department has one or more assigned members, the Delete button is disabled with an inline explanation ("This department has N member(s) assigned. Disable it instead, or reassign those members first.") — reassignment itself isn't available yet since Employee Management doesn't exist (see [Out of Scope](#out-of-scope)).
-8. **Enable/disable toggle**: flipping the Actions column's Switch immediately calls the status-update API (no separate save step, no confirmation) and updates optimistically; on failure the switch reverts to its previous state and an error toast is shown. Disabling a department does **not** affect members already assigned to it — it only means the department shouldn't be offered when assigning a *new* department to a member in the future (not enforced by this story, since that assignment UI doesn't exist yet).
+8. **Enable/disable toggle**: flipping the Actions column's Switch does **not** change status immediately — it opens a confirmation dialog ("Enable this department?" / "Disable this department?", with Cancel and a confirm button labeled Enable/Disable), matching [004](./004-grade-management.md)'s Grade toggle (see that doc's Open Questions for why this superseded an originally-specced instant/optimistic toggle). The Switch's visual state doesn't move until the dialog is confirmed; Cancel or a failed request leaves it exactly as it was. Confirming calls the status-update API; on success the Switch updates and the dialog closes with a success toast ("Department enabled."/"Department disabled."); on failure the dialog stays open with an error toast. Disabling a department does **not** affect members already assigned to it — it only means the department shouldn't be offered when assigning a *new* department to a member in the future (not enforced by this story, since that assignment UI doesn't exist yet).
 9. **Viewing members**: clicking a department's Members count (when > 0) opens a read-only dialog listing every organization member currently assigned that department (name + email). Clicking a Members count of 0 does nothing (no dialog, since there's nothing to show).
 
 ### Validation Rules
@@ -65,10 +66,12 @@ Covers full CRUD for **Departments** — the organizational units (e.g. "Enginee
 - **Given** a Department Name that already exists in this organization (case-insensitive), **when** the user submits, **then** the backend rejects with 409 and the frontend shows an inline "already exists" error on the field; the dialog stays open.
 - **Given** a department with zero assigned members, **when** the user opens its Edit dialog and confirms Delete, **then** the department is removed from the table.
 - **Given** a department with one or more assigned members, **when** the user opens its Edit dialog, **then** the Delete button is disabled with an inline explanation, and no delete request can be made from the UI.
-- **Given** any department, **when** the user flips its Actions-column toggle, **then** its active/inactive status updates immediately without a page reload, and reverts with an error toast if the request fails.
+- **Given** any department, **when** the user flips its Actions-column toggle, **then** a confirmation dialog opens and the Switch's visual state does not change yet.
+- **Given** the confirmation dialog is open, **when** the user clicks Cancel, **then** the dialog closes and the department's status is unchanged.
+- **Given** the confirmation dialog is open, **when** the user confirms, **then** the status update is submitted; on success the Switch updates to the new state, the dialog closes, and a success toast is shown; on failure the dialog stays open with an error toast and the Switch remains unchanged.
 - **Given** the user types into the search box, **when** the debounce elapses, **then** the table shows only departments whose name matches, re-fetched from the server, starting from page 1.
 - **Given** the user clicks the Departments or Members column header, **when** the request resolves, **then** the table is re-sorted by that column in the toggled direction, starting from page 1.
-- **Given** more departments exist than the current loaded page(s), **when** the user scrolls to the bottom (or clicks "Load more"), **then** the next page of results is fetched and appended without losing the already-loaded rows.
+- **Given** more departments exist than the current loaded page(s), **when** the user scrolls to the bottom of the table, **then** the next page of results is fetched automatically and appended without losing the already-loaded rows — no button click required.
 - **Given** a department with one or more assigned members, **when** the user clicks its Members count, **then** a dialog opens listing those members' names and emails.
 
 ### Error / Toast Messages
@@ -80,6 +83,8 @@ Covers full CRUD for **Departments** — the organizational units (e.g. "Enginee
 | Department created | "Department created." |
 | Department updated | "Department updated." |
 | Department deleted | "Department deleted." |
+| Department enabled | "Department enabled." |
+| Department disabled | "Department disabled." |
 | Status toggle failed | "Something went wrong. Please try again." |
 | Server/network error (any request) | "Something went wrong. Please try again." |
 
@@ -123,8 +128,10 @@ Error responses follow the existing convention (`{ error: string }`): 400 (valid
 | TC-06 | Edit to a name used by another department | Edit, enter another existing department's name | 409, inline error, dialog stays open |
 | TC-07 | Delete a department with 0 members | Edit a department with no members assigned, click Delete, confirm | Department removed from table |
 | TC-08 | Delete blocked when members assigned | Edit a department with ≥1 member, open Delete | Delete button disabled, explanation shown, no request sent |
-| TC-09 | Toggle disables a department | Click the Actions toggle on an active department | Switch flips off immediately; department shows inactive |
-| TC-10 | Toggle failure reverts | Flip the toggle while the backend request fails | Switch reverts to previous state, error toast shown |
+| TC-09 | Toggle opens confirmation | Click the Actions toggle on an active department | Confirmation dialog opens; Switch has not moved yet |
+| TC-09b | Confirm disables a department | Confirm the dialog opened from an active department's toggle | Switch flips off, dialog closes, department shows inactive, success toast |
+| TC-09c | Cancel leaves status unchanged | Open the toggle confirmation, click Cancel | Dialog closes, Switch/status unchanged |
+| TC-10 | Toggle failure keeps dialog open | Confirm the dialog while the backend request fails | Dialog stays open, error toast shown, Switch unchanged |
 | TC-11 | Search filters results | Type a partial department name into Search | Table shows only matching departments, re-fetched from page 1 |
 | TC-12 | Sort by Departments name | Click the "Departments" column header | Table re-sorts alphabetically, direction toggles on repeated clicks |
 | TC-13 | Sort by Members count | Click the "Members" column header | Table re-sorts by member count, direction toggles on repeated clicks |
@@ -157,6 +164,7 @@ Error responses follow the existing convention (`{ error: string }`): 400 (valid
 
 This story mirrors [004-grade-management.md](./004-grade-management.md)'s resolved decisions exactly, substituting "grade" for "department":
 
+- **Status toggle requires confirmation, built that way from the start**: unlike [004](./004-grade-management.md), which originally specced an instant/optimistic toggle and had that superseded after implementation, this story was implemented with the confirmation dialog from day one (Delete already required confirmation, so both destructive-feeling actions behave consistently) — there's no "original decision" to supersede here, just the already-current pattern.
 - **Delete lives inside the Edit dialog, not as a table-row icon**: the requested Actions column explicitly enumerates only Edit and the enable/disable toggle, while CRUD requires a delete path somewhere. Resolved by placing Delete inside the Edit dialog as a secondary, confirmation-gated action, blocked whenever the department has assigned members.
 - **Delete vs. disable are deliberately different gates**: disabling is always allowed (no member-count check) since it doesn't touch existing assignments; hard delete is blocked whenever `membersCount > 0`, since removing the department would orphan those members' `departmentId`.
 - **Members dialog has no pagination**: it returns everything in one call — fine at today's expected scale, flagged so it isn't mistaken for an oversight later.

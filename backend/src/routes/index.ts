@@ -1,5 +1,6 @@
 import { Router } from "express";
 import { authRouter } from "./auth.routes";
+import { departmentRouter } from "./department.routes";
 import { gradeRouter } from "./grade.routes";
 import { healthRouter } from "./health.routes";
 import { organizationRouter } from "./organization.routes";
@@ -12,3 +13,4 @@ apiRouter.use("/auth", authRouter);
 apiRouter.use("/organizations", organizationRouter);
 apiRouter.use("/users", userRouter);
 apiRouter.use("/grades", gradeRouter);
+apiRouter.use("/departments", departmentRouter);

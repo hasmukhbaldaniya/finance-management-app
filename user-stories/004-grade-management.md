@@ -43,7 +43,7 @@ Covers full CRUD for **Grades** — the job-level labels (e.g. "L1", "Senior Man
 1. On load, the screen fetches the first page of the current organization's grades (default sort: Grade name, ascending), each row showing its name, member count, current active/inactive state, and an Edit action.
 2. **Search**: typing in the search box (debounced) re-queries the list filtered by grade name (server-side substring match, case-insensitive) — it does not just filter whatever rows are already loaded, since not all rows are loaded at once (see Pagination below). Changing the search term resets the loaded set back to page 1.
 3. **Sorting**: clicking the Grade or Members column header toggles that column's sort direction (ascending → descending → ascending) and re-queries from page 1 with the new `sortBy`/`sortDir`. Only one column is sorted at a time.
-4. **Pagination**: the table loads a fixed page size (20) at a time; scrolling to the bottom of the loaded rows (or clicking a "Load more" control) fetches and appends the next page. This resets to page 1 whenever search or sort changes.
+4. **Pagination**: the table loads a fixed page size (20) at a time; scrolling to the bottom of the loaded rows automatically fetches and appends the next page (true infinite scroll — there is no "Load more" button). A small loading indicator appears at the bottom while the next page is being fetched. This resets to page 1 whenever search or sort changes.
 5. **Add**: clicking "New Grade" opens a dialog with an empty Grade Name field. Client-side validation runs on submit (required, length). On submit, the frontend calls the create API.
    - **Success** → new grade appears in the table (member count 0, active by default); dialog closes; success toast shown.
    - **Duplicate name** (case-insensitive, within this organization) → backend rejects with 409; frontend shows it as an inline field error on Grade Name; dialog stays open.
@@ -71,7 +71,7 @@ Covers full CRUD for **Grades** — the job-level labels (e.g. "L1", "Senior Man
 - **Given** the confirmation dialog is open, **when** the user confirms, **then** the status update is submitted; on success the Switch updates to the new state, the dialog closes, and a success toast is shown; on failure the dialog stays open with an error toast and the Switch remains unchanged.
 - **Given** the user types into the search box, **when** the debounce elapses, **then** the table shows only grades whose name matches, re-fetched from the server, starting from page 1.
 - **Given** the user clicks the Grade or Members column header, **when** the request resolves, **then** the table is re-sorted by that column in the toggled direction, starting from page 1.
-- **Given** more grades exist than the current loaded page(s), **when** the user scrolls to the bottom (or clicks "Load more"), **then** the next page of results is fetched and appended without losing the already-loaded rows.
+- **Given** more grades exist than the current loaded page(s), **when** the user scrolls to the bottom of the table, **then** the next page of results is fetched automatically and appended without losing the already-loaded rows — no button click required.
 - **Given** a grade with one or more assigned members, **when** the user clicks its Members count, **then** a dialog opens listing those members' names and emails.
 
 ### Error / Toast Messages
