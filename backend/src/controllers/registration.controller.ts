@@ -1,8 +1,9 @@
 import type { Request, Response } from "express";
 import { Op } from "sequelize";
 import { env } from "../config/env";
-import { Organization, OrganizationMember, Otp, User } from "../models";
+import { Organization, OrganizationMember, Otp, Role, User } from "../models";
 import { accessTokenCookieOptions, getCurrentOrganization, toPublicUser } from "../utils/auth";
+import { COMPANY_ADMIN_ROLE_NAME, MEMBERS_ROLE_NAME, MEMBERS_ROLE_PRIVILEGES, PRIVILEGE_KEYS } from "../utils/constants/role.constant";
 import {
   signAccessToken,
   signRefreshToken,
@@ -97,7 +98,24 @@ export async function createRegistration(req: Request, res: Response): Promise<v
     mobileVerifiedAt: null,
     activeOrganizationId: organization.id,
   });
-  await OrganizationMember.create({ organizationId: organization.id, userId: user.id, role: "owner" });
+  const companyAdminRole = await Role.create({
+    organizationId: organization.id,
+    name: COMPANY_ADMIN_ROLE_NAME,
+    isDefault: true,
+    privileges: [...PRIVILEGE_KEYS],
+  });
+  await Role.create({
+    organizationId: organization.id,
+    name: MEMBERS_ROLE_NAME,
+    isDefault: true,
+    privileges: MEMBERS_ROLE_PRIVILEGES,
+  });
+  await OrganizationMember.create({
+    organizationId: organization.id,
+    userId: user.id,
+    role: "owner",
+    roleId: companyAdminRole.id,
+  });
 
   const otp = generateOtp();
   const otpHash = await hashOtp(otp);

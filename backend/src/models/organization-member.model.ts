@@ -11,6 +11,7 @@ export class OrganizationMember extends Model<
   declare role: CreationOptional<string>;
   declare gradeId: number | null;
   declare departmentId: number | null;
+  declare roleId: number | null;
   declare createdAt: CreationOptional<Date>;
   declare updatedAt: CreationOptional<Date>;
 }
@@ -40,6 +41,10 @@ OrganizationMember.init(
       allowNull: true,
     },
     departmentId: {
+      type: DataTypes.INTEGER,
+      allowNull: true,
+    },
+    roleId: {
       type: DataTypes.INTEGER,
       allowNull: true,
     },
