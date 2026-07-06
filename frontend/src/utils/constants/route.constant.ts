@@ -1,6 +1,21 @@
 export const ROUTES = {
   LOGIN: "/login",
   DASHBOARD: "/dashboard",
+  TRIPS: "/trips",
+  CLAIMS: "/claims",
+  APPROVALS: "/approvals",
+  FINANCE: "/finance",
+  REPORTS: "/reports",
+  HELP: "/help",
+  PROFILE: "/profile",
+  COMPANY_SETTINGS: {
+    EMPLOYEES: "/company-settings/employees",
+    CATEGORIES: "/company-settings/categories",
+    ROLES_PRIVILEGES: "/company-settings/roles-privileges",
+    GRADES: "/company-settings/grades",
+    DEPARTMENTS: "/company-settings/departments",
+    ORGANIZATIONS: "/company-settings/organizations",
+  },
   REGISTER: {
     ORGANIZATION: "/register",
     DETAILS: "/register/details",

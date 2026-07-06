@@ -17,13 +17,21 @@ export function toPublicUser(user: User): { id: number; name: string; email: str
 }
 
 // A user can belong to more than one organization over time (see
-// user-stories/002-organization-signup.md), so this returns their current/active
-// one — today that's just "the first membership found" since there's no
-// switch-organization feature yet to make "current" mean anything more specific.
+// user-stories/002-organization-signup.md); which one is "current" is tracked by
+// User.activeOrganizationId (see user-stories/003-header-navigation.md), switchable
+// via PATCH /api/users/me/active-organization. Falls back to the first membership
+// found for a legacy row where that column is unexpectedly still null.
 export async function getCurrentOrganization(
-  userId: number
+  user: User
 ): Promise<{ id: number; name: string; gstNumber: string } | null> {
-  const membership = await OrganizationMember.findOne({ where: { userId } });
+  if (user.activeOrganizationId) {
+    const organization = await Organization.findByPk(user.activeOrganizationId);
+    if (organization) {
+      return { id: organization.id, name: organization.name, gstNumber: organization.gstNumber };
+    }
+  }
+
+  const membership = await OrganizationMember.findOne({ where: { userId: user.id } });
   if (!membership) return null;
 
   const organization = await Organization.findByPk(membership.organizationId);
