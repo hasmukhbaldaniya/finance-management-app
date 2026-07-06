@@ -5,7 +5,7 @@ Product requirements for Finance Management, written as user stories before any 
 ## Convention
 
 - **Numbering**: `NNN-epic-name.md`, zero-padded three digits, incrementing. The next story after `001-authentication.md` is `002-...`.
-- **One file per epic**: a file can bundle multiple tightly-coupled flows as separate `## Story: <name>` sections (e.g. `001-authentication.md` covers both Login and Forgot Password, since they share the same screens/fields/validation source of truth). Only split an epic into its own additional file if it stops being tightly coupled to the others.
+- **One file per epic**: a file can bundle multiple tightly-coupled flows as separate `## Story: <name>` sections (e.g. `001-authentication.md` covers both Login and Forgot Password, since they share the same screens/fields/validation source of truth). Only split an epic into its own additional file if it stops being tightly coupled to the others. **Exception**: `008`/`009`/`010` are all one epic (Employee Management) split across three files at explicit request, because the epic was large enough that each story (the invite wizard, the listing + lifecycle actions, and bulk CSV/XLSX import) has its own substantial API and data-model surface — not the default, but a documented deviation rather than a silent one.
 - **Status**: every file starts with a metadata block including `Status: Draft | Ready | In Progress | Done`.
   - `Draft` — being written/reviewed, not yet ready to implement.
   - `Ready` — reviewed and approved, safe to plan implementation from.
@@ -25,3 +25,6 @@ Product requirements for Finance Management, written as user stories before any 
 | 005 | [Department Management](./005-department-management.md) | Draft |
 | 006 | [Roles & Privileges Management](./006-roles-and-privileges-management.md) | Draft |
 | 007 | [Associated Organizations (Network)](./007-associated-organizations-network.md) | Draft |
+| 008 | [Employee Invitation](./008-employee-invitation.md) | Draft |
+| 009 | [Employee Listing](./009-employee-listing.md) | Draft |
+| 010 | [Bulk Invite Employees](./010-bulk-invite-employees.md) | Draft |
