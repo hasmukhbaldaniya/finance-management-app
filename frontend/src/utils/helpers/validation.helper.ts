@@ -1,4 +1,4 @@
-import { EMAIL_REGEX, OTP_REGEX, PASSWORD_REGEX, PHONE_REGEX } from "@/utils/constants/regex.constant";
+import { EMAIL_REGEX, GST_REGEX, NAME_REGEX, OTP_REGEX, PASSWORD_REGEX, PHONE_REGEX } from "@/utils/constants/regex.constant";
 
 export function isEmail(value: string): boolean {
   return EMAIL_REGEX.test(value);
@@ -18,4 +18,12 @@ export function isValidOtp(value: string): boolean {
 
 export function isStrongPassword(value: string): boolean {
   return PASSWORD_REGEX.test(value);
+}
+
+export function isValidGstNumber(value: string): boolean {
+  return GST_REGEX.test(value);
+}
+
+export function isValidName(value: string): boolean {
+  return NAME_REGEX.test(value);
 }

@@ -1,12 +1,12 @@
 import { DataTypes, Model, type InferAttributes, type InferCreationAttributes, type CreationOptional } from "sequelize";
 import { sequelize } from "../config/database";
 
-export class PasswordResetOtp extends Model<
-  InferAttributes<PasswordResetOtp>,
-  InferCreationAttributes<PasswordResetOtp>
-> {
+export type OtpPurpose = "password_reset" | "email_verification" | "mobile_verification";
+
+export class Otp extends Model<InferAttributes<Otp>, InferCreationAttributes<Otp>> {
   declare id: CreationOptional<number>;
-  declare email: string;
+  declare purpose: OtpPurpose;
+  declare identifier: string;
   declare otpHash: string;
   declare expiresAt: Date;
   declare verifiedAt: Date | null;
@@ -16,14 +16,18 @@ export class PasswordResetOtp extends Model<
   declare updatedAt: CreationOptional<Date>;
 }
 
-PasswordResetOtp.init(
+Otp.init(
   {
     id: {
       type: DataTypes.INTEGER,
       autoIncrement: true,
       primaryKey: true,
     },
-    email: {
+    purpose: {
+      type: DataTypes.STRING,
+      allowNull: false,
+    },
+    identifier: {
       type: DataTypes.STRING,
       allowNull: false,
     },
@@ -53,7 +57,7 @@ PasswordResetOtp.init(
   },
   {
     sequelize,
-    tableName: "password_reset_otps",
-    modelName: "PasswordResetOtp",
+    tableName: "otps",
+    modelName: "Otp",
   }
 );

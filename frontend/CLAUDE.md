@@ -2,7 +2,7 @@
 
 ## Overview
 
-Next.js (App Router, TypeScript, `src/` directory, import alias `@/*`), styled with Tailwind CSS 4 + shadcn/ui. Currently implements the full authentication flow (login, forgot password, session/route protection) per `user-stories/001-authentication.md`. Structure is modeled on `zp-frontend`'s conventions (see `../../nextjs/zp-frontend/CLAUDE.md`), scaled down to what this app actually has — folders aren't pre-created until there's real content for them.
+Next.js (App Router, TypeScript, `src/` directory, import alias `@/*`), styled with Tailwind CSS 4 + shadcn/ui. Implements login/forgot-password (`user-stories/001-authentication.md`) and the 5-step company registration wizard (`user-stories/002-organization-signup.md`). Structure is modeled on `zp-frontend`'s conventions (see `../../nextjs/zp-frontend/CLAUDE.md`), scaled down to what this app actually has — folders aren't pre-created until there's real content for them.
 
 ## Common Commands
 
@@ -31,12 +31,12 @@ No `src/hooks/` or `src/icons/` yet — not created until there's a real shared 
 
 ### `src/apis/` — API layer
 
-One subfolder per domain, one file per endpoint: `src/apis/auth/{login,logout,me,requestOtp,verifyOtp,resetPassword}.api.ts`, each just calling `apiCall` from `src/utils/apiManager/apiManager.ts` and returning its typed response. Every domain folder has an `index.ts` barrel; import from the domain barrel (`@/apis/auth`), not individual `.api.ts` files, outside the domain itself. No query-key layer yet — this project doesn't use a data-fetching/cache library (no React Query), so there's nothing to key. If one gets added later, add `src/apis/queryKeys/<domain>.queryKeys.ts` to match `zp-frontend`'s convention at that point.
+One subfolder per domain, one file per endpoint: `src/apis/auth/` (login/logout/me/forgot-password/registration endpoints — registration's endpoints are still `auth/*` since they're all under the backend's `/api/auth/registrations/*` namespace) and `src/apis/organization/` (the GST-availability check, the one endpoint under `/api/organizations/*`), each just calling `apiCall`/`postJson` from `src/utils/apiManager/apiManager.ts` and returning its typed response. Every domain folder has an `index.ts` barrel; import from the domain barrel (`@/apis/auth`, `@/apis/organization`), not individual `.api.ts` files, outside the domain itself. No query-key layer yet — this project doesn't use a data-fetching/cache library (no React Query), so there's nothing to key. If one gets added later, add `src/apis/queryKeys/<domain>.queryKeys.ts` to match `zp-frontend`'s convention at that point.
 
 ### `src/app/` — Routes
 
 Two route groups (groups don't affect the URL — `/login` and `/dashboard` are unchanged):
-- `src/app/(public)/` — unauthenticated screens (`login/`, `forgot-password/` and its steps). No route protection.
+- `src/app/(public)/` — unauthenticated screens (`login/`, `forgot-password/` and its steps, `register/` and its steps). No route protection.
 - `src/app/(private)/` — authenticated screens (`dashboard/`). Gated by `src/proxy.ts`'s `matcher`; any new authenticated route must be added under `(private)/` **and** to that matcher array.
 
 Route paths are centralized in `src/utils/constants/route.constant.ts` (`ROUTES` object) — never hardcode a path in `href`, `router.push`/`replace`, or a `new URL(...)` call.
@@ -51,11 +51,11 @@ Route protection: `src/proxy.ts` (Next 16 renamed Middleware to Proxy; it defaul
 
 ### `src/contexts/` — Context providers
 
-`<Name>Context/` folder per context, split into `context.ts` (the `createContext` call + its type), `provider.tsx` (the `<Name>Provider` component), `consumer.ts` (the `use<Name>` hook), `index.ts` (barrel). See `src/contexts/ForgotPasswordContext/` — only context so far, scoped to the forgot-password wizard's 3-step state.
+`<Name>Context/` folder per context, split into `context.ts` (the `createContext` call + its type), `provider.tsx` (the `<Name>Provider` component), `consumer.ts` (the `use<Name>` hook), `index.ts` (barrel). Two so far: `src/contexts/ForgotPasswordContext/` (3-step forgot-password state) and `src/contexts/RegistrationContext/` (5-step registration wizard state — org name/GST from step 1, email from step 2, `registrationToken` from step 3, mobile number from step 4). Each wizard step that depends on an earlier step's state guards itself with a `useEffect` that redirects back to step 1 if that field is empty (see any `register/*/page.tsx` or `forgot-password/*/page.tsx`) — a full page reload loses this in-memory state by design, it isn't persisted anywhere.
 
 ### `src/types/` — Types
 
-One file per domain: `<Domain>.type.ts`. `src/types/auth.type.ts` holds `AuthUser`. Don't define shared types inline in components/API files.
+One file per domain: `<Domain>.type.ts`. `src/types/auth.type.ts` holds `AuthUser`, `src/types/organization.type.ts` holds `Organization`. Don't define shared types inline in components/API files.
 
 ### `src/utils/` — Utilities
 
@@ -75,7 +75,7 @@ Note: `apiManager.ts` uses `fetch`, not Axios — no reason to add an Axios depe
 
 ### Storybook
 
-Config in `.storybook/`. Uses `@storybook/react-vite` (plain React, not `@storybook/nextjs`) — this project's Next 16 + the only Storybook version with matching Next-16 support (10.x) require a Node engine this environment doesn't meet, and `@storybook/nextjs`'s webpack/SWC integration doesn't work with Next 16.2.10 regardless. `react-vite` is a deliberate, verified-working choice, not a placeholder — fine since none of this project's components import `next/*` APIs directly; if a future component needs Next-specific mocking (routing, `next/image`, etc.), that's the point to revisit this. Stories glob (`src/**/*.stories.tsx`) already covers both story locations described above — no separate config needed per location.
+Config in `.storybook/`. Uses `@storybook/react-vite` (plain React, not `@storybook/nextjs`) — this project's Next 16 + the only Storybook version with matching Next-16 support (10.x) require a Node engine this environment doesn't meet, and `@storybook/nextjs`'s webpack/SWC integration doesn't work with Next 16.2.10 regardless. `react-vite` is a deliberate, verified-working choice, not a placeholder — fine since none of this project's components import `next/*` APIs directly; if a future component needs Next-specific mocking (routing, `next/image`, etc.), that's the point to revisit this. Stories glob (`src/**/*.stories.tsx`) already covers both story locations described above — no separate config needed per location. `.storybook/main.ts` also serves `public/` as a static dir; that folder has no real assets right now (the default `create-next-app` placeholders were removed as unused) but must still exist on disk — `public/.gitkeep` keeps it from disappearing, since git doesn't track empty directories and Storybook's build fails outright if the configured `staticDirs` path is missing.
 
 Icons: `@phosphor-icons/react` (use the `*Icon`-suffixed exports, e.g. `EyeIcon` — the unsuffixed names are deprecated). Do not add `lucide-react` — it was removed in favor of Phosphor.
 

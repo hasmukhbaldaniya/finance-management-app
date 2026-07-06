@@ -23,6 +23,7 @@ Covers how an existing user gets into the app: logging in with either their emai
 | Login | Password | password (masked, with show/hide toggle) | Yes |
 | Login | Login button | button | — |
 | Login | "Forgot password?" link | link → Forgot Password Step 1 | — |
+| Login | "Register your company" link | link → Register Step 1 (`/register`, see [002-organization-signup.md](./002-organization-signup.md)) | — |
 
 ### Flow
 
@@ -33,6 +34,7 @@ Covers how an existing user gets into the app: logging in with either their emai
    - **Correct** → backend returns success (+ session/auth token). Frontend redirects to the Dashboard page.
    - **Incorrect** (wrong password, or identifier not found) → backend returns an error response with a message. Frontend shows that message as a toast. The user stays on the Login screen.
 5. Any unexpected server error → backend returns a generic error; frontend shows a generic toast.
+6. Below "Forgot password?", the user can click **"Register your company"** to leave Login entirely and start the signup flow (Step 1 of [002-organization-signup.md](./002-organization-signup.md)) for a brand-new account/organization — this is a plain navigation link, not a Login form action, so no validation or API call happens on click.
 
 ### Validation Rules
 
@@ -48,6 +50,7 @@ Covers how an existing user gets into the app: logging in with either their emai
 - **Given** an identifier that doesn't match any user, **when** they submit, **then** the backend rejects the request and the frontend shows an error toast; the message does not reveal whether the identifier exists or the password was wrong (avoids account enumeration).
 - **Given** an Identifier that is neither a valid email nor a valid India phone number, **when** the user attempts to submit, **then** the form is blocked client-side with an inline validation error and no API call is made.
 - **Given** an empty Identifier or Password field, **when** the user attempts to submit, **then** the form is blocked client-side with inline "required" errors.
+- **Given** the user is on the Login screen, **when** they click "Register your company", **then** they are navigated to Step 1 of the Register Your Company flow with no validation or API call triggered.
 
 ### Error / Toast Messages
 
@@ -260,6 +263,7 @@ Error responses follow the existing convention (`{ error: string }`, appropriate
 | TC-23 | Expired/invalid reset session at submit | Forgot Password Step 3: wait for the reset token to expire (or reuse an already-consumed one), then submit | Error toast; returned to Step 1 |
 | TC-24 | "← Back" from Step 3 | Forgot Password Step 3: click "← Back" | Returned to Step 2 (OTP re-verification is a safe no-op) |
 | TC-25 | "Back to Login" from Step 3 | Forgot Password Step 3: click "Back to Login" | Navigated to Login; in-progress flow state cleared |
+| TC-26 | "Register your company" from Login | Login: click "Register your company" (no fields need to be filled) | Navigated to Register Step 1; no validation or API call triggered |
 
 ## Edge Cases
 
@@ -286,3 +290,4 @@ Error responses follow the existing convention (`{ error: string }`, appropriate
 - **Rate limiting** on login attempts and OTP requests/verification is not specified — should be decided before implementation to prevent brute-force abuse.
 - **Reset token transport — resolved**: implemented as a short-lived JWT (10 minutes) returned to the frontend after OTP verification, carried in-memory through Step 3's submission — not a server-side session.
 - **Navigation/back-out affordances**: every screen in the Forgot Password flow now has an explicit "Back to Login" (and, for Steps 2–3, a "← Back" to the previous step) link rather than relying on the browser's back button — added after this was found missing during manual testing. See the updated convention in `user-stories/README.md`; new multi-step stories should specify this up front instead of retrofitting it.
+- **"Register your company" link precedes its destination**: this link was added to the Login screen ahead of [002-organization-signup.md](./002-organization-signup.md)'s Step 1 actually being built — until that story is implemented, the link points at a route with no page behind it. Not a design gap in this story; flagged so it isn't mistaken for one when this doc is read on its own.

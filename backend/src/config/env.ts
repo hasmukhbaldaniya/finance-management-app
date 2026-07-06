@@ -29,6 +29,8 @@ export const env = {
     otpExpiryMinutes: Number(requireEnv("OTP_EXPIRY_MINUTES", "10")),
     otpResendCooldownSeconds: Number(requireEnv("OTP_RESEND_COOLDOWN_SECONDS", "30")),
     resetTokenExpiresIn: requireEnv("RESET_TOKEN_EXPIRES_IN", "10m"),
+    registrationTokenExpiresIn: requireEnv("REGISTRATION_TOKEN_EXPIRES_IN", "15m"),
+    refreshTokenExpiresIn: requireEnv("REFRESH_TOKEN_EXPIRES_IN", "30d"),
   },
   smtp: {
     host: requireEnv("SMTP_HOST", "smtp.gmail.com"),
