@@ -1,6 +1,6 @@
 import type { CookieOptions } from "express";
 import { env } from "../config/env";
-import { Organization, OrganizationMember, type User } from "../models";
+import { Organization, OrganizationMember, User } from "../models";
 
 export function accessTokenCookieOptions(): CookieOptions {
   return {
@@ -38,4 +38,12 @@ export async function getCurrentOrganization(
   if (!organization) return null;
 
   return { id: organization.id, name: organization.name, gstNumber: organization.gstNumber };
+}
+
+// Org-scoped resources (Grade, Department, Role, ...) all key off the caller's
+// active organization the same way — this is the shared lookup for that, so each
+// controller doesn't re-implement "find the User, read activeOrganizationId."
+export async function getActiveOrganizationId(userId: number | undefined): Promise<number | null> {
+  const user = await User.findByPk(userId);
+  return user?.activeOrganizationId ?? null;
 }

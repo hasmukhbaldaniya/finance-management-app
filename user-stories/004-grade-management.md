@@ -28,6 +28,7 @@ Covers full CRUD for **Grades** — the job-level labels (e.g. "L1", "Senior Man
 | Edit Grade dialog only | Delete button | button → opens delete-confirmation, disabled when the grade has ≥1 assigned member | — |
 | Members dialog (opened by clicking a grade's Members count) | Member list (name + email) | read-only list | — |
 | Members dialog | Close | button → closes dialog | — |
+| Status confirmation dialog (opened by flipping the Actions-column Switch) | "Enable/Disable this grade?" with Cancel / Enable/Disable | dialog | — |
 
 **Table columns:**
 
@@ -49,7 +50,7 @@ Covers full CRUD for **Grades** — the job-level labels (e.g. "L1", "Senior Man
    - **Unexpected server error** → generic error toast; dialog stays open with the entered value intact.
 6. **Edit**: clicking a row's Edit icon opens the same dialog pre-filled with that grade's current name, plus a Delete button. Submitting Save behaves the same as Add (validation, duplicate-name handling) but calls the update API instead, keyed to that grade's id.
 7. **Delete** (from within the Edit dialog only — there is no delete action directly in the table row): clicking Delete shows a confirmation step. If the grade currently has zero assigned members, confirming calls the delete API and removes the row on success. If the grade has one or more assigned members, the Delete button is disabled with an inline explanation ("This grade has N member(s) assigned. Disable it instead, or reassign those members first.") — reassignment itself isn't available yet since Employee Management doesn't exist (see [Out of Scope](#out-of-scope)).
-8. **Enable/disable toggle**: flipping the Actions column's Switch immediately calls the status-update API (no separate save step, no confirmation) and updates optimistically; on failure the switch reverts to its previous state and an error toast is shown. Disabling a grade does **not** affect members already assigned to it — it only means the grade shouldn't be offered when assigning a *new* grade to a member in the future (not enforced by this story, since that assignment UI doesn't exist yet).
+8. **Enable/disable toggle**: flipping the Actions column's Switch does **not** change status immediately — it opens a confirmation dialog ("Enable this grade?" / "Disable this grade?", with Cancel and a confirm button labeled Enable/Disable). The Switch's visual state doesn't move until the dialog is confirmed; clicking Cancel (or dismissing the dialog) leaves it exactly as it was. Confirming calls the status-update API; on success the Switch updates to the new state and the dialog closes with a success toast ("Grade enabled."/"Grade disabled."); on failure the dialog stays open with an error toast and the Switch remains unchanged. Disabling a grade does **not** affect members already assigned to it — it only means the grade shouldn't be offered when assigning a *new* grade to a member in the future (not enforced by this story, since that assignment UI doesn't exist yet).
 9. **Viewing members**: clicking a grade's Members count (when > 0) opens a read-only dialog listing every organization member currently assigned that grade (name + email). Clicking a Members count of 0 does nothing (no dialog, since there's nothing to show) — see [Open Questions](#open-questions--assumptions).
 
 ### Validation Rules
@@ -65,7 +66,9 @@ Covers full CRUD for **Grades** — the job-level labels (e.g. "L1", "Senior Man
 - **Given** a Grade Name that already exists in this organization (case-insensitive), **when** the user submits, **then** the backend rejects with 409 and the frontend shows an inline "already exists" error on the field; the dialog stays open.
 - **Given** a grade with zero assigned members, **when** the user opens its Edit dialog and confirms Delete, **then** the grade is removed from the table.
 - **Given** a grade with one or more assigned members, **when** the user opens its Edit dialog, **then** the Delete button is disabled with an inline explanation, and no delete request can be made from the UI.
-- **Given** any grade, **when** the user flips its Actions-column toggle, **then** its active/inactive status updates immediately without a page reload, and reverts with an error toast if the request fails.
+- **Given** any grade, **when** the user flips its Actions-column toggle, **then** a confirmation dialog opens and the Switch's visual state does not change yet.
+- **Given** the confirmation dialog is open, **when** the user clicks Cancel, **then** the dialog closes and the grade's status is unchanged.
+- **Given** the confirmation dialog is open, **when** the user confirms, **then** the status update is submitted; on success the Switch updates to the new state, the dialog closes, and a success toast is shown; on failure the dialog stays open with an error toast and the Switch remains unchanged.
 - **Given** the user types into the search box, **when** the debounce elapses, **then** the table shows only grades whose name matches, re-fetched from the server, starting from page 1.
 - **Given** the user clicks the Grade or Members column header, **when** the request resolves, **then** the table is re-sorted by that column in the toggled direction, starting from page 1.
 - **Given** more grades exist than the current loaded page(s), **when** the user scrolls to the bottom (or clicks "Load more"), **then** the next page of results is fetched and appended without losing the already-loaded rows.
@@ -80,6 +83,8 @@ Covers full CRUD for **Grades** — the job-level labels (e.g. "L1", "Senior Man
 | Grade created | "Grade created." |
 | Grade updated | "Grade updated." |
 | Grade deleted | "Grade deleted." |
+| Grade enabled | "Grade enabled." |
+| Grade disabled | "Grade disabled." |
 | Status toggle failed | "Something went wrong. Please try again." |
 | Server/network error (any request) | "Something went wrong. Please try again." |
 
@@ -123,8 +128,10 @@ Error responses follow the existing convention (`{ error: string }`): 400 (valid
 | TC-06 | Edit to a name used by another grade | Edit, enter another existing grade's name | 409, inline error, dialog stays open |
 | TC-07 | Delete a grade with 0 members | Edit a grade with no members assigned, click Delete, confirm | Grade removed from table |
 | TC-08 | Delete blocked when members assigned | Edit a grade with ≥1 member, open Delete | Delete button disabled, explanation shown, no request sent |
-| TC-09 | Toggle disables a grade | Click the Actions toggle on an active grade | Switch flips off immediately; grade shows inactive |
-| TC-10 | Toggle failure reverts | Flip the toggle while the backend request fails | Switch reverts to previous state, error toast shown |
+| TC-09 | Toggle opens confirmation | Click the Actions toggle on an active grade | Confirmation dialog opens; Switch has not moved yet |
+| TC-09b | Confirm disables a grade | Confirm the dialog opened from an active grade's toggle | Switch flips off, dialog closes, grade shows inactive, success toast |
+| TC-09c | Cancel leaves status unchanged | Open the toggle confirmation, click Cancel | Dialog closes, Switch/status unchanged |
+| TC-10 | Toggle failure keeps dialog open | Confirm the dialog while the backend request fails | Dialog stays open, error toast shown, Switch unchanged |
 | TC-11 | Search filters results | Type a partial grade name into Search | Table shows only matching grades, re-fetched from page 1 |
 | TC-12 | Sort by Grade name | Click the "Grade" column header | Table re-sorts alphabetically, direction toggles on repeated clicks |
 | TC-13 | Sort by Members count | Click the "Members" column header | Table re-sorts by member count, direction toggles on repeated clicks |
@@ -158,3 +165,4 @@ Error responses follow the existing convention (`{ error: string }`): 400 (valid
 - **Members dialog has no pagination**: unlike the main grades table, the Members dialog returns everything in one call. This is fine at today's expected scale (grades per org, members per grade) but should be revisited if that assumption stops holding — flagged here so it isn't mistaken for an oversight later, mirroring how [003](./003-header-navigation.md) flagged its own scale assumptions.
 - **Pagination style is page-number-based (`page`/`pageSize`), not cursor-based**, despite being described as "infinite" on the frontend (append-on-scroll). Offset pagination is simpler to implement with no existing pagination convention in this codebase to build on, and is sufficient at the expected scale (an organization's grade list, not a firehose table) — cursor-based pagination is a reasonable future upgrade if that assumption stops holding, not a correctness issue today.
 - **No new frontend form/table libraries added**: consistent with this codebase's existing hand-rolled validation pattern (local `FieldErrors` state + a `validate()` function, as used throughout [001](./001-authentication.md)/[002](./002-organization-signup.md)), this story does not introduce `react-hook-form`/`zod` for the Add/Edit dialog, nor `@tanstack/react-table` for the grid — sorting/search/pagination are driven by plain state and the query params above. Implementation will need to add shadcn's `table`, `dialog`, and `switch` primitives (none exist in `src/components/ui/` yet), which is expected, not a gap in this story.
+- **Status toggle now requires confirmation — supersedes this doc's original decision**: this story originally specified the toggle as instant (no confirmation, no separate save step, optimistic update with revert-on-failure), reasoning that disabling is always reversible and low-risk. That was changed after implementation, at explicit request: every enable/disable now opens a confirmation dialog, and the API call only happens on confirm (no optimistic UI update at all — the Switch's `checked` state is purely server-driven and only moves after a successful response). The underlying `PATCH /api/grades/:id/status` contract is unchanged; only the frontend's interaction pattern differs from what's described elsewhere in this doc as the original design. Since Delete already requires confirmation, both destructive-feeling actions in this dialog now behave consistently.

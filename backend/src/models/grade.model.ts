@@ -1,20 +1,16 @@
 import { DataTypes, Model, type InferAttributes, type InferCreationAttributes, type CreationOptional } from "sequelize";
 import { sequelize } from "../config/database";
 
-export class OrganizationMember extends Model<
-  InferAttributes<OrganizationMember>,
-  InferCreationAttributes<OrganizationMember>
-> {
+export class Grade extends Model<InferAttributes<Grade>, InferCreationAttributes<Grade>> {
   declare id: CreationOptional<number>;
   declare organizationId: number;
-  declare userId: number;
-  declare role: CreationOptional<string>;
-  declare gradeId: number | null;
+  declare name: string;
+  declare isActive: CreationOptional<boolean>;
   declare createdAt: CreationOptional<Date>;
   declare updatedAt: CreationOptional<Date>;
 }
 
-OrganizationMember.init(
+Grade.init(
   {
     id: {
       type: DataTypes.INTEGER,
@@ -25,25 +21,21 @@ OrganizationMember.init(
       type: DataTypes.INTEGER,
       allowNull: false,
     },
-    userId: {
-      type: DataTypes.INTEGER,
-      allowNull: false,
-    },
-    role: {
+    name: {
       type: DataTypes.STRING,
       allowNull: false,
-      defaultValue: "owner",
     },
-    gradeId: {
-      type: DataTypes.INTEGER,
-      allowNull: true,
+    isActive: {
+      type: DataTypes.BOOLEAN,
+      allowNull: false,
+      defaultValue: true,
     },
     createdAt: DataTypes.DATE,
     updatedAt: DataTypes.DATE,
   },
   {
     sequelize,
-    tableName: "organization_members",
-    modelName: "OrganizationMember",
+    tableName: "grades",
+    modelName: "Grade",
   }
 );
