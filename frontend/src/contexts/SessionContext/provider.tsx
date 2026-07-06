@@ -68,9 +68,17 @@ export function SessionProvider({ children }: { children: ReactNode }) {
 
   return (
     <SessionContext.Provider value={{ user, organization, setOrganization }}>
-      <div className="flex min-h-svh flex-1 flex-col bg-zinc-50 dark:bg-black">
+      {/*
+        `fixed inset-0` (not h-svh/min-h-svh) is deliberate: pinning directly to
+        the viewport makes this shell immune to any parent (html/body) sizing
+        mismatch between percentage and viewport units — the kind of 1px
+        rounding difference that silently triggers a persistent, always-visible
+        browser scrollbar even though nothing is actually meant to overflow.
+        Every private page's own scrolling (if any) happens *inside* this box.
+      */}
+      <div className="fixed inset-0 flex flex-col overflow-hidden bg-zinc-50 dark:bg-black">
         <Header user={user} organization={organization} />
-        <div className="flex flex-1 flex-col">{children}</div>
+        <div className="flex flex-1 flex-col overflow-y-auto">{children}</div>
       </div>
     </SessionContext.Provider>
   );

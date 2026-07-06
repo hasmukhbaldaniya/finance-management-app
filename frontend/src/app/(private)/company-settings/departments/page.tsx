@@ -123,7 +123,7 @@ export default function DepartmentManagementPage() {
   const sentinelRef = useInfiniteScroll(handleLoadMore, hasMore, isLoadingMore);
 
   return (
-    <div className="mx-auto w-full max-w-4xl flex-1 px-4 py-10">
+    <div className="mx-auto flex min-h-0 w-full max-w-4xl flex-1 flex-col overflow-hidden px-4 py-10">
       <div className="flex flex-wrap items-center justify-between gap-4">
         <h1 className="text-2xl font-semibold tracking-tight">Department Management</h1>
         <Button onClick={() => setFormDialog({ open: true, department: null })}>New Department</Button>
@@ -151,72 +151,74 @@ export default function DepartmentManagementPage() {
       ) : departments.length === 0 ? (
         <p className="mt-6 text-sm text-muted-foreground">No departments found.</p>
       ) : (
-        <div className="mt-6 rounded-lg border border-border">
-          <Table>
-            <TableHeader>
-              <TableRow>
-                <TableHead>
-                  <button
-                    type="button"
-                    onClick={() => handleSort("name")}
-                    className="flex items-center gap-1 font-medium"
-                  >
-                    Departments {renderSortIcon("name")}
-                  </button>
-                </TableHead>
-                <TableHead>
-                  <button
-                    type="button"
-                    onClick={() => handleSort("membersCount")}
-                    className="flex items-center gap-1 font-medium"
-                  >
-                    Members {renderSortIcon("membersCount")}
-                  </button>
-                </TableHead>
-                <TableHead>Actions</TableHead>
-              </TableRow>
-            </TableHeader>
-            <TableBody>
-              {departments.map((department) => (
-                <TableRow key={department.id}>
-                  <TableCell>{department.name}</TableCell>
-                  <TableCell>
+        <div className="mt-6 flex min-h-0 flex-1 flex-col overflow-hidden rounded-lg border border-border">
+          <div className="min-h-0 flex-1 overflow-y-auto">
+            <Table>
+              <TableHeader>
+                <TableRow>
+                  <TableHead>
                     <button
                       type="button"
-                      onClick={() => (department.membersCount > 0 ? setMembersDialogDepartment(department) : undefined)}
-                      className={cn(
-                        "underline-offset-4",
-                        department.membersCount > 0
-                          ? "text-primary hover:underline"
-                          : "cursor-default text-muted-foreground"
-                      )}
+                      onClick={() => handleSort("name")}
+                      className="flex items-center gap-1 font-medium"
                     >
-                      {department.membersCount}
+                      Departments {renderSortIcon("name")}
                     </button>
-                  </TableCell>
-                  <TableCell>
-                    <div className="flex items-center gap-3">
+                  </TableHead>
+                  <TableHead>
+                    <button
+                      type="button"
+                      onClick={() => handleSort("membersCount")}
+                      className="flex items-center gap-1 font-medium"
+                    >
+                      Members {renderSortIcon("membersCount")}
+                    </button>
+                  </TableHead>
+                  <TableHead>Actions</TableHead>
+                </TableRow>
+              </TableHeader>
+              <TableBody>
+                {departments.map((department) => (
+                  <TableRow key={department.id}>
+                    <TableCell>{department.name}</TableCell>
+                    <TableCell>
                       <button
                         type="button"
-                        aria-label={`Edit ${department.name}`}
-                        onClick={() => setFormDialog({ open: true, department })}
-                        className="text-muted-foreground hover:text-foreground"
+                        onClick={() => (department.membersCount > 0 ? setMembersDialogDepartment(department) : undefined)}
+                        className={cn(
+                          "underline-offset-4",
+                          department.membersCount > 0
+                            ? "text-primary hover:underline"
+                            : "cursor-default text-muted-foreground"
+                        )}
                       >
-                        <PencilSimpleIcon className="size-4" />
+                        {department.membersCount}
                       </button>
-                      <Switch
-                        checked={department.isActive}
-                        onCheckedChange={() => setStatusDialogDepartment(department)}
-                        aria-label={department.isActive ? `Disable ${department.name}` : `Enable ${department.name}`}
-                      />
-                    </div>
-                  </TableCell>
-                </TableRow>
-              ))}
-            </TableBody>
-          </Table>
+                    </TableCell>
+                    <TableCell>
+                      <div className="flex items-center gap-3">
+                        <button
+                          type="button"
+                          aria-label={`Edit ${department.name}`}
+                          onClick={() => setFormDialog({ open: true, department })}
+                          className="text-muted-foreground hover:text-foreground"
+                        >
+                          <PencilSimpleIcon className="size-4" />
+                        </button>
+                        <Switch
+                          checked={department.isActive}
+                          onCheckedChange={() => setStatusDialogDepartment(department)}
+                          aria-label={department.isActive ? `Disable ${department.name}` : `Enable ${department.name}`}
+                        />
+                      </div>
+                    </TableCell>
+                  </TableRow>
+                ))}
+              </TableBody>
+            </Table>
 
-          {hasMore ? <div ref={sentinelRef} aria-hidden className="h-px" /> : null}
+            {hasMore ? <div ref={sentinelRef} aria-hidden className="h-px" /> : null}
+          </div>
           {isLoadingMore ? (
             <div className="flex justify-center border-t border-border p-3">
               <Spinner />
