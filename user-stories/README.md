@@ -21,3 +21,7 @@ Product requirements for Finance Management, written as user stories before any 
 | 001 | [Authentication](./001-authentication.md) | Draft |
 | 002 | [Organization Signup](./002-organization-signup.md) | Draft |
 | 003 | [Header Navigation](./003-header-navigation.md) | Draft |
+| 004 | [Grade Management](./004-grade-management.md) | Draft |
+| 005 | [Department Management](./005-department-management.md) | Draft |
+| 006 | [Roles & Privileges Management](./006-roles-and-privileges-management.md) | Draft |
+| 007 | [Associated Organizations (Network)](./007-associated-organizations-network.md) | Draft |
