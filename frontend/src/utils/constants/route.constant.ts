@@ -17,12 +17,7 @@ export const ROUTES = {
     ORGANIZATIONS: "/company-settings/organizations",
     ASSOCIATED_ORGANIZATIONS: "/company-settings/associated-organizations",
   },
-  EMPLOYEE_INVITE: {
-    BASIC_INFO: "/company-settings/employees/invite",
-    COMPANY_ACCESS: "/company-settings/employees/invite/company-access",
-    FF_NUMBERS: "/company-settings/employees/invite/ff-numbers",
-    ACCESS_APPROVAL: "/company-settings/employees/invite/access-approval",
-  },
+  EMPLOYEE_INVITE: "/company-settings/employees/invite",
   REGISTER: {
     ORGANIZATION: "/register",
     DETAILS: "/register/details",
