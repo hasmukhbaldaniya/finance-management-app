@@ -5,6 +5,7 @@ import type { Organization } from "@/types/organization.type";
 export type SessionState = {
   user: AuthUser;
   organization: Organization | null;
+  isOwner: boolean;
   setOrganization: (organization: Organization) => void;
 };
 

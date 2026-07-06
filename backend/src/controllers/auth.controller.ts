@@ -3,7 +3,7 @@ import { Op } from "sequelize";
 import { env } from "../config/env";
 import type { AuthenticatedRequest } from "../middleware/require-auth";
 import { Otp, User } from "../models";
-import { accessTokenCookieOptions, getCurrentOrganization, toPublicUser } from "../utils/auth";
+import { accessTokenCookieOptions, getCurrentOrganization, isOrganizationOwner, toPublicUser } from "../utils/auth";
 import { signAccessToken, signResetToken, verifyResetToken } from "../utils/jwt";
 import { sendOtpEmail } from "../utils/mailer";
 import { generateOtp, hashOtp, verifyOtp as compareOtp } from "../utils/otp";
@@ -51,7 +51,8 @@ export async function me(req: AuthenticatedRequest, res: Response): Promise<void
     return;
   }
   const organization = await getCurrentOrganization(user);
-  res.status(200).json({ user: toPublicUser(user), organization });
+  const isOwner = organization ? await isOrganizationOwner(user.id, organization.id) : false;
+  res.status(200).json({ user: toPublicUser(user), organization, isOwner });
 }
 
 export async function requestOtp(req: Request, res: Response): Promise<void> {

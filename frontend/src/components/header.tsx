@@ -20,6 +20,7 @@ import { ROUTES } from "@/utils/constants/route.constant";
 type HeaderProps = {
   user: AuthUser;
   organization: Organization | null;
+  isOwner: boolean;
 };
 
 const COMPANY_SETTINGS_BASE_PATH = "/company-settings";
@@ -44,15 +45,29 @@ const COMPANY_SETTINGS_LINKS = [
   { label: "Associated Organizations", href: ROUTES.COMPANY_SETTINGS.ORGANIZATIONS },
 ];
 
+// Distinct label from the "Associated Organizations" entry above — that one is
+// 003's personal "which of my orgs is active" switcher; this is 007's owner-only
+// org-to-org network listing. Same underlying epic name ("Associated Organizations
+// (Network)"), deliberately disambiguated here since both would otherwise show up
+// as identically-labeled sub-header links pointing at different pages.
+const ASSOCIATED_ORGANIZATIONS_NETWORK_LINK = {
+  label: "Associated Organizations (Network)",
+  href: ROUTES.COMPANY_SETTINGS.ASSOCIATED_ORGANIZATIONS,
+};
+
 const NAV_LINK_CLASSNAME =
   "rounded-md px-2.5 py-1.5 text-sm font-medium text-muted-foreground hover:bg-muted hover:text-foreground aria-[current=page]:bg-muted aria-[current=page]:text-foreground";
 
 const SUB_NAV_LINK_CLASSNAME =
   "rounded-md px-2.5 py-1 text-sm font-medium text-muted-foreground hover:bg-background hover:text-foreground aria-[current=page]:bg-background aria-[current=page]:text-foreground aria-[current=page]:shadow-sm";
 
-export function Header({ user, organization }: HeaderProps) {
+export function Header({ user, organization, isOwner }: HeaderProps) {
   const pathname = usePathname();
   const router = useRouter();
+
+  const companySettingsLinks = isOwner
+    ? [...COMPANY_SETTINGS_LINKS, ASSOCIATED_ORGANIZATIONS_NETWORK_LINK]
+    : COMPANY_SETTINGS_LINKS;
 
   const isOnCompanySettings = pathname.startsWith(COMPANY_SETTINGS_BASE_PATH);
 
@@ -112,7 +127,7 @@ export function Header({ user, organization }: HeaderProps) {
           aria-label="Company Settings"
           className="flex items-center gap-1 border-b border-border bg-muted/40 px-4 py-2"
         >
-          {COMPANY_SETTINGS_LINKS.map((link) => (
+          {companySettingsLinks.map((link) => (
             <Link
               key={link.href}
               href={link.href}
