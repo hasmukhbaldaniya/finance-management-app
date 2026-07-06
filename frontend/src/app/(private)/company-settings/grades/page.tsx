@@ -8,9 +8,10 @@ import { Input } from "@/components/ui/input";
 import { Spinner } from "@/components/ui/spinner";
 import { Switch } from "@/components/ui/switch";
 import { Table, TableBody, TableCell, TableHead, TableHeader, TableRow } from "@/components/ui/table";
-import { GradeFormDialog } from "@/components/grade-form-dialog";
-import { GradeMembersDialog } from "@/components/grade-members-dialog";
-import { GradeStatusDialog } from "@/components/grade-status-dialog";
+import { GradeFormDialog } from "@/components/grade/form-dialog";
+import { GradeMembersDialog } from "@/components/grade/members-dialog";
+import { GradeStatusDialog } from "@/components/grade/status-dialog";
+import { useInfiniteScroll } from "@/hooks/useInfiniteScroll";
 import { getGrades } from "@/apis/grade";
 import type { Grade, GradeSortBy, SortDirection } from "@/types/grade.type";
 import { ApiError, GENERIC_ERROR_MESSAGE } from "@/utils/apiManager/apiManager";
@@ -119,6 +120,8 @@ export default function GradeManagementPage() {
     return sortDir === "asc" ? <CaretUpIcon className="inline size-3" /> : <CaretDownIcon className="inline size-3" />;
   }
 
+  const sentinelRef = useInfiniteScroll(handleLoadMore, hasMore, isLoadingMore);
+
   return (
     <div className="mx-auto w-full max-w-4xl flex-1 px-4 py-10">
       <div className="flex flex-wrap items-center justify-between gap-4">
@@ -211,12 +214,10 @@ export default function GradeManagementPage() {
             </TableBody>
           </Table>
 
-          {hasMore ? (
+          {hasMore ? <div ref={sentinelRef} aria-hidden className="h-px" /> : null}
+          {isLoadingMore ? (
             <div className="flex justify-center border-t border-border p-3">
-              <Button variant="outline" onClick={handleLoadMore} disabled={isLoadingMore}>
-                {isLoadingMore ? <Spinner /> : null}
-                Load more
-              </Button>
+              <Spinner />
             </div>
           ) : null}
         </div>
