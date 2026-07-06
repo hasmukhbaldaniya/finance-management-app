@@ -47,3 +47,13 @@ export async function getActiveOrganizationId(userId: number | undefined): Promi
   const user = await User.findByPk(userId);
   return user?.activeOrganizationId ?? null;
 }
+
+// Backs both requireOwner (the 007 API gate) and GET /me's isOwner flag (so the
+// frontend can hide the Associated Organizations nav link/route for non-owners
+// without a separate request) — checks the pre-existing OrganizationMember.role
+// column ("owner"/"member"), not 006's newer Role/privileges entity, which isn't
+// wired to any enforcement yet (see 007's Open Questions).
+export async function isOrganizationOwner(userId: number, organizationId: number): Promise<boolean> {
+  const membership = await OrganizationMember.findOne({ where: { userId, organizationId } });
+  return membership?.role === "owner";
+}
