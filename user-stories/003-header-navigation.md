@@ -27,13 +27,13 @@ This story **supersedes one specific deferral** in [002-organization-signup.md](
 | Header | Approvals | nav link → placeholder | — |
 | Header | Finance | nav link → placeholder | — |
 | Header | Reports | nav link → placeholder | — |
-| Header | Company Settings | menu trigger (expands submenu) | — |
-| Header → Company Settings submenu | Employee management | nav link → placeholder | — |
-| Header → Company Settings submenu | Categories management | nav link → placeholder | — |
-| Header → Company Settings submenu | Roles & privileges | nav link → placeholder | — |
-| Header → Company Settings submenu | Grades | nav link → placeholder | — |
-| Header → Company Settings submenu | Departments | nav link → placeholder | — |
-| Header → Company Settings submenu | Associated Organizations | nav link → Switch Active Organization screen (functional, see next story) | — |
+| Header | Company Settings | nav link → Employee management; also reveals the Company Settings sub-header (below) on every Company Settings page | — |
+| Header sub-header (shown only while on a Company Settings page) | Employee management | nav link → placeholder | — |
+| Header sub-header | Categories management | nav link → placeholder | — |
+| Header sub-header | Roles & privileges | nav link → placeholder | — |
+| Header sub-header | Grades | nav link → placeholder | — |
+| Header sub-header | Departments | nav link → placeholder | — |
+| Header sub-header | Associated Organizations | nav link → Switch Active Organization screen (functional, see next story) | — |
 | Header | Help | nav link → placeholder | — |
 | Header | Profile | menu trigger (expands submenu) | — |
 | Header → Profile submenu | User name + current organization name | text (display only, not a link) | — |
@@ -43,13 +43,14 @@ This story **supersedes one specific deferral** in [002-organization-signup.md](
 ### Flow
 
 1. On every authenticated page, the header renders using the user/organization already fetched via `GET /api/auth/me` (no separate fetch for the header itself — the calling page passes it down or the header reads it from wherever that page already stores it).
-2. Clicking any top-level link (Home, Trips, Claims, Approvals, Finance, Reports, Help) navigates directly to that page.
-3. Clicking **Company Settings** or **Profile** expands a submenu (disclosure pattern): `aria-expanded` reflects state, the trigger is keyboard-operable (Enter/Space to open, Escape to close), and the submenu closes when the user clicks outside it or presses Escape.
-4. The header visually marks whichever top-level item corresponds to the current route as active (e.g. underline/background), so the user always knows where they are — this does not apply to Company Settings/Profile's own trigger, since those are menus, not destinations themselves, but does apply to their submenu items when one of those pages is active.
-5. Clicking a Company Settings submenu item other than Associated Organizations, or Help, or View Profile navigates to that page's placeholder screen (a simple "Coming soon" message — see [Out of Scope](#out-of-scope)).
-6. Clicking **Associated Organizations** navigates to the Switch Active Organization screen (see next story).
-7. Clicking **Logout** calls the existing logout API (`POST /api/auth/logout`, already used by the Dashboard today) and redirects to Login — this is a relocation of existing behavior into the shared header, not new behavior.
-8. There is no scenario in this story where a menu item is hidden or disabled based on who's logged in — every item is visible to every authenticated user (see [Open Questions](#open-questions--assumptions)).
+2. Clicking any top-level link (Home, Trips, Claims, Approvals, Finance, Reports, Company Settings, Help) navigates directly to that page — **Company Settings is a plain nav link, not a menu trigger**: it navigates straight to Employee management (the first sub-item), the same as any other top-level item.
+3. Whenever the current page is anywhere under Company Settings (Employee management, Categories management, Roles & privileges, Grades, Departments, or Associated Organizations), the header shows a second row directly beneath it — a **sub-header** — listing all six Company Settings destinations as plain links. This row is not a popup/overlay and does not need to be opened or closed; it simply appears while on one of those pages and disappears when navigating elsewhere, the same way a browser tab bar reflects the current section.
+4. Clicking **Profile** expands a submenu (disclosure pattern): `aria-expanded` reflects state, the trigger is keyboard-operable (Enter/Space to open, Escape to close), and the submenu closes when the user clicks outside it or presses Escape. Profile is the only menu-trigger-style item in the header — Company Settings uses the sub-header pattern instead (see above).
+5. The header visually marks whichever top-level item corresponds to the current route as active (e.g. underline/background), so the user always knows where they are. Company Settings is marked active whenever the current route is under `/company-settings/*`, not just on an exact match — this does not apply to Profile's own trigger, since it's a menu, not a destination itself. Within the sub-header, the specific current sub-item is also marked active.
+6. Clicking a Company Settings sub-header item other than Associated Organizations, or Help, or View Profile navigates to that page's placeholder screen (a simple "Coming soon" message — see [Out of Scope](#out-of-scope)).
+7. Clicking **Associated Organizations** navigates to the Switch Active Organization screen (see next story).
+8. Clicking **Logout** calls the existing logout API (`POST /api/auth/logout`, already used by the Dashboard today) and redirects to Login — this is a relocation of existing behavior into the shared header, not new behavior.
+9. There is no scenario in this story where a menu item is hidden or disabled based on who's logged in — every item is visible to every authenticated user (see [Open Questions](#open-questions--assumptions)).
 
 ### Validation Rules
 
@@ -59,9 +60,11 @@ Not applicable — this story is pure navigation with no user-entered fields.
 
 - **Given** any authenticated page, **when** it renders, **then** the header shows all top-level items (Home, Trips, Claims, Approvals, Finance, Reports, Company Settings, Help, Profile).
 - **Given** the user is on a page corresponding to a top-level item, **when** the header renders, **then** that item is visually marked as active.
-- **Given** the Company Settings menu is closed, **when** the user activates it via mouse or keyboard, **then** it expands and shows all six submenu items, with `aria-expanded="true"` on the trigger.
-- **Given** the Company Settings or Profile submenu is open, **when** the user presses Escape or clicks outside it, **then** it closes and `aria-expanded` returns to `false`.
-- **Given** the user clicks a placeholder destination (Trips, Claims, Approvals, Finance, Reports, Help, View Profile, or any Company Settings submenu item except Associated Organizations), **when** the page loads, **then** a "Coming soon" placeholder screen is shown, not an error or blank page.
+- **Given** the user clicks Company Settings from any other page, **when** the page loads, **then** they land on Employee management and the sub-header appears beneath the main header showing all six Company Settings links.
+- **Given** the user is on any Company Settings page, **when** the header renders, **then** the sub-header is visible with the current sub-item marked active, and Company Settings itself is marked active in the main header.
+- **Given** the user navigates away from Company Settings to any other top-level item, **when** the next page renders, **then** the sub-header disappears.
+- **Given** the Profile submenu is open, **when** the user presses Escape or clicks outside it, **then** it closes and `aria-expanded` returns to `false`.
+- **Given** the user clicks a placeholder destination (Trips, Claims, Approvals, Finance, Reports, Help, View Profile, or any Company Settings sub-header item except Associated Organizations), **when** the page loads, **then** a "Coming soon" placeholder screen is shown, not an error or blank page.
 - **Given** the user opens the Profile submenu, **when** it renders, **then** it shows the current user's name and their currently active organization's name (matching whatever `GET /api/auth/me` last returned).
 - **Given** the user clicks Logout from the Profile submenu, **when** the logout call succeeds, **then** the session cookie is cleared and the user is redirected to Login — identical to the Dashboard's existing Logout behavior.
 
@@ -149,11 +152,11 @@ No new field-format rules beyond the `organizationId` membership check above —
 | ID | Scenario | Steps | Expected Result |
 |----|----------|-------|------------------|
 | TC-01 | Header renders on any private page | Load Dashboard (or any placeholder page) while logged in | All top-level items visible; current page's item marked active |
-| TC-02 | Company Settings submenu opens | Click/activate "Company Settings" | Submenu expands showing all 6 items; `aria-expanded="true"` |
-| TC-03 | Company Settings submenu closes on outside click | Open submenu, click elsewhere on the page | Submenu closes; `aria-expanded="false"` |
-| TC-04 | Company Settings submenu closes on Escape | Open submenu, press Escape | Submenu closes |
-| TC-05 | Keyboard-only navigation | Tab to "Company Settings", press Enter, Tab through items, press Escape | Menu opens, items are reachable by keyboard, Escape closes it |
-| TC-06 | Placeholder destination | Click "Trips" (or Claims/Approvals/Finance/Reports/Help/View Profile/any submenu item except Associated Organizations) | "Coming soon" placeholder page renders, no error |
+| TC-02 | Company Settings navigates and reveals sub-header | Click "Company Settings" from Dashboard | Navigates to Employee management; sub-header appears with all 6 links, Employee management marked active |
+| TC-03 | Sub-header persists across Company Settings pages | From Employee management, click "Grades" in the sub-header | Navigates to Grades; sub-header still visible, Grades now marked active, Company Settings still marked active in the main header |
+| TC-04 | Sub-header disappears outside Company Settings | From any Company Settings page, click "Home" | Navigates to Dashboard; sub-header is gone |
+| TC-05 | Keyboard-only navigation | Tab to "Company Settings", press Enter, then Tab through the sub-header links | Company Settings link and every sub-header link are reachable and activatable via keyboard, same as any other nav link |
+| TC-06 | Placeholder destination | Click "Trips" (or Claims/Approvals/Finance/Reports/Help/View Profile/any sub-header item except Associated Organizations) | "Coming soon" placeholder page renders, no error |
 | TC-07 | Profile submenu shows identity | Open Profile submenu | Current user's name and active organization's name are shown |
 | TC-08 | Logout from header | Open Profile submenu, click Logout | Session cookie cleared, redirected to Login |
 | TC-09 | Associated Organizations, multiple orgs | User belongs to 2+ orgs, opens Associated Organizations | All orgs listed, active one marked, Switch enabled on the others |
@@ -183,5 +186,6 @@ No new field-format rules beyond the `organizationId` membership check above —
 
 - **This story supersedes part of [002-organization-signup.md](./002-organization-signup.md)'s Out of Scope**: 002 explicitly excluded "any 'switch organization' UI" and left the exact mechanism as an open question, while deliberately modeling `User`↔`Organization` as many-to-many specifically so this would be possible later without a breaking migration. This story is that later feature. 002's document is not edited retroactively — this note is the linkage between the two.
 - **"Home" reuses the existing Dashboard route** (`/dashboard`) rather than introducing a separate synonymous route — flagged so it isn't mistaken for a missing item during implementation.
-- **Company Settings visibility is a deliberate decision, not an oversight**: every logged-in user sees the full Company Settings submenu today because no role/permission enforcement exists yet. Whoever builds real authorization on top of `OrganizationMember.role` should treat this as the point to revisit, not assume the current "visible to all" behavior is permanent product intent.
+- **Company Settings visibility is a deliberate decision, not an oversight**: every logged-in user sees the full Company Settings sub-header today because no role/permission enforcement exists yet. Whoever builds real authorization on top of `OrganizationMember.role` should treat this as the point to revisit, not assume the current "visible to all" behavior is permanent product intent.
+- **Company Settings is a sub-header, not a dropdown — a mid-implementation design change**: the first implementation used a popup disclosure menu (matching Profile's pattern) for Company Settings' six destinations. It was changed to a second nav row that appears while on any Company Settings page, since the six destinations are peer sections a user moves between (like tabs), not one-off actions picked from a transient menu. Profile intentionally keeps the dropdown pattern — its contents (identity display, View Profile, Logout) are a single miscellaneous action set, not a set of pages to switch between.
 - **Placeholder page content**: this story assumes a minimal, identical "Coming soon" placeholder is sufficient for every non-functional destination; no distinct copy/design per page is specified.

@@ -95,6 +95,7 @@ export async function createRegistration(req: Request, res: Response): Promise<v
     phone: null,
     emailVerifiedAt: null,
     mobileVerifiedAt: null,
+    activeOrganizationId: organization.id,
   });
   await OrganizationMember.create({ organizationId: organization.id, userId: user.id, role: "owner" });
 
@@ -304,7 +305,7 @@ export async function completeRegistration(req: Request, res: Response): Promise
   if (!context) return;
   const { user } = context;
 
-  const organization = await getCurrentOrganization(user.id);
+  const organization = await getCurrentOrganization(user);
   if (!organization) {
     res.status(401).json({ error: SESSION_EXPIRED_MESSAGE });
     return;

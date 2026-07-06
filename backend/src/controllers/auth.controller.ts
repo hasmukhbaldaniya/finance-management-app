@@ -50,7 +50,7 @@ export async function me(req: AuthenticatedRequest, res: Response): Promise<void
     res.status(401).json({ error: "Not authenticated." });
     return;
   }
-  const organization = await getCurrentOrganization(user.id);
+  const organization = await getCurrentOrganization(user);
   res.status(200).json({ user: toPublicUser(user), organization });
 }
 

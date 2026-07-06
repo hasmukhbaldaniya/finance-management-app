@@ -12,6 +12,7 @@ export class User extends Model<InferAttributes<User>, InferCreationAttributes<U
   declare emailVerifiedAt: Date | null;
   declare mobileVerifiedAt: Date | null;
   declare registrationCompletedAt: Date | null;
+  declare activeOrganizationId: number | null;
   declare createdAt: CreationOptional<Date>;
   declare updatedAt: CreationOptional<Date>;
 }
@@ -60,6 +61,10 @@ User.init(
     },
     registrationCompletedAt: {
       type: DataTypes.DATE,
+      allowNull: true,
+    },
+    activeOrganizationId: {
+      type: DataTypes.INTEGER,
       allowNull: true,
     },
     createdAt: DataTypes.DATE,

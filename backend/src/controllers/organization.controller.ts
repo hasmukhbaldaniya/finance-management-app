@@ -1,5 +1,6 @@
 import type { Request, Response } from "express";
-import { Organization } from "../models";
+import type { AuthenticatedRequest } from "../middleware/require-auth";
+import { Organization, OrganizationMember, User } from "../models";
 import { isValidGstNumber } from "../utils/validation";
 
 export async function getGstAvailability(req: Request, res: Response): Promise<void> {
@@ -12,4 +13,26 @@ export async function getGstAvailability(req: Request, res: Response): Promise<v
 
   const existing = await Organization.findOne({ where: { gstNumber } });
   res.status(200).json({ available: !existing });
+}
+
+export async function listMyOrganizations(req: AuthenticatedRequest, res: Response): Promise<void> {
+  const user = await User.findByPk(req.userId);
+  if (!user) {
+    res.status(401).json({ error: "Not authenticated." });
+    return;
+  }
+
+  const memberships = await OrganizationMember.findAll({ where: { userId: user.id } });
+  const organizations = await Organization.findAll({
+    where: { id: memberships.map((membership) => membership.organizationId) },
+  });
+
+  res.status(200).json({
+    organizations: organizations.map((organization) => ({
+      id: organization.id,
+      name: organization.name,
+      gstNumber: organization.gstNumber,
+      isActive: organization.id === user.activeOrganizationId,
+    })),
+  });
 }

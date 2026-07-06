@@ -3,3 +3,7 @@ export type Organization = {
   name: string;
   gstNumber: string;
 };
+
+export type OrganizationMembership = Organization & {
+  isActive: boolean;
+};
