@@ -1,8 +1,9 @@
-import type { CookieOptions, Request, Response } from "express";
+import type { Request, Response } from "express";
 import { Op } from "sequelize";
 import { env } from "../config/env";
 import type { AuthenticatedRequest } from "../middleware/require-auth";
-import { PasswordResetOtp, User } from "../models";
+import { Otp, User } from "../models";
+import { accessTokenCookieOptions, getCurrentOrganization, toPublicUser } from "../utils/auth";
 import { signAccessToken, signResetToken, verifyResetToken } from "../utils/jwt";
 import { sendOtpEmail } from "../utils/mailer";
 import { generateOtp, hashOtp, verifyOtp as compareOtp } from "../utils/otp";
@@ -12,20 +13,6 @@ import { isEmail, isStrongPassword, isValidIdentifier, isValidOtp, normalizePhon
 const INVALID_CREDENTIALS_MESSAGE = "Invalid email/phone number or password.";
 const EMAIL_NOT_REGISTERED_MESSAGE = "This email is not registered.";
 const OTP_SENT_MESSAGE = "An OTP has been sent to your email.";
-
-function accessTokenCookieOptions(): CookieOptions {
-  return {
-    httpOnly: true,
-    sameSite: "lax",
-    secure: env.nodeEnv === "production",
-    maxAge: env.auth.accessTokenCookieMaxAgeMs,
-    path: "/",
-  };
-}
-
-function toPublicUser(user: User): { id: number; name: string; email: string; phone: string | null } {
-  return { id: user.id, name: user.name, email: user.email, phone: user.phone };
-}
 
 export async function login(req: Request, res: Response): Promise<void> {
   const identifier = typeof req.body?.identifier === "string" ? req.body.identifier.trim() : "";
@@ -63,7 +50,8 @@ export async function me(req: AuthenticatedRequest, res: Response): Promise<void
     res.status(401).json({ error: "Not authenticated." });
     return;
   }
-  res.status(200).json({ user: toPublicUser(user) });
+  const organization = await getCurrentOrganization(user.id);
+  res.status(200).json({ user: toPublicUser(user), organization });
 }
 
 export async function requestOtp(req: Request, res: Response): Promise<void> {
@@ -82,19 +70,22 @@ export async function requestOtp(req: Request, res: Response): Promise<void> {
   }
 
   const cooldownStart = new Date(Date.now() - env.auth.otpResendCooldownSeconds * 1000);
-  const recentOtp = await PasswordResetOtp.findOne({
-    where: { email, consumedAt: null, createdAt: { [Op.gt]: cooldownStart } },
+  const recentOtp = await Otp.findOne({
+    where: { purpose: "password_reset", identifier: email, consumedAt: null, createdAt: { [Op.gt]: cooldownStart } },
     order: [["createdAt", "DESC"]],
   });
 
   if (!recentOtp) {
-    await PasswordResetOtp.update({ consumedAt: new Date() }, { where: { email, consumedAt: null } });
+    await Otp.update(
+      { consumedAt: new Date() },
+      { where: { purpose: "password_reset", identifier: email, consumedAt: null } }
+    );
 
     const otp = generateOtp();
     const otpHash = await hashOtp(otp);
     const expiresAt = new Date(Date.now() + env.auth.otpExpiryMinutes * 60 * 1000);
 
-    await PasswordResetOtp.create({ email, otpHash, expiresAt });
+    await Otp.create({ purpose: "password_reset", identifier: email, otpHash, expiresAt });
     await sendOtpEmail(email, otp);
   }
 
@@ -110,8 +101,8 @@ export async function verifyOtpHandler(req: Request, res: Response): Promise<voi
     return;
   }
 
-  const otpRecord = await PasswordResetOtp.findOne({
-    where: { email, consumedAt: null },
+  const otpRecord = await Otp.findOne({
+    where: { purpose: "password_reset", identifier: email, consumedAt: null },
     order: [["createdAt", "DESC"]],
   });
 
@@ -156,8 +147,14 @@ export async function resetPassword(req: Request, res: Response): Promise<void> 
     return;
   }
 
-  const otpRecord = await PasswordResetOtp.findByPk(payload.otpId);
-  if (!otpRecord || otpRecord.email !== payload.email || !otpRecord.verifiedAt || otpRecord.consumedAt) {
+  const otpRecord = await Otp.findByPk(payload.otpId);
+  if (
+    !otpRecord ||
+    otpRecord.purpose !== "password_reset" ||
+    otpRecord.identifier !== payload.email ||
+    !otpRecord.verifiedAt ||
+    otpRecord.consumedAt
+  ) {
     res.status(401).json({ error: SESSION_EXPIRED_MESSAGE });
     return;
   }

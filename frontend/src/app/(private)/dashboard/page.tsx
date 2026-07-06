@@ -8,12 +8,14 @@ import { Button } from "@/components/ui/button";
 import { Spinner } from "@/components/ui/spinner";
 import { getMe, logout } from "@/apis/auth";
 import type { AuthUser } from "@/types/auth.type";
+import type { Organization } from "@/types/organization.type";
 import { ApiError, GENERIC_ERROR_MESSAGE } from "@/utils/apiManager/apiManager";
 import { ROUTES } from "@/utils/constants/route.constant";
 
 export default function DashboardPage() {
   const router = useRouter();
   const [user, setUser] = useState<AuthUser | null>(null);
+  const [organization, setOrganization] = useState<Organization | null>(null);
   const [isLoading, setIsLoading] = useState(true);
   const [loadError, setLoadError] = useState<string | undefined>();
 
@@ -22,8 +24,11 @@ export default function DashboardPage() {
     let isRedirecting = false;
 
     getMe()
-      .then(({ user: fetchedUser }) => {
-        if (isMounted) setUser(fetchedUser);
+      .then(({ user: fetchedUser, organization: fetchedOrganization }) => {
+        if (isMounted) {
+          setUser(fetchedUser);
+          setOrganization(fetchedOrganization);
+        }
       })
       .catch((error: unknown) => {
         if (!isMounted) return;
@@ -79,6 +84,13 @@ export default function DashboardPage() {
           <div className="text-center">
             <h1 className="text-2xl font-semibold tracking-tight">Welcome, {user.name}</h1>
             <p className="mt-1 text-sm text-muted-foreground">{user.email}</p>
+            {organization ? (
+              <div className="mt-4 rounded-lg border border-border bg-background px-4 py-3 text-left">
+                <p className="text-xs font-medium uppercase tracking-wide text-muted-foreground">Organization</p>
+                <p className="mt-1 text-sm font-semibold">{organization.name}</p>
+                <p className="text-sm text-muted-foreground">GSTIN: {organization.gstNumber}</p>
+              </div>
+            ) : null}
           </div>
         ) : null}
       </div>

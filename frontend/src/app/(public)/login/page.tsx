@@ -112,6 +112,12 @@ export default function LoginPage() {
             Forgot password?
           </Link>
         </p>
+
+        <p className="text-center text-sm">
+          <Link href={ROUTES.REGISTER.ORGANIZATION} className="text-primary underline-offset-4 hover:underline">
+            Register your company
+          </Link>
+        </p>
       </form>
     </AuthCard>
   );
