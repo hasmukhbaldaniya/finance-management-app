@@ -1,7 +1,7 @@
 import type { Response } from "express";
 import { Op, col, fn } from "sequelize";
 import type { AuthenticatedRequest } from "../middleware/require-auth";
-import { Grade, OrganizationMember, User } from "../models";
+import { Employee, EmployeeCompanyAccess, Grade } from "../models";
 import { getActiveOrganizationId } from "../utils/auth";
 
 const DEFAULT_PAGE_SIZE = 20;
@@ -16,7 +16,7 @@ function parseGradeName(body: unknown): string {
 }
 
 async function findGradeMembersCount(organizationId: number, gradeId: number): Promise<number> {
-  return OrganizationMember.count({ where: { organizationId, gradeId } });
+  return EmployeeCompanyAccess.count({ where: { organizationId, gradeId } });
 }
 
 export async function listGrades(req: AuthenticatedRequest, res: Response): Promise<void> {
@@ -37,7 +37,7 @@ export async function listGrades(req: AuthenticatedRequest, res: Response): Prom
     order: sortBy === "name" ? [["name", sortDir]] : undefined,
   });
 
-  const counts = (await OrganizationMember.findAll({
+  const counts = (await EmployeeCompanyAccess.findAll({
     attributes: ["gradeId", [fn("COUNT", col("id")), "membersCount"]],
     where: { organizationId, gradeId: { [Op.not]: null } },
     group: ["gradeId"],
@@ -190,8 +190,14 @@ export async function listGradeMembers(req: AuthenticatedRequest, res: Response)
     return;
   }
 
-  const memberships = await OrganizationMember.findAll({ where: { organizationId, gradeId: id } });
-  const users = await User.findAll({ where: { id: memberships.map((membership) => membership.userId) } });
+  const accessRows = await EmployeeCompanyAccess.findAll({ where: { organizationId, gradeId: id } });
+  const employees = await Employee.findAll({ where: { id: accessRows.map((access) => access.employeeId) } });
 
-  res.status(200).json({ members: users.map((user) => ({ id: user.id, name: user.name, email: user.email })) });
+  res.status(200).json({
+    members: employees.map((employee) => ({
+      id: employee.id,
+      name: `${employee.firstName} ${employee.lastName}`.trim(),
+      email: employee.email,
+    })),
+  });
 }

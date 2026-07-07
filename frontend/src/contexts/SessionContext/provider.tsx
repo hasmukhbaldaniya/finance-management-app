@@ -69,7 +69,7 @@ export function SessionProvider({ children }: { children: ReactNode }) {
   }
 
   return (
-    <SessionContext.Provider value={{ user, organization, isOwner, setOrganization }}>
+    <SessionContext.Provider value={{ user, organization, isOwner }}>
       {/*
         `fixed inset-0` (not h-svh/min-h-svh) is deliberate: pinning directly to
         the viewport makes this shell immune to any parent (html/body) sizing
