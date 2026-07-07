@@ -13,6 +13,7 @@ import { Label } from "@/components/ui/label";
 import { Spinner } from "@/components/ui/spinner";
 import { NativeSelect } from "@/components/employee-invite/native-select";
 import { SectionCard } from "@/components/employee-invite/section-card";
+import { StepNav, type StepNavItem } from "@/components/employee-invite/step-nav";
 import {
   addEmployeeFfNumbers,
   createEmployee,
@@ -48,6 +49,13 @@ const COUNTRY_CODES = ["+91", "+1", "+44", "+971", "+65"];
 const MINIMUM_AGE = 18;
 const MAX_FF_NUMBER_LENGTH = 30;
 const PICKER_PAGE_SIZE = 100;
+
+const STEPS: StepNavItem[] = [
+  { id: "basic-information", label: "Basic Information" },
+  { id: "company-access", label: "Company Access" },
+  { id: "ff-numbers", label: "FF Numbers" },
+  { id: "access-approval", label: "Access & Approval" },
+];
 
 type FfRow = {
   airlineId: string;
@@ -349,7 +357,7 @@ export default function InviteEmployeePage() {
   }
 
   return (
-    <div className="mx-auto w-full max-w-2xl flex-1 px-4 py-10">
+    <div className="mx-auto w-full max-w-5xl flex-1 px-4 py-10">
       <h1 className="text-2xl font-semibold tracking-tight">Invite Employee</h1>
       <p className="mt-1 text-sm text-muted-foreground">
         Fill in any of the sections below in any order, then send the invitation.
@@ -360,8 +368,10 @@ export default function InviteEmployeePage() {
           <Spinner />
         </div>
       ) : (
-        <form onSubmit={handleSubmit} noValidate className="mt-6 space-y-6">
-          <SectionCard title="Basic Information" description="The employee's personal details.">
+        <div className="mt-6 flex gap-8">
+          <StepNav steps={STEPS} />
+          <form onSubmit={handleSubmit} noValidate className="min-w-0 flex-1 space-y-6">
+          <SectionCard id="basic-information" title="Basic Information" description="The employee's personal details.">
             <div className="space-y-4">
               <div className="space-y-1.5">
                 <Label htmlFor="title">Title</Label>
@@ -444,7 +454,7 @@ export default function InviteEmployeePage() {
             </div>
           </SectionCard>
 
-          <SectionCard title="Company Access" description="Assign the employee's role, department, grade, and projects.">
+          <SectionCard id="company-access" title="Company Access" description="Assign the employee's role, department, grade, and projects.">
             <div className="space-y-4">
               <div className="space-y-1.5">
                 <Label htmlFor="roleId">Role</Label>
@@ -518,7 +528,7 @@ export default function InviteEmployeePage() {
             </div>
           </SectionCard>
 
-          <SectionCard title="Frequent Flyer Numbers" description="Optionally add the employee's airline frequent flyer numbers.">
+          <SectionCard id="ff-numbers" title="Frequent Flyer Numbers" description="Optionally add the employee's airline frequent flyer numbers.">
             <div className="space-y-4">
               {ffRows.map((row, index) => (
                 <div key={index} className="flex items-start gap-2">
@@ -569,7 +579,7 @@ export default function InviteEmployeePage() {
             </div>
           </SectionCard>
 
-          <SectionCard title="Access & Approval" description="Choose module access and the approver chain.">
+          <SectionCard id="access-approval" title="Access & Approval" description="Choose module access and the approver chain.">
             <div className="space-y-6">
               <div className="space-y-2">
                 <Label>Module Access</Label>
@@ -630,7 +640,8 @@ export default function InviteEmployeePage() {
               Send Invite
             </Button>
           </div>
-        </form>
+          </form>
+        </div>
       )}
     </div>
   );
