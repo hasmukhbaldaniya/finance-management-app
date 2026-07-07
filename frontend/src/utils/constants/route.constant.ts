@@ -17,6 +17,7 @@ export const ROUTES = {
     ORGANIZATIONS: "/company-settings/organizations",
     ASSOCIATED_ORGANIZATIONS: "/company-settings/associated-organizations",
   },
+  EMPLOYEE_INVITE: "/company-settings/employees/invite",
   REGISTER: {
     ORGANIZATION: "/register",
     DETAILS: "/register/details",
