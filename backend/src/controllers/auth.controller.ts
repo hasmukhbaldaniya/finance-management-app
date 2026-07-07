@@ -2,8 +2,8 @@ import type { Request, Response } from "express";
 import { Op } from "sequelize";
 import { env } from "../config/env";
 import type { AuthenticatedRequest } from "../middleware/require-auth";
-import { Otp, User } from "../models";
-import { accessTokenCookieOptions, getCurrentOrganization, isOrganizationOwner, toPublicUser } from "../utils/auth";
+import { Employee, Otp } from "../models";
+import { accessTokenCookieOptions, getCurrentOrganization, isOrganizationOwner, toPublicEmployee } from "../utils/auth";
 import { signAccessToken, signResetToken, verifyResetToken } from "../utils/jwt";
 import { sendOtpEmail } from "../utils/mailer";
 import { generateOtp, hashOtp, verifyOtp as compareOtp } from "../utils/otp";
@@ -23,20 +23,23 @@ export async function login(req: Request, res: Response): Promise<void> {
     return;
   }
 
-  const user = await User.findOne({
-    where: { [Op.or]: [{ email: identifier }, { phone: normalizePhone(identifier) }] },
+  const employee = await Employee.findOne({
+    where: { [Op.or]: [{ email: identifier }, { contactNumber: normalizePhone(identifier) }] },
   });
 
-  const passwordMatches = user ? await verifyPassword(password, user.passwordHash) : false;
+  // A still-pending invitee (or a self-registered account that hasn't
+  // finished the wizard) has no passwordHash yet — fail cleanly, not by
+  // throwing on a null hash.
+  const passwordMatches = employee?.passwordHash ? await verifyPassword(password, employee.passwordHash) : false;
 
-  if (!user || !passwordMatches) {
+  if (!employee || !passwordMatches) {
     res.status(401).json({ error: INVALID_CREDENTIALS_MESSAGE });
     return;
   }
 
-  const token = signAccessToken(user.id);
+  const token = signAccessToken(employee.id);
   res.cookie(env.auth.cookieName, token, accessTokenCookieOptions());
-  res.status(200).json({ user: toPublicUser(user) });
+  res.status(200).json({ user: toPublicEmployee(employee) });
 }
 
 export function logout(_req: Request, res: Response): void {
@@ -45,14 +48,14 @@ export function logout(_req: Request, res: Response): void {
 }
 
 export async function me(req: AuthenticatedRequest, res: Response): Promise<void> {
-  const user = await User.findByPk(req.userId);
-  if (!user) {
+  const employee = await Employee.findByPk(req.userId);
+  if (!employee) {
     res.status(401).json({ error: "Not authenticated." });
     return;
   }
-  const organization = await getCurrentOrganization(user);
-  const isOwner = organization ? await isOrganizationOwner(user.id, organization.id) : false;
-  res.status(200).json({ user: toPublicUser(user), organization, isOwner });
+  const organization = await getCurrentOrganization(employee);
+  const isOwner = organization ? await isOrganizationOwner(employee.id, organization.id) : false;
+  res.status(200).json({ user: toPublicEmployee(employee), organization, isOwner });
 }
 
 export async function requestOtp(req: Request, res: Response): Promise<void> {
@@ -63,9 +66,9 @@ export async function requestOtp(req: Request, res: Response): Promise<void> {
     return;
   }
 
-  const user = await User.findOne({ where: { email } });
+  const employee = await Employee.findOne({ where: { email } });
 
-  if (!user) {
+  if (!employee) {
     res.status(404).json({ error: EMAIL_NOT_REGISTERED_MESSAGE });
     return;
   }
@@ -160,14 +163,14 @@ export async function resetPassword(req: Request, res: Response): Promise<void> 
     return;
   }
 
-  const user = await User.findOne({ where: { email: payload.email } });
-  if (!user) {
+  const employee = await Employee.findOne({ where: { email: payload.email } });
+  if (!employee) {
     res.status(401).json({ error: SESSION_EXPIRED_MESSAGE });
     return;
   }
 
-  user.passwordHash = await hashPassword(newPassword);
-  await user.save();
+  employee.passwordHash = await hashPassword(newPassword);
+  await employee.save();
 
   otpRecord.consumedAt = new Date();
   await otpRecord.save();

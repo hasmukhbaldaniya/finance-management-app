@@ -1,7 +1,7 @@
 import type { Response } from "express";
 import { Op, col, fn } from "sequelize";
 import type { AuthenticatedRequest } from "../middleware/require-auth";
-import { Department, OrganizationMember, User } from "../models";
+import { Department, Employee, EmployeeCompanyAccess } from "../models";
 import { getActiveOrganizationId } from "../utils/auth";
 
 const DEFAULT_PAGE_SIZE = 20;
@@ -16,7 +16,7 @@ function parseDepartmentName(body: unknown): string {
 }
 
 async function findDepartmentMembersCount(organizationId: number, departmentId: number): Promise<number> {
-  return OrganizationMember.count({ where: { organizationId, departmentId } });
+  return EmployeeCompanyAccess.count({ where: { organizationId, departmentId } });
 }
 
 export async function listDepartments(req: AuthenticatedRequest, res: Response): Promise<void> {
@@ -37,7 +37,7 @@ export async function listDepartments(req: AuthenticatedRequest, res: Response):
     order: sortBy === "name" ? [["name", sortDir]] : undefined,
   });
 
-  const counts = (await OrganizationMember.findAll({
+  const counts = (await EmployeeCompanyAccess.findAll({
     attributes: ["departmentId", [fn("COUNT", col("id")), "membersCount"]],
     where: { organizationId, departmentId: { [Op.not]: null } },
     group: ["departmentId"],
@@ -196,8 +196,14 @@ export async function listDepartmentMembers(req: AuthenticatedRequest, res: Resp
     return;
   }
 
-  const memberships = await OrganizationMember.findAll({ where: { organizationId, departmentId: id } });
-  const users = await User.findAll({ where: { id: memberships.map((membership) => membership.userId) } });
+  const accessRows = await EmployeeCompanyAccess.findAll({ where: { organizationId, departmentId: id } });
+  const employees = await Employee.findAll({ where: { id: accessRows.map((access) => access.employeeId) } });
 
-  res.status(200).json({ members: users.map((user) => ({ id: user.id, name: user.name, email: user.email })) });
+  res.status(200).json({
+    members: employees.map((employee) => ({
+      id: employee.id,
+      name: `${employee.firstName} ${employee.lastName}`.trim(),
+      email: employee.email,
+    })),
+  });
 }

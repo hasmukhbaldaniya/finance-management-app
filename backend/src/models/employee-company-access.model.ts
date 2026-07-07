@@ -9,8 +9,8 @@ export class EmployeeCompanyAccess extends Model<
   declare employeeId: number;
   declare organizationId: number;
   declare roleId: number;
-  declare departmentId: number;
-  declare gradeId: number;
+  declare departmentId: number | null;
+  declare gradeId: number | null;
   declare createdAt: CreationOptional<Date>;
   declare updatedAt: CreationOptional<Date>;
 }
@@ -21,8 +21,8 @@ EmployeeCompanyAccess.init(
     employeeId: { type: DataTypes.INTEGER, allowNull: false },
     organizationId: { type: DataTypes.INTEGER, allowNull: false },
     roleId: { type: DataTypes.INTEGER, allowNull: false },
-    departmentId: { type: DataTypes.INTEGER, allowNull: false },
-    gradeId: { type: DataTypes.INTEGER, allowNull: false },
+    departmentId: { type: DataTypes.INTEGER, allowNull: true },
+    gradeId: { type: DataTypes.INTEGER, allowNull: true },
     createdAt: DataTypes.DATE,
     updatedAt: DataTypes.DATE,
   },

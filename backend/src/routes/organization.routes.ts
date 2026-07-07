@@ -1,8 +1,6 @@
 import { Router } from "express";
-import { getGstAvailability, listMyOrganizations } from "../controllers/organization.controller";
-import { requireAuth } from "../middleware/require-auth";
+import { getGstAvailability } from "../controllers/organization.controller";
 
 export const organizationRouter = Router();
 
 organizationRouter.get("/gst-availability", getGstAvailability);
-organizationRouter.get("/mine", requireAuth, listMyOrganizations);

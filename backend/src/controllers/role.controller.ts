@@ -1,7 +1,7 @@
 import type { Response } from "express";
 import { Op, col, fn } from "sequelize";
 import type { AuthenticatedRequest } from "../middleware/require-auth";
-import { OrganizationMember, Role, User } from "../models";
+import { Employee, EmployeeCompanyAccess, Role } from "../models";
 import { getActiveOrganizationId } from "../utils/auth";
 import { isValidPrivilegeKey, type PrivilegeKey } from "../utils/constants/role.constant";
 
@@ -27,7 +27,7 @@ function parsePrivileges(body: unknown): PrivilegeKey[] | null {
 }
 
 async function findRoleMembersCount(organizationId: number, roleId: number): Promise<number> {
-  return OrganizationMember.count({ where: { organizationId, roleId } });
+  return EmployeeCompanyAccess.count({ where: { organizationId, roleId } });
 }
 
 export async function listRoles(req: AuthenticatedRequest, res: Response): Promise<void> {
@@ -49,9 +49,9 @@ export async function listRoles(req: AuthenticatedRequest, res: Response): Promi
     where: search ? { organizationId, name: { [Op.iLike]: `%${search}%` } } : { organizationId },
   });
 
-  const counts = (await OrganizationMember.findAll({
+  const counts = (await EmployeeCompanyAccess.findAll({
     attributes: ["roleId", [fn("COUNT", col("id")), "membersCount"]],
-    where: { organizationId, roleId: { [Op.not]: null } },
+    where: { organizationId },
     group: ["roleId"],
     raw: true,
   })) as unknown as { roleId: number; membersCount: string }[];
@@ -258,8 +258,14 @@ export async function listRoleMembers(req: AuthenticatedRequest, res: Response):
     return;
   }
 
-  const memberships = await OrganizationMember.findAll({ where: { organizationId, roleId: id } });
-  const users = await User.findAll({ where: { id: memberships.map((membership) => membership.userId) } });
+  const accessRows = await EmployeeCompanyAccess.findAll({ where: { organizationId, roleId: id } });
+  const employees = await Employee.findAll({ where: { id: accessRows.map((access) => access.employeeId) } });
 
-  res.status(200).json({ members: users.map((user) => ({ id: user.id, name: user.name, email: user.email })) });
+  res.status(200).json({
+    members: employees.map((employee) => ({
+      id: employee.id,
+      name: `${employee.firstName} ${employee.lastName}`.trim(),
+      email: employee.email,
+    })),
+  });
 }

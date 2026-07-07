@@ -1,8 +1,8 @@
 import type { Request, Response } from "express";
 import { Op } from "sequelize";
 import { env } from "../config/env";
-import { Organization, OrganizationMember, Otp, Role, User } from "../models";
-import { accessTokenCookieOptions, getCurrentOrganization, toPublicUser } from "../utils/auth";
+import { Employee, EmployeeCompanyAccess, Organization, Otp, Role } from "../models";
+import { accessTokenCookieOptions, getCurrentOrganization, toPublicEmployee } from "../utils/auth";
 import { COMPANY_ADMIN_ROLE_NAME, MEMBERS_ROLE_NAME, MEMBERS_ROLE_PRIVILEGES, PRIVILEGE_KEYS } from "../utils/constants/role.constant";
 import {
   signAccessToken,
@@ -20,11 +20,12 @@ import { isEmail, isPhone, isValidGstNumber, isValidName, isValidOtp, isStrongPa
 const SESSION_EXPIRED_MESSAGE = "Your session has expired. Please start over.";
 const INVALID_OTP_MESSAGE = "Invalid OTP. Please try again.";
 const EXPIRED_OTP_MESSAGE = "This OTP has expired. Please request a new one.";
+const DEFAULT_COUNTRY_CODE = "+91";
 
 async function requireRegistrationUser(
   req: Request,
   res: Response
-): Promise<{ payload: RegistrationTokenPayload; user: User } | null> {
+): Promise<{ payload: RegistrationTokenPayload; employee: Employee } | null> {
   const registrationToken = typeof req.body?.registrationToken === "string" ? req.body.registrationToken : "";
 
   const payload = registrationToken ? verifyRegistrationToken(registrationToken) : null;
@@ -33,13 +34,18 @@ async function requireRegistrationUser(
     return null;
   }
 
-  const user = await User.findByPk(payload.userId);
-  if (!user || user.email !== payload.email || !user.emailVerifiedAt || user.registrationCompletedAt) {
+  const employee = await Employee.findByPk(payload.userId);
+  if (
+    !employee ||
+    employee.email !== payload.email ||
+    !employee.emailVerifiedAt ||
+    employee.invitationStatus === "registered"
+  ) {
     res.status(401).json({ error: SESSION_EXPIRED_MESSAGE });
     return null;
   }
 
-  return { payload, user };
+  return { payload, employee };
 }
 
 export async function createRegistration(req: Request, res: Response): Promise<void> {
@@ -73,7 +79,7 @@ export async function createRegistration(req: Request, res: Response): Promise<v
 
   const [gstTaken, emailTaken] = await Promise.all([
     Organization.findOne({ where: { gstNumber } }),
-    User.findOne({ where: { email } }),
+    Employee.findOne({ where: { email } }),
   ]);
 
   if (gstTaken) {
@@ -87,16 +93,23 @@ export async function createRegistration(req: Request, res: Response): Promise<v
 
   const passwordHash = await hashPassword(password);
   const organization = await Organization.create({ name: organizationName, gstNumber });
-  const user = await User.create({
+  const employee = await Employee.create({
+    organizationId: organization.id,
     firstName,
     lastName,
-    name: `${firstName} ${lastName}`,
     email,
     passwordHash,
-    phone: null,
+    isOwner: true,
+    title: null,
+    countryCode: null,
+    contactNumber: null,
+    dob: null,
+    gender: null,
+    employeeCode: null,
     emailVerifiedAt: null,
     mobileVerifiedAt: null,
-    activeOrganizationId: organization.id,
+    createdBy: null,
+    updatedBy: null,
   });
   const companyAdminRole = await Role.create({
     organizationId: organization.id,
@@ -110,11 +123,12 @@ export async function createRegistration(req: Request, res: Response): Promise<v
     isDefault: true,
     privileges: MEMBERS_ROLE_PRIVILEGES,
   });
-  await OrganizationMember.create({
+  await EmployeeCompanyAccess.create({
+    employeeId: employee.id,
     organizationId: organization.id,
-    userId: user.id,
-    role: "owner",
     roleId: companyAdminRole.id,
+    departmentId: null,
+    gradeId: null,
   });
 
   const otp = generateOtp();
@@ -134,12 +148,12 @@ export async function resendRegistrationEmailOtp(req: Request, res: Response): P
     return;
   }
 
-  const user = await User.findOne({ where: { email } });
-  if (!user) {
+  const employee = await Employee.findOne({ where: { email } });
+  if (!employee) {
     res.status(404).json({ error: "This email is not registered." });
     return;
   }
-  if (user.emailVerifiedAt) {
+  if (employee.emailVerifiedAt) {
     res.status(400).json({ error: "This email is already verified." });
     return;
   }
@@ -197,8 +211,8 @@ export async function verifyRegistrationEmailOtp(req: Request, res: Response): P
     return;
   }
 
-  const user = await User.findOne({ where: { email } });
-  if (!user) {
+  const employee = await Employee.findOne({ where: { email } });
+  if (!employee) {
     res.status(401).json({ error: SESSION_EXPIRED_MESSAGE });
     return;
   }
@@ -207,17 +221,17 @@ export async function verifyRegistrationEmailOtp(req: Request, res: Response): P
   otpRecord.consumedAt = new Date();
   await otpRecord.save();
 
-  user.emailVerifiedAt = new Date();
-  await user.save();
+  employee.emailVerifiedAt = new Date();
+  await employee.save();
 
-  const registrationToken = signRegistrationToken(user.id, email);
+  const registrationToken = signRegistrationToken(employee.id, email);
   res.status(200).json({ registrationToken });
 }
 
 export async function setRegistrationMobile(req: Request, res: Response): Promise<void> {
   const context = await requireRegistrationUser(req, res);
   if (!context) return;
-  const { user } = context;
+  const { employee } = context;
 
   const mobileNumber = typeof req.body?.mobileNumber === "string" ? req.body.mobileNumber.trim() : "";
   if (!isPhone(mobileNumber)) {
@@ -226,14 +240,17 @@ export async function setRegistrationMobile(req: Request, res: Response): Promis
   }
 
   const normalized = normalizePhone(mobileNumber);
-  const existing = await User.findOne({ where: { phone: normalized, id: { [Op.ne]: user.id } } });
+  const existing = await Employee.findOne({
+    where: { countryCode: DEFAULT_COUNTRY_CODE, contactNumber: normalized, id: { [Op.ne]: employee.id } },
+  });
   if (existing) {
     res.status(409).json({ error: "This mobile number is already in use." });
     return;
   }
 
-  user.phone = normalized;
-  await user.save();
+  employee.countryCode = DEFAULT_COUNTRY_CODE;
+  employee.contactNumber = normalized;
+  await employee.save();
 
   res.status(200).json({ message: "Mobile number saved." });
 }
@@ -241,9 +258,9 @@ export async function setRegistrationMobile(req: Request, res: Response): Promis
 export async function sendRegistrationMobileOtp(req: Request, res: Response): Promise<void> {
   const context = await requireRegistrationUser(req, res);
   if (!context) return;
-  const { user } = context;
+  const { employee } = context;
 
-  if (!user.phone) {
+  if (!employee.contactNumber) {
     res.status(400).json({ error: "Enter your mobile number first." });
     return;
   }
@@ -252,7 +269,7 @@ export async function sendRegistrationMobileOtp(req: Request, res: Response): Pr
   const recentOtp = await Otp.findOne({
     where: {
       purpose: "mobile_verification",
-      identifier: user.phone,
+      identifier: employee.contactNumber,
       consumedAt: null,
       createdAt: { [Op.gt]: cooldownStart },
     },
@@ -262,14 +279,14 @@ export async function sendRegistrationMobileOtp(req: Request, res: Response): Pr
   if (!recentOtp) {
     await Otp.update(
       { consumedAt: new Date() },
-      { where: { purpose: "mobile_verification", identifier: user.phone, consumedAt: null } }
+      { where: { purpose: "mobile_verification", identifier: employee.contactNumber, consumedAt: null } }
     );
 
     const otp = generateOtp();
     const otpHash = await hashOtp(otp);
     const expiresAt = new Date(Date.now() + env.auth.otpExpiryMinutes * 60 * 1000);
-    await Otp.create({ purpose: "mobile_verification", identifier: user.phone, otpHash, expiresAt });
-    await sendOtpSms(user.phone, otp);
+    await Otp.create({ purpose: "mobile_verification", identifier: employee.contactNumber, otpHash, expiresAt });
+    await sendOtpSms(employee.contactNumber, otp);
   }
 
   res.status(200).json({ message: "OTP sent to your mobile number." });
@@ -278,16 +295,16 @@ export async function sendRegistrationMobileOtp(req: Request, res: Response): Pr
 export async function verifyRegistrationMobileOtp(req: Request, res: Response): Promise<void> {
   const context = await requireRegistrationUser(req, res);
   if (!context) return;
-  const { user } = context;
+  const { employee } = context;
 
   const otp = typeof req.body?.otp === "string" ? req.body.otp.trim() : "";
-  if (!user.phone || !isValidOtp(otp)) {
+  if (!employee.contactNumber || !isValidOtp(otp)) {
     res.status(400).json({ error: INVALID_OTP_MESSAGE });
     return;
   }
 
   const otpRecord = await Otp.findOne({
-    where: { purpose: "mobile_verification", identifier: user.phone, consumedAt: null },
+    where: { purpose: "mobile_verification", identifier: employee.contactNumber, consumedAt: null },
     order: [["createdAt", "DESC"]],
   });
 
@@ -312,8 +329,8 @@ export async function verifyRegistrationMobileOtp(req: Request, res: Response): 
   otpRecord.consumedAt = new Date();
   await otpRecord.save();
 
-  user.mobileVerifiedAt = new Date();
-  await user.save();
+  employee.mobileVerifiedAt = new Date();
+  await employee.save();
 
   res.status(200).json({ message: "Mobile number verified." });
 }
@@ -321,23 +338,23 @@ export async function verifyRegistrationMobileOtp(req: Request, res: Response): 
 export async function completeRegistration(req: Request, res: Response): Promise<void> {
   const context = await requireRegistrationUser(req, res);
   if (!context) return;
-  const { user } = context;
+  const { employee } = context;
 
-  const organization = await getCurrentOrganization(user);
+  const organization = await getCurrentOrganization(employee);
   if (!organization) {
     res.status(401).json({ error: SESSION_EXPIRED_MESSAGE });
     return;
   }
 
-  user.registrationCompletedAt = new Date();
-  await user.save();
+  employee.invitationStatus = "registered";
+  await employee.save();
 
-  const accessToken = signAccessToken(user.id);
-  const refreshToken = signRefreshToken(user.id);
+  const accessToken = signAccessToken(employee.id);
+  const refreshToken = signRefreshToken(employee.id);
   res.cookie(env.auth.cookieName, accessToken, accessTokenCookieOptions());
 
   res.status(200).json({
-    user: toPublicUser(user),
+    user: toPublicEmployee(employee),
     organization,
     accessToken,
     refreshToken,
