@@ -31,6 +31,7 @@ export const env = {
     resetTokenExpiresIn: requireEnv("RESET_TOKEN_EXPIRES_IN", "10m"),
     registrationTokenExpiresIn: requireEnv("REGISTRATION_TOKEN_EXPIRES_IN", "15m"),
     refreshTokenExpiresIn: requireEnv("REFRESH_TOKEN_EXPIRES_IN", "30d"),
+    onboardingTokenExpiresIn: requireEnv("ONBOARDING_TOKEN_EXPIRES_IN", "10m"),
   },
   smtp: {
     host: requireEnv("SMTP_HOST", "smtp.gmail.com"),

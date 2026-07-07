@@ -22,6 +22,7 @@ export type EmployeeListItem = {
   email: string;
   role: string | null;
   department: string | null;
+  grade: string | null;
   countryCode: string | null;
   contactNumber: string | null;
   invitationStatus: EmployeeInvitationStatus;
@@ -30,7 +31,15 @@ export type EmployeeListItem = {
 
 export type EmployeeStatusFilterValue = "active" | "suspended" | "pending";
 
-export type EmployeeSortBy = "firstName" | "email" | "role" | "department" | "contactNumber" | "invitationStatus" | "status";
+export type EmployeeSortBy =
+  | "firstName"
+  | "email"
+  | "role"
+  | "department"
+  | "grade"
+  | "contactNumber"
+  | "invitationStatus"
+  | "status";
 export type { SortDirection } from "./pagination.type";
 
 export type EmployeeBasicInfo = {

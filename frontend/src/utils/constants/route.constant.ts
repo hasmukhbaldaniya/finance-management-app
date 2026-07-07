@@ -25,6 +25,12 @@ export const ROUTES = {
     MOBILE: "/register/mobile",
     VERIFY_MOBILE: "/register/verify-mobile",
   },
+  ONBOARDING: {
+    VERIFY: "/onboarding",
+    PROFILE: "/onboarding/profile",
+    MOBILE: "/onboarding/mobile",
+    VERIFY_MOBILE: "/onboarding/verify-mobile",
+  },
   FORGOT_PASSWORD: {
     REQUEST: "/forgot-password",
     VERIFY: "/forgot-password/verify",
