@@ -17,6 +17,7 @@ export const ROUTES = {
     ASSOCIATED_ORGANIZATIONS: "/company-settings/associated-organizations",
   },
   EMPLOYEE_INVITE: "/company-settings/employees/invite",
+  EMPLOYEE_BULK_INVITE: "/company-settings/employees/bulk-invite",
   employeeEdit: (employeeId: number) => `/company-settings/employees/${employeeId}/edit`,
   REGISTER: {
     ORGANIZATION: "/register",
