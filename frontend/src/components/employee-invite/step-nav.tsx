@@ -43,7 +43,7 @@ export function StepNav({ steps }: StepNavProps) {
   }
 
   return (
-    <nav aria-label="Form sections" className="sticky top-24 hidden w-56 shrink-0 md:block">
+    <nav aria-label="Form sections" className="sticky top-4 hidden w-56 shrink-0 self-start md:block">
       <ol className="space-y-1">
         {steps.map((step, index) => {
           const isActive = step.id === activeId;

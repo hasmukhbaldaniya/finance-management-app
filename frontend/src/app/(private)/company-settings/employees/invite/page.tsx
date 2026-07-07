@@ -631,11 +631,11 @@ export default function InviteEmployeePage() {
             </div>
           </SectionCard>
 
-          <div className="flex gap-2">
-            <Link href={ROUTES.COMPANY_SETTINGS.EMPLOYEES} className={cn(buttonVariants({ variant: "outline" }), "w-full")}>
+          <div className="flex justify-end gap-2">
+            <Link href={ROUTES.COMPANY_SETTINGS.EMPLOYEES} className={cn(buttonVariants({ variant: "outline", size: "sm" }))}>
               Cancel
             </Link>
-            <Button type="submit" className="w-full" disabled={isSubmitting}>
+            <Button type="submit" size="sm" disabled={isSubmitting}>
               {isSubmitting ? <Spinner /> : null}
               Send Invite
             </Button>
