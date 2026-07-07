@@ -19,3 +19,5 @@ export { Airline } from "./airline.model";
 export { EmployeeFfNumber } from "./employee-ff-number.model";
 export { ApprovalLevel } from "./approval-level.model";
 export { EmployeeInvite } from "./employee-invite.model";
+export { BulkUpload, type BulkUploadStatus } from "./bulk-upload.model";
+export { BulkUploadError } from "./bulk-upload-error.model";

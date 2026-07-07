@@ -9,3 +9,7 @@ export { resendEmployeeInvite } from "./resend.api";
 export { updateEmployeeStatus } from "./updateStatus.api";
 export { updateEmployeeBasicInfo, type UpdateBasicInfoPayload } from "./updateBasicInfo.api";
 export { getEmployeeDetail, type EmployeeDetail } from "./getDetail.api";
+export { downloadBulkTemplate } from "./downloadBulkTemplate.api";
+export { uploadBulkImport } from "./uploadBulkImport.api";
+export { confirmBulkImport } from "./confirmBulkImport.api";
+export { downloadBulkImportErrors } from "./downloadBulkImportErrors.api";

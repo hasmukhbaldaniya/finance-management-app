@@ -27,5 +27,5 @@ Product requirements for Finance Management, written as user stories before any 
 | 007 | [Associated Organizations (Network)](./007-associated-organizations-network.md) | Draft |
 | 008 | [Employee Invitation](./008-employee-invitation.md) | Draft |
 | 009 | [Employee Listing](./009-employee-listing.md) | Draft |
-| 010 | [Bulk Invite Employees](./010-bulk-invite-employees.md) | Draft |
+| 010 | [Bulk Invite Employees](./010-bulk-invite-employees.md) | Implemented |
 | 011 | [Employee Onboarding](./011-employee-onboarding.md) | Draft |
