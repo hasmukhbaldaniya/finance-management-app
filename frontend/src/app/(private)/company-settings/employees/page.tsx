@@ -36,6 +36,7 @@ const SORTABLE_COLUMNS: { key: EmployeeSortBy; label: string }[] = [
   { key: "email", label: "Email" },
   { key: "role", label: "Role" },
   { key: "department", label: "Department" },
+  { key: "grade", label: "Grade" },
   { key: "contactNumber", label: "Contact Number" },
   { key: "invitationStatus", label: "Invitation Status" },
   { key: "status", label: "Employee Status" },
@@ -213,12 +214,13 @@ export default function EmployeeListingPage() {
         pageSize: EXPORT_PAGE_SIZE,
       });
 
-      const header = ["Employee Name", "Email", "Role", "Department", "Contact Number", "Invitation Status", "Employee Status"];
+      const header = ["Employee Name", "Email", "Role", "Department", "Grade", "Contact Number", "Invitation Status", "Employee Status"];
       const rows = allMatching.map((employee) => [
         `${employee.firstName} ${employee.lastName}`.trim(),
         employee.email,
         employee.role ?? "",
         employee.department ?? "",
+        employee.grade ?? "",
         formatContactNumber(employee),
         employee.invitationStatus === "pending" ? "Pending" : "Registered",
         employee.status === "active" ? "Active" : "Suspended",
@@ -323,6 +325,7 @@ export default function EmployeeListingPage() {
                     </TableHead>
                     <TableHead />
                     <TableHead />
+                    <TableHead />
                     <TableHead>
                       <div className="relative">
                         <MagnifyingGlassIcon className="absolute left-2 top-1/2 size-3.5 -translate-y-1/2 text-muted-foreground" />
@@ -372,6 +375,7 @@ export default function EmployeeListingPage() {
                       <TableCell>{employee.email}</TableCell>
                       <TableCell>{employee.role ?? "—"}</TableCell>
                       <TableCell>{employee.department ?? "—"}</TableCell>
+                      <TableCell>{employee.grade ?? "—"}</TableCell>
                       <TableCell>{formatContactNumber(employee)}</TableCell>
                       <TableCell>
                         <span
