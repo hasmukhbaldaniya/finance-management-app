@@ -34,7 +34,7 @@ const ALREADY_REGISTERED_MESSAGE = "This employee has already accepted their inv
 const INVITE_LIMIT_MESSAGE = "This employee has reached today's invitation limit (5). Please try again tomorrow.";
 const DEFAULT_PAGE_SIZE = 20;
 const MAX_PAGE_SIZE = 100;
-const SORTABLE_FIELDS = ["firstName", "email", "role", "department", "contactNumber", "invitationStatus", "status"] as const;
+const SORTABLE_FIELDS = ["firstName", "email", "role", "department", "grade", "contactNumber", "invitationStatus", "status"] as const;
 type EmployeeSortBy = (typeof SORTABLE_FIELDS)[number];
 const SELF_SUSPEND_MESSAGE = "You cannot suspend your own account.";
 const LAST_COMPANY_ADMIN_MESSAGE = "This organization must have at least one active Company Admin.";
@@ -105,12 +105,15 @@ export async function listEmployees(req: AuthenticatedRequest, res: Response): P
 
   const roleIds = accessRows.map((access) => access.roleId);
   const departmentIds = accessRows.map((access) => access.departmentId).filter((id): id is number => id !== null);
-  const [roles, departments] = await Promise.all([
+  const gradeIds = accessRows.map((access) => access.gradeId).filter((id): id is number => id !== null);
+  const [roles, departments, grades] = await Promise.all([
     roleIds.length > 0 ? Role.findAll({ where: { id: roleIds } }) : Promise.resolve([]),
     departmentIds.length > 0 ? Department.findAll({ where: { id: departmentIds } }) : Promise.resolve([]),
+    gradeIds.length > 0 ? Grade.findAll({ where: { id: gradeIds } }) : Promise.resolve([]),
   ]);
   const roleNameById = new Map(roles.map((role) => [role.id, role.name]));
   const departmentNameById = new Map(departments.map((department) => [department.id, department.name]));
+  const gradeNameById = new Map(grades.map((grade) => [grade.id, grade.name]));
 
   let items = employees.map((employee) => {
     const access = accessByEmployeeId.get(employee.id);
@@ -121,6 +124,7 @@ export async function listEmployees(req: AuthenticatedRequest, res: Response): P
       email: employee.email,
       role: access ? roleNameById.get(access.roleId) ?? null : null,
       department: access?.departmentId ? departmentNameById.get(access.departmentId) ?? null : null,
+      grade: access?.gradeId ? gradeNameById.get(access.gradeId) ?? null : null,
       countryCode: employee.countryCode,
       contactNumber: employee.contactNumber,
       invitationStatus: employee.invitationStatus,
@@ -132,7 +136,7 @@ export async function listEmployees(req: AuthenticatedRequest, res: Response): P
     let comparison: number;
     if (sortBy === "firstName") {
       comparison = `${a.firstName} ${a.lastName}`.localeCompare(`${b.firstName} ${b.lastName}`);
-    } else if (sortBy === "role" || sortBy === "department") {
+    } else if (sortBy === "role" || sortBy === "department" || sortBy === "grade") {
       comparison = (a[sortBy] ?? "").localeCompare(b[sortBy] ?? "");
     } else if (sortBy === "contactNumber") {
       comparison = (a.contactNumber ?? "").localeCompare(b.contactNumber ?? "");
