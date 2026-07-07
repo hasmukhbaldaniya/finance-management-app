@@ -609,7 +609,7 @@ export default function InviteEmployeePage() {
                           .filter((employee) => employee.id !== employeeId)
                           .map((employee) => (
                             <option key={employee.id} value={employee.id}>
-                              {employee.firstName} {employee.lastName}
+                              {employee.firstName} {employee.lastName} ({employee.email})
                             </option>
                           ))}
                       </NativeSelect>
