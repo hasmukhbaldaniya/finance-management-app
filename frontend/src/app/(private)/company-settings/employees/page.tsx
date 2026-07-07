@@ -281,8 +281,6 @@ export default function EmployeeListingPage() {
           <Spinner />
           Loading…
         </div>
-      ) : employees.length === 0 ? (
-        <p className="mt-6 text-sm text-muted-foreground">No Employees Found</p>
       ) : (
         <div className="mt-6 flex min-h-0 flex-1 flex-col overflow-hidden rounded-lg border border-border">
           <div className="min-h-0 flex-1 overflow-y-auto">
@@ -356,77 +354,85 @@ export default function EmployeeListingPage() {
                 ) : null}
               </TableHeader>
               <TableBody>
-                {employees.map((employee) => (
-                  <TableRow key={employee.id}>
-                    <TableCell>
-                      <div className="flex items-center gap-2">
-                        <EmployeeAvatar name={employee.firstName} />
-                        {`${employee.firstName} ${employee.lastName}`.trim()}
-                      </div>
-                    </TableCell>
-                    <TableCell>{employee.email}</TableCell>
-                    <TableCell>{employee.role ?? "—"}</TableCell>
-                    <TableCell>{employee.department ?? "—"}</TableCell>
-                    <TableCell>{formatContactNumber(employee)}</TableCell>
-                    <TableCell>
-                      <span
-                        className={cn(
-                          "rounded-full px-2.5 py-0.5 text-xs font-medium",
-                          employee.invitationStatus === "pending"
-                            ? "bg-amber-100 text-amber-700 dark:bg-amber-900/40 dark:text-amber-400"
-                            : "bg-green-100 text-green-700 dark:bg-green-900/40 dark:text-green-400"
-                        )}
-                      >
-                        {employee.invitationStatus === "pending" ? "Pending" : "Registered"}
-                      </span>
-                    </TableCell>
-                    <TableCell>
-                      <span
-                        className={cn(
-                          "rounded-full px-2.5 py-0.5 text-xs font-medium",
-                          employee.status === "active"
-                            ? "bg-green-100 text-green-700 dark:bg-green-900/40 dark:text-green-400"
-                            : "bg-muted text-muted-foreground"
-                        )}
-                      >
-                        {employee.status === "active" ? "Active" : "Suspended"}
-                      </span>
-                    </TableCell>
-                    <TableCell>
-                      <div className="flex items-center gap-3">
-                        {employee.invitationStatus === "pending" ? (
-                          <Button
-                            type="button"
-                            variant="ghost"
-                            size="sm"
-                            disabled={resendingId === employee.id}
-                            onClick={() => handleResend(employee)}
-                          >
-                            {resendingId === employee.id ? <Spinner /> : null}
-                            Resend Invite
-                          </Button>
-                        ) : null}
-                        <Link
-                          href={ROUTES.employeeEdit(employee.id)}
-                          aria-label={`Edit ${employee.firstName} ${employee.lastName}`.trim()}
-                          className="text-muted-foreground hover:text-foreground"
-                        >
-                          <PencilSimpleIcon className="size-4" />
-                        </Link>
-                        {/* Suspend requires confirmation; Activate applies immediately —
-                            an intentional asymmetry per 009's Flow, not the same
-                            always-confirm pattern Grade/Department/Role use. */}
-                        <Switch
-                          checked={employee.status === "active"}
-                          onCheckedChange={(checked) =>
-                            checked ? handleActivate(employee) : setSuspendDialogEmployee(employee)
-                          }
-                          aria-label={employee.status === "active" ? "Suspend" : "Activate"}
-                        />
-                      </div>
+                {employees.length === 0 ? (
+                  <TableRow>
+                    <TableCell colSpan={SORTABLE_COLUMNS.length + 1} className="py-6 text-center text-sm text-muted-foreground">
+                      No Employees Found
                     </TableCell>
                   </TableRow>
-                ))}
+                ) : (
+                  employees.map((employee) => (
+                    <TableRow key={employee.id}>
+                      <TableCell>
+                        <div className="flex items-center gap-2">
+                          <EmployeeAvatar name={employee.firstName} />
+                          {`${employee.firstName} ${employee.lastName}`.trim()}
+                        </div>
+                      </TableCell>
+                      <TableCell>{employee.email}</TableCell>
+                      <TableCell>{employee.role ?? "—"}</TableCell>
+                      <TableCell>{employee.department ?? "—"}</TableCell>
+                      <TableCell>{formatContactNumber(employee)}</TableCell>
+                      <TableCell>
+                        <span
+                          className={cn(
+                            "rounded-full px-2.5 py-0.5 text-xs font-medium",
+                            employee.invitationStatus === "pending"
+                              ? "bg-amber-100 text-amber-700 dark:bg-amber-900/40 dark:text-amber-400"
+                              : "bg-green-100 text-green-700 dark:bg-green-900/40 dark:text-green-400"
+                          )}
+                        >
+                          {employee.invitationStatus === "pending" ? "Pending" : "Registered"}
+                        </span>
+                      </TableCell>
+                      <TableCell>
+                        <span
+                          className={cn(
+                            "rounded-full px-2.5 py-0.5 text-xs font-medium",
+                            employee.status === "active"
+                              ? "bg-green-100 text-green-700 dark:bg-green-900/40 dark:text-green-400"
+                              : "bg-muted text-muted-foreground"
+                          )}
+                        >
+                          {employee.status === "active" ? "Active" : "Suspended"}
+                        </span>
+                      </TableCell>
+                      <TableCell>
+                        <div className="flex items-center gap-3">
+                          {employee.invitationStatus === "pending" ? (
+                            <Button
+                              type="button"
+                              variant="ghost"
+                              size="sm"
+                              disabled={resendingId === employee.id}
+                              onClick={() => handleResend(employee)}
+                            >
+                              {resendingId === employee.id ? <Spinner /> : null}
+                              Resend Invite
+                            </Button>
+                          ) : null}
+                          <Link
+                            href={ROUTES.employeeEdit(employee.id)}
+                            aria-label={`Edit ${employee.firstName} ${employee.lastName}`.trim()}
+                            className="text-muted-foreground hover:text-foreground"
+                          >
+                            <PencilSimpleIcon className="size-4" />
+                          </Link>
+                          {/* Suspend requires confirmation; Activate applies immediately —
+                              an intentional asymmetry per 009's Flow, not the same
+                              always-confirm pattern Grade/Department/Role use. */}
+                          <Switch
+                            checked={employee.status === "active"}
+                            onCheckedChange={(checked) =>
+                              checked ? handleActivate(employee) : setSuspendDialogEmployee(employee)
+                            }
+                            aria-label={employee.status === "active" ? "Suspend" : "Activate"}
+                          />
+                        </div>
+                      </TableCell>
+                    </TableRow>
+                  ))
+                )}
               </TableBody>
             </Table>
 
