@@ -267,6 +267,9 @@ export default function EmployeeListingPage() {
             {isExporting ? <Spinner /> : <DownloadSimpleIcon data-icon="inline-start" />}
             Export
           </Button>
+          <Link href={ROUTES.EMPLOYEE_BULK_INVITE} className={cn(buttonVariants({ variant: "outline" }))}>
+            Bulk Invite
+          </Link>
           <Link href={ROUTES.EMPLOYEE_INVITE} className={cn(buttonVariants())}>
             Invite
           </Link>

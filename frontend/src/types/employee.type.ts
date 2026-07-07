@@ -54,3 +54,26 @@ export type EmployeeBasicInfo = {
   gender: EmployeeGender | null;
   employeeCode: string | null;
 };
+
+export type BulkUploadErrorRow = {
+  row: number;
+  employeeName: string;
+  employeeEmail: string;
+  message: string;
+};
+
+export type BulkUploadSummary = {
+  uploadId: number;
+  total: number;
+  created: number;
+  updated: number;
+  failed: number;
+  errors: BulkUploadErrorRow[];
+};
+
+export type BulkImportResult = {
+  total: number;
+  created: number;
+  updated: number;
+  failed: number;
+};

@@ -52,3 +52,54 @@ export function postJson<T>(path: string, body: Record<string, unknown> = {}): P
     body: JSON.stringify(body),
   });
 }
+
+// Multipart upload — no Content-Type header is set so the browser can attach
+// its own multipart boundary; everything else (credentials, error shape)
+// matches apiCall exactly.
+export async function uploadFile<T>(path: string, formData: FormData): Promise<T> {
+  let response: Response;
+
+  try {
+    response = await fetch(`${API_BASE_URL}${path}`, {
+      method: "POST",
+      credentials: "include",
+      body: formData,
+    });
+  } catch {
+    throw new ApiError(GENERIC_ERROR_MESSAGE, 0);
+  }
+
+  const body: unknown = await response.json().catch(() => null);
+
+  if (!response.ok) {
+    const message = isErrorBody(body) ? body.error : GENERIC_ERROR_MESSAGE;
+    throw new ApiError(message, response.status);
+  }
+
+  if (body === null) {
+    throw new ApiError(GENERIC_ERROR_MESSAGE, response.status);
+  }
+
+  return body as T;
+}
+
+// For endpoints that return a binary file (the bulk-invite template/error
+// report) rather than JSON — success responses are read as a Blob; failure
+// responses still follow the usual { error } JSON shape.
+export async function downloadFile(path: string): Promise<Blob> {
+  let response: Response;
+
+  try {
+    response = await fetch(`${API_BASE_URL}${path}`, { credentials: "include" });
+  } catch {
+    throw new ApiError(GENERIC_ERROR_MESSAGE, 0);
+  }
+
+  if (!response.ok) {
+    const body: unknown = await response.json().catch(() => null);
+    const message = isErrorBody(body) ? body.error : GENERIC_ERROR_MESSAGE;
+    throw new ApiError(message, response.status);
+  }
+
+  return response.blob();
+}
