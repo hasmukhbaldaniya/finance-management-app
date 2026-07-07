@@ -52,7 +52,15 @@ export async function listEmployees(req: AuthenticatedRequest, res: Response): P
     return;
   }
 
-  const search = typeof req.query.search === "string" ? req.query.search.trim().slice(0, 100) : "";
+  // Per-column filters, matching 007's Associated Organizations pattern (see
+  // backend/CLAUDE.md) rather than 009's original single combined `search`
+  // param — the frontend redesigned this listing's filter row to match that
+  // page's funnel-toggle/per-column-inputs UI, at explicit request. Employee
+  // ID has no dedicated visible column, so it's folded into the Name filter
+  // (OR'd against employeeCode) rather than dropped entirely.
+  const nameFilter = typeof req.query.name === "string" ? req.query.name.trim().slice(0, 100) : "";
+  const emailFilter = typeof req.query.email === "string" ? req.query.email.trim().slice(0, 100) : "";
+  const contactNumberFilter = typeof req.query.contactNumber === "string" ? req.query.contactNumber.trim().slice(0, 100) : "";
   const statusFilter = typeof req.query.status === "string" && req.query.status
     ? req.query.status.split(",").filter((value) => value === "active" || value === "suspended" || value === "pending")
     : [];
@@ -64,16 +72,20 @@ export async function listEmployees(req: AuthenticatedRequest, res: Response): P
   const pageSize = Math.min(MAX_PAGE_SIZE, Math.max(1, Math.trunc(Number(req.query.pageSize)) || DEFAULT_PAGE_SIZE));
 
   const conditions: WhereOptions<Employee>[] = [{ organizationId }, { id: { [Op.ne]: req.userId } }];
-  if (search) {
+  if (nameFilter) {
     conditions.push({
       [Op.or]: [
-        { firstName: { [Op.iLike]: `%${search}%` } },
-        { lastName: { [Op.iLike]: `%${search}%` } },
-        { email: { [Op.iLike]: `%${search}%` } },
-        { employeeCode: { [Op.iLike]: `%${search}%` } },
-        { contactNumber: { [Op.iLike]: `%${search}%` } },
+        { firstName: { [Op.iLike]: `%${nameFilter}%` } },
+        { lastName: { [Op.iLike]: `%${nameFilter}%` } },
+        { employeeCode: { [Op.iLike]: `%${nameFilter}%` } },
       ],
     });
+  }
+  if (emailFilter) {
+    conditions.push({ email: { [Op.iLike]: `%${emailFilter}%` } });
+  }
+  if (contactNumberFilter) {
+    conditions.push({ contactNumber: { [Op.iLike]: `%${contactNumberFilter}%` } });
   }
   if (statusFilter.length > 0) {
     conditions.push({

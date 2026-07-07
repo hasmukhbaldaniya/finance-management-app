@@ -1,16 +1,10 @@
 "use client";
 
 import Link from "next/link";
-import { CaretDownIcon, CaretUpIcon, DownloadSimpleIcon, FunnelIcon, PencilSimpleIcon } from "@phosphor-icons/react";
+import { CaretDownIcon, CaretUpIcon, DownloadSimpleIcon, FunnelIcon, MagnifyingGlassIcon, PencilSimpleIcon, XIcon } from "@phosphor-icons/react";
 import { useEffect, useState } from "react";
 import { toast } from "sonner";
 import { Button, buttonVariants } from "@/components/ui/button";
-import {
-  DropdownMenu,
-  DropdownMenuCheckboxItem,
-  DropdownMenuContent,
-  DropdownMenuTrigger,
-} from "@/components/ui/dropdown-menu";
 import { Input } from "@/components/ui/input";
 import { Spinner } from "@/components/ui/spinner";
 import { Switch } from "@/components/ui/switch";
@@ -27,12 +21,16 @@ const PAGE_SIZE = 20;
 const EXPORT_PAGE_SIZE = 1000;
 const SEARCH_DEBOUNCE_MS = 300;
 
-const STATUS_FILTER_OPTIONS: { value: EmployeeStatusFilterValue; label: string }[] = [
+const STATUS_OPTIONS: { value: EmployeeStatusFilterValue; label: string }[] = [
   { value: "active", label: "Active" },
   { value: "suspended", label: "Suspended" },
   { value: "pending", label: "Pending Invitation" },
 ];
 
+// Same shape as Associated Organizations' SORTABLE_COLUMNS/STATIC_COLUMN_LABELS
+// split (see backend/CLAUDE.md and that page) — every column here happens to
+// be sortable per 009's own spec, unlike that page's 2-of-7, so this list is
+// just every data column.
 const SORTABLE_COLUMNS: { key: EmployeeSortBy; label: string }[] = [
   { key: "firstName", label: "Employee Name" },
   { key: "email", label: "Email" },
@@ -52,10 +50,26 @@ function toCsvValue(value: string): string {
   return `"${value.replace(/"/g, '""')}"`;
 }
 
+function EmployeeAvatar({ name }: { name: string }) {
+  return (
+    <span className="inline-flex size-6 shrink-0 items-center justify-center rounded-full bg-muted text-xs font-semibold uppercase text-muted-foreground">
+      {name.charAt(0)}
+    </span>
+  );
+}
+
 export default function EmployeeListingPage() {
-  const [searchInput, setSearchInput] = useState("");
-  const [search, setSearch] = useState("");
-  const [statusFilter, setStatusFilter] = useState<EmployeeStatusFilterValue[]>([]);
+  const [isFilterRowOpen, setIsFilterRowOpen] = useState(false);
+
+  const [nameInput, setNameInput] = useState("");
+  const [emailInput, setEmailInput] = useState("");
+  const [contactNumberInput, setContactNumberInput] = useState("");
+  const [statusFilter, setStatusFilter] = useState<EmployeeStatusFilterValue | "">("");
+
+  const [name, setName] = useState("");
+  const [email, setEmail] = useState("");
+  const [contactNumber, setContactNumber] = useState("");
+
   const [sortBy, setSortBy] = useState<EmployeeSortBy>("firstName");
   const [sortDir, setSortDir] = useState<SortDirection>("asc");
 
@@ -71,16 +85,29 @@ export default function EmployeeListingPage() {
   const [resendingId, setResendingId] = useState<number | null>(null);
 
   useEffect(() => {
-    const timeout = setTimeout(() => setSearch(searchInput.trim()), SEARCH_DEBOUNCE_MS);
+    const timeout = setTimeout(() => {
+      setName(nameInput.trim());
+      setEmail(emailInput.trim());
+      setContactNumber(contactNumberInput.trim());
+    }, SEARCH_DEBOUNCE_MS);
     return () => clearTimeout(timeout);
-  }, [searchInput]);
+  }, [nameInput, emailInput, contactNumberInput]);
 
   useEffect(() => {
     let isMounted = true;
     setIsLoading(true);
     setLoadError(undefined);
 
-    getEmployees({ search, status: statusFilter, sortBy, sortDir, page: 1, pageSize: PAGE_SIZE })
+    getEmployees({
+      name,
+      email,
+      contactNumber,
+      status: statusFilter ? [statusFilter] : [],
+      sortBy,
+      sortDir,
+      page: 1,
+      pageSize: PAGE_SIZE,
+    })
       .then(({ employees: fetched, hasMore: fetchedHasMore }) => {
         if (!isMounted) return;
         setEmployees(fetched);
@@ -98,15 +125,17 @@ export default function EmployeeListingPage() {
     return () => {
       isMounted = false;
     };
-  }, [search, statusFilter, sortBy, sortDir]);
+  }, [name, email, contactNumber, statusFilter, sortBy, sortDir]);
 
   async function handleLoadMore(): Promise<void> {
     setIsLoadingMore(true);
     try {
       const nextPage = page + 1;
       const { employees: fetched, hasMore: fetchedHasMore } = await getEmployees({
-        search,
-        status: statusFilter,
+        name,
+        email,
+        contactNumber,
+        status: statusFilter ? [statusFilter] : [],
         sortBy,
         sortDir,
         page: nextPage,
@@ -131,8 +160,12 @@ export default function EmployeeListingPage() {
     }
   }
 
-  function toggleStatusFilter(value: EmployeeStatusFilterValue, checked: boolean): void {
-    setStatusFilter((current) => (checked ? [...current, value] : current.filter((v) => v !== value)));
+  function handleCloseFilters(): void {
+    setNameInput("");
+    setEmailInput("");
+    setContactNumberInput("");
+    setStatusFilter("");
+    setIsFilterRowOpen(false);
   }
 
   function renderSortIcon(column: EmployeeSortBy) {
@@ -170,8 +203,10 @@ export default function EmployeeListingPage() {
     setIsExporting(true);
     try {
       const { employees: allMatching } = await getEmployees({
-        search,
-        status: statusFilter,
+        name,
+        email,
+        contactNumber,
+        status: statusFilter ? [statusFilter] : [],
         sortBy,
         sortDir,
         page: 1,
@@ -208,8 +243,23 @@ export default function EmployeeListingPage() {
 
   return (
     <div className="mx-auto flex min-h-0 w-full max-w-6xl flex-1 flex-col overflow-hidden px-4 py-10">
-      <div className="flex flex-wrap items-center justify-between gap-4">
-        <h1 className="text-2xl font-semibold tracking-tight">Employee Management</h1>
+      <div className="flex items-center justify-between gap-4">
+        <div className="flex items-center gap-2">
+          <h1 className="text-2xl font-semibold tracking-tight">Employee Management</h1>
+          <Button
+            type="button"
+            variant="ghost"
+            size="icon"
+            onClick={() => (isFilterRowOpen ? handleCloseFilters() : setIsFilterRowOpen(true))}
+            aria-label={isFilterRowOpen ? "Close filters" : "Show filters"}
+            className={cn(
+              "rounded-full",
+              isFilterRowOpen ? "bg-destructive/10 text-destructive hover:bg-destructive/20" : "bg-muted"
+            )}
+          >
+            {isFilterRowOpen ? <XIcon className="size-4" /> : <FunnelIcon className="size-4" />}
+          </Button>
+        </div>
         <div className="flex items-center gap-2">
           <Button variant="outline" disabled={isExporting} onClick={handleExport}>
             {isExporting ? <Spinner /> : <DownloadSimpleIcon data-icon="inline-start" />}
@@ -219,34 +269,6 @@ export default function EmployeeListingPage() {
             Invite
           </Link>
         </div>
-      </div>
-
-      <div className="mt-4 flex flex-wrap items-center gap-2">
-        <Input
-          value={searchInput}
-          onChange={(event) => setSearchInput(event.target.value)}
-          placeholder="Search by name, email, employee ID, or contact number…"
-          className="max-w-sm"
-        />
-        <DropdownMenu>
-          <DropdownMenuTrigger className={cn(buttonVariants({ variant: "outline" }))}>
-            <FunnelIcon data-icon="inline-start" />
-            Status
-            {statusFilter.length > 0 ? ` (${statusFilter.length})` : ""}
-          </DropdownMenuTrigger>
-          <DropdownMenuContent align="start">
-            {STATUS_FILTER_OPTIONS.map((option) => (
-              <DropdownMenuCheckboxItem
-                key={option.value}
-                checked={statusFilter.includes(option.value)}
-                onCheckedChange={(checked) => toggleStatusFilter(option.value, checked === true)}
-                closeOnClick={false}
-              >
-                {option.label}
-              </DropdownMenuCheckboxItem>
-            ))}
-          </DropdownMenuContent>
-        </DropdownMenu>
       </div>
 
       {loadError ? (
@@ -276,11 +298,72 @@ export default function EmployeeListingPage() {
                   ))}
                   <TableHead>Actions</TableHead>
                 </TableRow>
+
+                {isFilterRowOpen ? (
+                  <TableRow>
+                    <TableHead>
+                      <div className="relative">
+                        <MagnifyingGlassIcon className="absolute left-2 top-1/2 size-3.5 -translate-y-1/2 text-muted-foreground" />
+                        <Input
+                          value={nameInput}
+                          onChange={(event) => setNameInput(event.target.value)}
+                          placeholder="Search"
+                          className="h-8 pl-7 text-xs font-normal"
+                        />
+                      </div>
+                    </TableHead>
+                    <TableHead>
+                      <div className="relative">
+                        <MagnifyingGlassIcon className="absolute left-2 top-1/2 size-3.5 -translate-y-1/2 text-muted-foreground" />
+                        <Input
+                          value={emailInput}
+                          onChange={(event) => setEmailInput(event.target.value)}
+                          placeholder="Search"
+                          className="h-8 pl-7 text-xs font-normal"
+                        />
+                      </div>
+                    </TableHead>
+                    <TableHead />
+                    <TableHead />
+                    <TableHead>
+                      <div className="relative">
+                        <MagnifyingGlassIcon className="absolute left-2 top-1/2 size-3.5 -translate-y-1/2 text-muted-foreground" />
+                        <Input
+                          value={contactNumberInput}
+                          onChange={(event) => setContactNumberInput(event.target.value)}
+                          placeholder="Search"
+                          className="h-8 pl-7 text-xs font-normal"
+                        />
+                      </div>
+                    </TableHead>
+                    <TableHead />
+                    <TableHead>
+                      <select
+                        value={statusFilter}
+                        onChange={(event) => setStatusFilter(event.target.value as EmployeeStatusFilterValue | "")}
+                        className="h-8 w-full rounded-md border border-input bg-background px-2 text-xs font-normal outline-none focus-visible:border-ring focus-visible:ring-3 focus-visible:ring-ring/50"
+                      >
+                        <option value="">All</option>
+                        {STATUS_OPTIONS.map((option) => (
+                          <option key={option.value} value={option.value}>
+                            {option.label}
+                          </option>
+                        ))}
+                      </select>
+                    </TableHead>
+                    <TableHead />
+                  </TableRow>
+                ) : null}
               </TableHeader>
               <TableBody>
                 {employees.map((employee) => (
                   <TableRow key={employee.id}>
-                    <TableCell>{`${employee.firstName} ${employee.lastName}`.trim()}</TableCell>
+                    <TableCell>
+                      <div className="flex items-center gap-2">
+                        <EmployeeAvatar name={employee.firstName} />
+                        {`${employee.firstName} ${employee.lastName}`.trim()}
+                      </div>
+                    </TableCell>
                     <TableCell>{employee.email}</TableCell>
                     <TableCell>{employee.role ?? "—"}</TableCell>
                     <TableCell>{employee.department ?? "—"}</TableCell>

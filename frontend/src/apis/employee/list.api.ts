@@ -2,7 +2,9 @@ import { apiCall } from "@/utils/apiManager/apiManager";
 import type { EmployeeListItem, EmployeeSortBy, EmployeeStatusFilterValue, SortDirection } from "@/types/employee.type";
 
 export type ListEmployeesParams = {
-  search?: string;
+  name?: string;
+  email?: string;
+  contactNumber?: string;
   status?: EmployeeStatusFilterValue[];
   sortBy?: EmployeeSortBy;
   sortDir?: SortDirection;
@@ -13,7 +15,9 @@ export type ListEmployeesParams = {
 export function getEmployees(params: ListEmployeesParams = {}): Promise<{ employees: EmployeeListItem[]; hasMore: boolean }> {
   const query = new URLSearchParams();
 
-  if (params.search) query.set("search", params.search);
+  if (params.name) query.set("name", params.name);
+  if (params.email) query.set("email", params.email);
+  if (params.contactNumber) query.set("contactNumber", params.contactNumber);
   if (params.status && params.status.length > 0) query.set("status", params.status.join(","));
   if (params.sortBy) query.set("sortBy", params.sortBy);
   if (params.sortDir) query.set("sortDir", params.sortDir);
