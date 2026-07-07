@@ -23,6 +23,12 @@ export type RefreshTokenPayload = {
   sub: number;
 };
 
+export type OnboardingTokenPayload = {
+  type: "onboarding";
+  employeeId: number;
+  email: string;
+};
+
 export function signAccessToken(userId: number): string {
   const payload: AccessTokenPayload = { type: "access", sub: userId };
   return jwt.sign(payload, env.auth.jwtSecret, { expiresIn: env.auth.accessTokenExpiresIn } as jwt.SignOptions);
@@ -43,6 +49,15 @@ export function signRefreshToken(userId: number): string {
   return jwt.sign(payload, env.auth.jwtSecret, { expiresIn: env.auth.refreshTokenExpiresIn } as jwt.SignOptions);
 }
 
+// One token covers the entire 4-step onboarding flow (011-employee-onboarding.md)
+// — unlike registrationToken, it is never exchanged for a fresh one partway
+// through, so its 10-minute expiry is a single flat window for all 4 steps,
+// not 10 minutes per step. See that story's Open Questions for why.
+export function signOnboardingToken(employeeId: number, email: string): string {
+  const payload: OnboardingTokenPayload = { type: "onboarding", employeeId, email };
+  return jwt.sign(payload, env.auth.jwtSecret, { expiresIn: env.auth.onboardingTokenExpiresIn } as jwt.SignOptions);
+}
+
 function isAccessTokenPayload(value: unknown): value is AccessTokenPayload {
   return typeof value === "object" && value !== null && (value as { type?: unknown }).type === "access";
 }
@@ -53,6 +68,10 @@ function isResetTokenPayload(value: unknown): value is ResetTokenPayload {
 
 function isRegistrationTokenPayload(value: unknown): value is RegistrationTokenPayload {
   return typeof value === "object" && value !== null && (value as { type?: unknown }).type === "registration";
+}
+
+function isOnboardingTokenPayload(value: unknown): value is OnboardingTokenPayload {
+  return typeof value === "object" && value !== null && (value as { type?: unknown }).type === "onboarding";
 }
 
 export function verifyAccessToken(token: string): AccessTokenPayload | null {
@@ -77,6 +96,15 @@ export function verifyRegistrationToken(token: string): RegistrationTokenPayload
   try {
     const decoded: unknown = jwt.verify(token, env.auth.jwtSecret);
     return isRegistrationTokenPayload(decoded) ? decoded : null;
+  } catch {
+    return null;
+  }
+}
+
+export function verifyOnboardingToken(token: string): OnboardingTokenPayload | null {
+  try {
+    const decoded: unknown = jwt.verify(token, env.auth.jwtSecret);
+    return isOnboardingTokenPayload(decoded) ? decoded : null;
   } catch {
     return null;
   }

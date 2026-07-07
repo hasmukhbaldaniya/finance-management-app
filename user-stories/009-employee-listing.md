@@ -94,7 +94,7 @@ This screen operates on the `Employee` entity introduced in [008](./008-employee
 ### Flow
 
 1. Clicking Resend Invite on a Pending employee's row calls the resend API for that employee's id — no confirmation dialog (a low-risk, reversible action).
-2. **Success** → success toast; the underlying send-log entry ([008](./008-employee-invitation.md)'s `EmployeeInvite`) is updated, resetting the expiry window.
+2. **Success** → success toast; the underlying send-log entry ([008](./008-employee-invitation.md)'s `EmployeeInvite`) is updated, resetting the expiry window. A resend mints a **brand-new** onboarding link superseding the previous one — see [011-employee-onboarding.md](./011-employee-onboarding.md) for what's actually in the email and what happens when the employee clicks it.
 3. **Already registered** (invitation was accepted between the row rendering and the click — a race) → error toast, row refreshes to reflect the current (no longer Pending) status; the button disappears.
 4. **Daily limit reached** (5 sends — first send + resends combined — for this employee in the current day) → error toast naming the limit; no email sent.
 5. **Send failure** (e.g. SMTP failure, invalid/bounced email) → error toast; `invitationStatus` remains `"pending"`, admin may retry.

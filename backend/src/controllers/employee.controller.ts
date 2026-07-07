@@ -14,10 +14,12 @@ import {
   Role,
   Airline,
 } from "../models";
+import { env } from "../config/env";
 import { getActiveOrganizationId } from "../utils/auth";
 import { APPROVER_PRIVILEGE_KEY, GENERAL_APPROVAL_MODULE } from "../utils/constants/employee.constant";
 import { COMPANY_ADMIN_ROLE_NAME } from "../utils/constants/role.constant";
 import { sendEmployeeInviteEmail } from "../utils/employee-invite-mailer";
+import { signOnboardingToken } from "../utils/jwt";
 import { calculateAge, isEmail, isValidContactNumber, isValidEmployeeName } from "../utils/validation";
 
 const NOT_AUTHENTICATED_MESSAGE = "Not authenticated.";
@@ -567,7 +569,9 @@ export async function sendEmployeeInvite(req: AuthenticatedRequest, res: Respons
   }
 
   try {
-    await sendEmployeeInviteEmail(employee.email, employee.firstName);
+    const onboardingToken = signOnboardingToken(employee.id, employee.email);
+    const onboardingLink = `${env.corsOrigin}/onboarding?token=${onboardingToken}`;
+    await sendEmployeeInviteEmail(employee.email, employee.firstName, onboardingLink);
   } catch {
     res.status(500).json({ error: GENERIC_ERROR_MESSAGE });
     return;
