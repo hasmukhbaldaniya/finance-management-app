@@ -42,16 +42,14 @@ const COMPANY_SETTINGS_LINKS = [
   { label: "Roles & privileges", href: ROUTES.COMPANY_SETTINGS.ROLES_PRIVILEGES },
   { label: "Grades", href: ROUTES.COMPANY_SETTINGS.GRADES },
   { label: "Departments", href: ROUTES.COMPANY_SETTINGS.DEPARTMENTS },
-  { label: "Associated Organizations", href: ROUTES.COMPANY_SETTINGS.ORGANIZATIONS },
 ];
 
-// Distinct label from the "Associated Organizations" entry above — that one is
-// 003's personal "which of my orgs is active" switcher; this is 007's owner-only
-// org-to-org network listing. Same underlying epic name ("Associated Organizations
-// (Network)"), deliberately disambiguated here since both would otherwise show up
-// as identically-labeled sub-header links pointing at different pages.
+// 007's owner-only org-to-org network listing (Employee is now the login
+// entity and is always scoped to exactly one organization, so 003's old
+// personal "which of my orgs is active" switcher no longer applies — this is
+// the only "Associated Organizations" link left).
 const ASSOCIATED_ORGANIZATIONS_NETWORK_LINK = {
-  label: "Associated Organizations (Network)",
+  label: "Associated Organizations",
   href: ROUTES.COMPANY_SETTINGS.ASSOCIATED_ORGANIZATIONS,
 };
 

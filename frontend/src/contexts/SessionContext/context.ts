@@ -6,7 +6,6 @@ export type SessionState = {
   user: AuthUser;
   organization: Organization | null;
   isOwner: boolean;
-  setOrganization: (organization: Organization) => void;
 };
 
 export const SessionContext = createContext<SessionState | null>(null);

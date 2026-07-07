@@ -14,7 +14,6 @@ export const ROUTES = {
     ROLES_PRIVILEGES: "/company-settings/roles-privileges",
     GRADES: "/company-settings/grades",
     DEPARTMENTS: "/company-settings/departments",
-    ORGANIZATIONS: "/company-settings/organizations",
     ASSOCIATED_ORGANIZATIONS: "/company-settings/associated-organizations",
   },
   EMPLOYEE_INVITE: "/company-settings/employees/invite",

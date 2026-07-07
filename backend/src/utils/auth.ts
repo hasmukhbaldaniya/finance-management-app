@@ -1,6 +1,6 @@
 import type { CookieOptions } from "express";
 import { env } from "../config/env";
-import { Organization, OrganizationMember, User } from "../models";
+import { Employee, Organization } from "../models";
 
 export function accessTokenCookieOptions(): CookieOptions {
   return {
@@ -12,48 +12,39 @@ export function accessTokenCookieOptions(): CookieOptions {
   };
 }
 
-export function toPublicUser(user: User): { id: number; name: string; email: string; phone: string | null } {
-  return { id: user.id, name: user.name, email: user.email, phone: user.phone };
+// Keeps the frontend's AuthUser response shape ({id, name, email, phone})
+// unchanged even though Employee doesn't have single name/phone columns —
+// name is derived from firstName/lastName, phone from contactNumber (no
+// country code, matching the old User.phone's bare-digits shape exactly).
+export function toPublicEmployee(employee: Employee): { id: number; name: string; email: string; phone: string | null } {
+  return {
+    id: employee.id,
+    name: `${employee.firstName} ${employee.lastName}`.trim(),
+    email: employee.email,
+    phone: employee.contactNumber,
+  };
 }
 
-// A user can belong to more than one organization over time (see
-// user-stories/002-organization-signup.md); which one is "current" is tracked by
-// User.activeOrganizationId (see user-stories/003-header-navigation.md), switchable
-// via PATCH /api/users/me/active-organization. Falls back to the first membership
-// found for a legacy row where that column is unexpectedly still null.
+// Employee.organizationId is fixed at creation — there's no more "active
+// organization" indirection to resolve (no switching, see 003's removal).
 export async function getCurrentOrganization(
-  user: User
+  employee: Employee
 ): Promise<{ id: number; name: string; gstNumber: string } | null> {
-  if (user.activeOrganizationId) {
-    const organization = await Organization.findByPk(user.activeOrganizationId);
-    if (organization) {
-      return { id: organization.id, name: organization.name, gstNumber: organization.gstNumber };
-    }
-  }
-
-  const membership = await OrganizationMember.findOne({ where: { userId: user.id } });
-  if (!membership) return null;
-
-  const organization = await Organization.findByPk(membership.organizationId);
+  const organization = await Organization.findByPk(employee.organizationId);
   if (!organization) return null;
-
   return { id: organization.id, name: organization.name, gstNumber: organization.gstNumber };
 }
 
-// Org-scoped resources (Grade, Department, Role, ...) all key off the caller's
-// active organization the same way — this is the shared lookup for that, so each
-// controller doesn't re-implement "find the User, read activeOrganizationId."
+// Signature unchanged so every org-scoped controller (grade/department/role/
+// project/employee) needing "which org is this caller in" keeps working
+// without modification — only the underlying lookup moved off User.
 export async function getActiveOrganizationId(userId: number | undefined): Promise<number | null> {
-  const user = await User.findByPk(userId);
-  return user?.activeOrganizationId ?? null;
+  if (!userId) return null;
+  const employee = await Employee.findByPk(userId);
+  return employee?.organizationId ?? null;
 }
 
-// Backs both requireOwner (the 007 API gate) and GET /me's isOwner flag (so the
-// frontend can hide the Associated Organizations nav link/route for non-owners
-// without a separate request) — checks the pre-existing OrganizationMember.role
-// column ("owner"/"member"), not 006's newer Role/privileges entity, which isn't
-// wired to any enforcement yet (see 007's Open Questions).
 export async function isOrganizationOwner(userId: number, organizationId: number): Promise<boolean> {
-  const membership = await OrganizationMember.findOne({ where: { userId, organizationId } });
-  return membership?.role === "owner";
+  const employee = await Employee.findByPk(userId);
+  return employee?.isOwner === true && employee.organizationId === organizationId;
 }
