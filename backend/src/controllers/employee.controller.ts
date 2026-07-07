@@ -16,7 +16,7 @@ import {
   User,
 } from "../models";
 import { getActiveOrganizationId } from "../utils/auth";
-import { APPROVER_PRIVILEGE_KEY, GENERAL_APPROVAL_MODULE, isValidModuleAccessKey } from "../utils/constants/employee.constant";
+import { APPROVER_PRIVILEGE_KEY, GENERAL_APPROVAL_MODULE } from "../utils/constants/employee.constant";
 import { sendEmployeeInviteEmail } from "../utils/employee-invite-mailer";
 import { calculateAge, isEmail, isValidContactNumber, isValidEmployeeName } from "../utils/validation";
 
@@ -364,13 +364,6 @@ export async function saveEmployeeApprovals(req: AuthenticatedRequest, res: Resp
     return;
   }
 
-  const rawModuleAccess = Array.isArray(req.body?.moduleAccess) ? req.body.moduleAccess : [];
-  if (!rawModuleAccess.every(isValidModuleAccessKey)) {
-    res.status(400).json({ error: "Enter a valid set of modules." });
-    return;
-  }
-  const moduleAccess: string[] = rawModuleAccess.length > 0 ? rawModuleAccess : [GENERAL_APPROVAL_MODULE];
-
   const rawApprovers = Array.isArray(req.body?.approvers) ? req.body.approvers : [];
   const approvers: { level: number; approverEmployeeId: number }[] = [];
   const seenLevels = new Set<number>();
@@ -412,15 +405,14 @@ export async function saveEmployeeApprovals(req: AuthenticatedRequest, res: Resp
   }
 
   await ApprovalLevel.destroy({ where: { employeeId } });
-  const rows = moduleAccess.flatMap((module) =>
+  await ApprovalLevel.bulkCreate(
     approvers.map((approver) => ({
       employeeId,
-      module,
+      module: GENERAL_APPROVAL_MODULE,
       level: approver.level,
       approverEmployeeId: approver.approverEmployeeId,
     }))
   );
-  await ApprovalLevel.bulkCreate(rows);
 
   employee.updatedBy = req.userId;
   await employee.save();

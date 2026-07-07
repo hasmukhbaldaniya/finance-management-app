@@ -71,7 +71,7 @@ Route protection: `src/proxy.ts` (Next 16 renamed Middleware to Proxy; it defaul
 
 ### `src/types/` — Types
 
-One file per domain: `<Domain>.type.ts`. `src/types/auth.type.ts` holds `AuthUser`, `src/types/organization.type.ts` holds `Organization` and `OrganizationMembership` (`Organization & { isActive: boolean }`, the shape `GET /api/organizations/mine` returns). `src/types/employee.type.ts` holds `EmployeeTitle`/`EmployeeGender`/`EmployeePickerOption`/`ModuleAccessKey` (plus `MODULE_ACCESS_OPTIONS`, the fixed `{key, label}` list rendered as Step 4's checkboxes — kept in sync with the backend's `MODULE_ACCESS_KEYS`) and `ApproverLevel`; `src/types/project.type.ts` and `src/types/airline.type.ts` hold the minimal `Project`/`Airline` shapes for Step 2/3's pickers. Don't define shared types inline in components/API files.
+One file per domain: `<Domain>.type.ts`. `src/types/auth.type.ts` holds `AuthUser`, `src/types/organization.type.ts` holds `Organization` and `OrganizationMembership` (`Organization & { isActive: boolean }`, the shape `GET /api/organizations/mine` returns). `src/types/employee.type.ts` holds `EmployeeTitle`/`EmployeeGender`/`EmployeePickerOption`/`ApproverLevel` (no `ModuleAccessKey`/`MODULE_ACCESS_OPTIONS` — Module Access was removed from the Access & Approval section after initial implementation, at explicit request; see `008`'s Open Questions); `src/types/project.type.ts` and `src/types/airline.type.ts` hold the minimal `Project`/`Airline` shapes for Step 2/3's pickers. Don't define shared types inline in components/API files.
 
 ### `src/utils/` — Utilities
 

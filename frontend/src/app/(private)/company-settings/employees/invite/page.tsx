@@ -29,13 +29,7 @@ import { getGrades } from "@/apis/grade";
 import { getRoles } from "@/apis/role";
 import type { Airline } from "@/types/airline.type";
 import type { Department } from "@/types/department.type";
-import {
-  MODULE_ACCESS_OPTIONS,
-  type EmployeeGender,
-  type EmployeePickerOption,
-  type EmployeeTitle,
-  type ModuleAccessKey,
-} from "@/types/employee.type";
+import { type EmployeeGender, type EmployeePickerOption, type EmployeeTitle } from "@/types/employee.type";
 import type { Grade } from "@/types/grade.type";
 import type { Project } from "@/types/project.type";
 import type { Role } from "@/types/role.type";
@@ -120,7 +114,6 @@ export default function InviteEmployeePage() {
 
   // Access & Approval
   const [employees, setEmployees] = useState<EmployeePickerOption[]>([]);
-  const [moduleAccess, setModuleAccess] = useState<ModuleAccessKey[]>([]);
   const [approverRows, setApproverRows] = useState<ApproverRow[]>([{ level: 1, approverEmployeeId: "" }]);
 
   const [employeeId, setEmployeeId] = useState<number | null>(null);
@@ -208,10 +201,6 @@ export default function InviteEmployeePage() {
 
   function removeFfRow(index: number): void {
     setFfRows((current) => current.filter((_, rowIndex) => rowIndex !== index));
-  }
-
-  function toggleModule(key: ModuleAccessKey, checked: boolean): void {
-    setModuleAccess((current) => (checked ? [...current, key] : current.filter((moduleKey) => moduleKey !== key)));
   }
 
   function updateApprover(index: number, approverEmployeeId: string): void {
@@ -339,7 +328,6 @@ export default function InviteEmployeePage() {
       }
 
       await saveEmployeeApprovals(currentEmployeeId, {
-        moduleAccess,
         approvers: approverRows
           .filter((row) => row.approverEmployeeId)
           .map((row) => ({ level: row.level, approverEmployeeId: Number(row.approverEmployeeId) })),
@@ -579,22 +567,8 @@ export default function InviteEmployeePage() {
             </div>
           </SectionCard>
 
-          <SectionCard id="access-approval" title="Access & Approval" description="Choose module access and the approver chain.">
+          <SectionCard id="access-approval" title="Access & Approval" description="Choose the approver chain.">
             <div className="space-y-6">
-              <div className="space-y-2">
-                <Label>Module Access</Label>
-                {MODULE_ACCESS_OPTIONS.map((option) => (
-                  <div key={option.key} className="flex items-center gap-2">
-                    <Checkbox
-                      id={`module-${option.key}`}
-                      checked={moduleAccess.includes(option.key)}
-                      onCheckedChange={(checked) => toggleModule(option.key, checked === true)}
-                    />
-                    <Label htmlFor={`module-${option.key}`}>{option.label}</Label>
-                  </div>
-                ))}
-              </div>
-
               <div className="space-y-3">
                 <Label>Approval Chain</Label>
                 {approverRows.map((row, index) => (

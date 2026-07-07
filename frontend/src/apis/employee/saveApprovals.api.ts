@@ -1,8 +1,6 @@
 import { apiCall } from "@/utils/apiManager/apiManager";
-import type { ModuleAccessKey } from "@/types/employee.type";
 
 export type SaveApprovalsPayload = {
-  moduleAccess: ModuleAccessKey[];
   approvers: { level: number; approverEmployeeId: number }[];
 };
 

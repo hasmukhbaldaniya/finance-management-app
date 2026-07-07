@@ -8,16 +8,6 @@ export type EmployeePickerOption = {
   email: string;
 };
 
-export type ModuleAccessKey = "trips" | "claims" | "approvals" | "finance" | "reports";
-
-export const MODULE_ACCESS_OPTIONS: { key: ModuleAccessKey; label: string }[] = [
-  { key: "trips", label: "Trips" },
-  { key: "claims", label: "Claims" },
-  { key: "approvals", label: "Approvals" },
-  { key: "finance", label: "Finance" },
-  { key: "reports", label: "Reports" },
-];
-
 export type ApproverLevel = {
   level: number;
   approverEmployeeId: number | null;
