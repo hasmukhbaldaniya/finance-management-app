@@ -51,6 +51,7 @@ Covers how an existing user gets into the app: logging in with either their emai
 - **Given** an Identifier that is neither a valid email nor a valid India phone number, **when** the user attempts to submit, **then** the form is blocked client-side with an inline validation error and no API call is made.
 - **Given** an empty Identifier or Password field, **when** the user attempts to submit, **then** the form is blocked client-side with inline "required" errors.
 - **Given** the user is on the Login screen, **when** they click "Register your company", **then** they are navigated to Step 1 of the Register Your Company flow with no validation or API call triggered.
+- **Given** a user with an active session, **when** they navigate to the Login screen (or any Forgot Password step), **then** they are redirected to the Dashboard without the auth screen rendering (see [Access & Permission Rules](#access--permission-rules)).
 
 ### Error / Toast Messages
 
@@ -225,6 +226,33 @@ Error responses follow the existing convention (`{ error: string }`, appropriate
 
 ---
 
+## Access & Permission Rules
+
+| Condition | Rule |
+|-----------|------|
+| Unauthenticated user visits Login or any Forgot Password step | Allowed — this is the intended entry point. |
+| Authenticated user (valid session) visits Login or any Forgot Password step | Redirected to the Dashboard; the auth screen is not rendered. |
+
+Route guards determine authenticated state via `GET /api/auth/me` (the session cookie set at Login) — see [API Design](#api-design).
+
+---
+
+## Loading States
+
+Every submit action shows an explicit in-flight state: the triggering button is disabled with a spinner and a progress label, and the fields it submits are disabled until the request resolves.
+
+| Element | Behavior During Load |
+|---------|----------------------|
+| Login button | Disabled; label changes to "Logging in…"; spinner inside button. Identifier/Password fields disabled while the request is in flight. |
+| Step 1 Submit button | Disabled; label changes to "Sending OTP…"; spinner inside button. Email field disabled while in flight. |
+| Step 2 Verify button | Disabled; label changes to "Verifying…"; spinner inside button. OTP field disabled while in flight. (Independent of the Resend cooldown — Resend has its own disabled/countdown state.) |
+| Step 3 Submit button | Disabled; label changes to "Resetting password…"; spinner inside button. Both password fields disabled while in flight. |
+| Timeout (any of the above) | If no response within 30 seconds, clear the loading state and show: "Something went wrong. Please try again." |
+
+> These loading states were adopted as reasonable defaults during spec review — they are not represented in the original source. Confirm with design before build.
+
+---
+
 ## Validation Rules Summary
 
 | Field type | Rule |
@@ -264,6 +292,10 @@ Error responses follow the existing convention (`{ error: string }`, appropriate
 | TC-24 | "← Back" from Step 3 | Forgot Password Step 3: click "← Back" | Returned to Step 2 (OTP re-verification is a safe no-op) |
 | TC-25 | "Back to Login" from Step 3 | Forgot Password Step 3: click "Back to Login" | Navigated to Login; in-progress flow state cleared |
 | TC-26 | "Register your company" from Login | Login: click "Register your company" (no fields need to be filled) | Navigated to Register Step 1; no validation or API call triggered |
+| TC-27 | Authenticated user visits Login | With an active session, navigate to the Login URL | Redirected to Dashboard; the Login screen is not rendered |
+| TC-28 | Authenticated user visits Forgot Password | With an active session, navigate to any Forgot Password step URL | Redirected to Dashboard; the auth screen is not rendered |
+| TC-29 | Loading state during submit | Submit any auth form (e.g. Login) while the request is in flight | Button disabled with spinner and progress label (e.g. "Logging in…"); submitted fields disabled until the request resolves |
+| TC-30 | Request timeout | Any auth submit receives no response within 30 seconds | Loading state cleared; "Something went wrong. Please try again." toast |
 
 ## Edge Cases
 
