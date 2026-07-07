@@ -1,3 +1,5 @@
+import type { PrivilegeKey } from "./role.constant";
+
 // Resolved per user-stories/008-employee-invitation.md's Open Questions: the
 // source spec didn't enumerate the full module list, so this mirrors
 // 003-header-navigation.md's existing top-level nav items.
@@ -15,3 +17,8 @@ export function isValidModuleAccessKey(value: unknown): value is ModuleAccessKey
 // still saved (approvers are collected regardless of module access, per the
 // story's own flow) rather than silently discarded.
 export const GENERAL_APPROVAL_MODULE = "general";
+
+// The Level 1/2+ approver picker (GET /api/employees) is scoped to employees
+// whose Role carries this privilege — see role.constant.ts's PRIVILEGE_KEYS.
+// Company Admin has it by default; Members doesn't.
+export const APPROVER_PRIVILEGE_KEY: PrivilegeKey = "claim_trip_approvals";

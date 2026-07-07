@@ -13,9 +13,10 @@ import {
   Project,
   Role,
   Airline,
+  User,
 } from "../models";
 import { getActiveOrganizationId } from "../utils/auth";
-import { GENERAL_APPROVAL_MODULE, isValidModuleAccessKey } from "../utils/constants/employee.constant";
+import { APPROVER_PRIVILEGE_KEY, GENERAL_APPROVAL_MODULE, isValidModuleAccessKey } from "../utils/constants/employee.constant";
 import { sendEmployeeInviteEmail } from "../utils/employee-invite-mailer";
 import { calculateAge, isEmail, isValidContactNumber, isValidEmployeeName } from "../utils/validation";
 
@@ -28,19 +29,92 @@ const MINIMUM_AGE = 18;
 const DAILY_INVITE_LIMIT = 5;
 const ALREADY_REGISTERED_MESSAGE = "This employee has already accepted their invitation.";
 const INVITE_LIMIT_MESSAGE = "This employee has reached today's invitation limit (5). Please try again tomorrow.";
+const SELF_EMPLOYEE_MAX_CONTACT_ATTEMPTS = 5;
 
-// Minimal, unpaginated, active-only listing — just enough for Step 4's approver
-// picker. 009-employee-listing.md's full search/sort/pagination screen is a
-// separate, not-yet-built endpoint; this one isn't meant to satisfy that story.
+// The logged-in admin composing an invite usually has no Employee row of their
+// own (only invited people get one — see backend/CLAUDE.md's Employee vs. User
+// note) but must always be selectable as an approver. This finds-or-creates a
+// shadow Employee row linked via userId, first trying to link an existing row
+// by email (covers an admin who was themselves invited earlier and later given
+// login access) before fabricating one. Fields User doesn't carry (title,
+// gender, contact number) get placeholder values — this record's only purpose
+// is to make the user selectable in the approver picker, never to be edited or
+// displayed as their real contact details.
+async function ensureSelfEmployee(user: User, organizationId: number): Promise<Employee> {
+  const existingByUserId = await Employee.findOne({ where: { organizationId, userId: user.id } });
+  if (existingByUserId) return existingByUserId;
+
+  const existingByEmail = await Employee.findOne({ where: { organizationId, email: user.email } });
+  if (existingByEmail) {
+    if (existingByEmail.userId === null) {
+      existingByEmail.userId = user.id;
+      await existingByEmail.save();
+    }
+    return existingByEmail;
+  }
+
+  const firstName = user.firstName || user.name;
+  const lastName = user.lastName || "";
+  const countryCode = "+91";
+
+  let contactNumber = `9${String(user.id).padStart(9, "0")}`;
+  for (let attempt = 0; attempt < SELF_EMPLOYEE_MAX_CONTACT_ATTEMPTS; attempt += 1) {
+    const taken = await Employee.findOne({ where: { organizationId, countryCode, contactNumber } });
+    if (!taken) break;
+    contactNumber = `9${String(user.id * 10 + attempt).padStart(9, "0")}`;
+  }
+
+  return Employee.create({
+    organizationId,
+    title: "Mr",
+    firstName,
+    lastName,
+    email: user.email,
+    countryCode,
+    contactNumber,
+    dob: null,
+    gender: "Other",
+    employeeCode: null,
+    status: "active",
+    invitationStatus: "registered",
+    userId: user.id,
+    createdBy: user.id,
+    updatedBy: user.id,
+  });
+}
+
+// Minimal, unpaginated listing for Step 4's approver picker — NOT 009's future
+// full Employee Listing. Scoped to who can actually approve: the logged-in
+// admin (via ensureSelfEmployee above) plus any active employee whose Role
+// carries the "Claim / Trip Approvals" privilege (Company Admin has it by
+// default; Members doesn't — see role.constant.ts — but any custom role that
+// grants it also qualifies).
 export async function listEmployeesForPicker(req: AuthenticatedRequest, res: Response): Promise<void> {
-  const organizationId = await getActiveOrganizationId(req.userId);
-  if (!organizationId) {
+  const user = await User.findByPk(req.userId);
+  const organizationId = user?.activeOrganizationId ?? null;
+  if (!user || !organizationId) {
     res.status(401).json({ error: NOT_AUTHENTICATED_MESSAGE });
     return;
   }
 
+  const selfEmployee = await ensureSelfEmployee(user, organizationId);
+
+  const approverRoles = await Role.findAll({
+    where: { organizationId, privileges: { [Op.contains]: [APPROVER_PRIVILEGE_KEY] } },
+    attributes: ["id"],
+  });
+  const approverRoleIds = approverRoles.map((role) => role.id);
+
+  const approverAccessRows =
+    approverRoleIds.length > 0
+      ? await EmployeeCompanyAccess.findAll({ where: { organizationId, roleId: approverRoleIds }, attributes: ["employeeId"] })
+      : [];
+
+  const employeeIds = new Set(approverAccessRows.map((access) => access.employeeId));
+  employeeIds.add(selfEmployee.id);
+
   const employees = await Employee.findAll({
-    where: { organizationId, status: "active" },
+    where: { id: Array.from(employeeIds), organizationId, status: "active" },
     order: [["firstName", "ASC"]],
   });
   res.status(200).json({
