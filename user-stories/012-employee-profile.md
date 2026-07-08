@@ -1,6 +1,6 @@
 # 012 - Employee Profile
 
-**Status:** Draft
+**Status:** Done
 **Epic:** Employee Profile
 
 ## Overview

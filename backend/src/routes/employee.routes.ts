@@ -11,6 +11,13 @@ import {
   updateEmployeeCompanyAccess,
   updateEmployeeStatus,
 } from "../controllers/employee.controller";
+import {
+  getMyProfile,
+  resendMyMobileOtp,
+  setMyMobile,
+  updateMyProfile,
+  verifyMyMobileOtp,
+} from "../controllers/employee-profile.controller";
 import { requireAuth } from "../middleware/require-auth";
 
 export const employeeRouter = Router();
@@ -23,6 +30,14 @@ employeeRouter.use(requireAuth);
 // before GET "/:id" so a request to "/approvers" matches this exact route,
 // not the "/:id" pattern with id="approvers".
 employeeRouter.get("/approvers", listEmployeesForPicker);
+// 012's self-service profile — every handler here acts on req.userId only,
+// never an :id param, so it must be registered before GET/PATCH "/:id"
+// below (otherwise "/me" would match "/:id" with id="me" first).
+employeeRouter.get("/me", getMyProfile);
+employeeRouter.patch("/me", updateMyProfile);
+employeeRouter.put("/me/mobile", setMyMobile);
+employeeRouter.post("/me/mobile-otp", resendMyMobileOtp);
+employeeRouter.post("/me/mobile-otp/verify", verifyMyMobileOtp);
 employeeRouter.get("/", listEmployees);
 employeeRouter.post("/", createEmployee);
 employeeRouter.get("/:id", getEmployeeDetail);

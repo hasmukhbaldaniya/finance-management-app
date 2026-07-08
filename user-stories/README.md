@@ -29,4 +29,4 @@ Product requirements for Finance Management, written as user stories before any 
 | 009 | [Employee Listing](./009-employee-listing.md) | Draft |
 | 010 | [Bulk Invite Employees](./010-bulk-invite-employees.md) | Implemented |
 | 011 | [Employee Onboarding](./011-employee-onboarding.md) | Draft |
-| 012 | [Employee Profile](./012-employee-profile.md) | Draft |
+| 012 | [Employee Profile](./012-employee-profile.md) | Done |

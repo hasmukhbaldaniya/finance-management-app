@@ -77,3 +77,22 @@ export type BulkImportResult = {
   updated: number;
   failed: number;
 };
+
+export type MyProfile = {
+  id: number;
+  title: EmployeeTitle | null;
+  firstName: string;
+  lastName: string;
+  email: string;
+  countryCode: string | null;
+  contactNumber: string | null;
+  dob: string | null;
+  gender: EmployeeGender | null;
+  employeeCode: string | null;
+  status: EmployeeStatus;
+  invitationStatus: EmployeeInvitationStatus;
+  organizationName: string | null;
+  role: string | null;
+  department: string | null;
+  grade: string | null;
+};
