@@ -4,6 +4,7 @@ export { getMe } from "./me.api";
 export { requestOtp } from "./requestOtp.api";
 export { verifyOtp } from "./verifyOtp.api";
 export { resetPassword } from "./resetPassword.api";
+export { changePassword } from "./changePassword.api";
 export { register, type RegisterPayload } from "./register.api";
 export { resendRegistrationEmailOtp } from "./resendRegistrationEmailOtp.api";
 export { verifyRegistrationEmailOtp } from "./verifyRegistrationEmailOtp.api";

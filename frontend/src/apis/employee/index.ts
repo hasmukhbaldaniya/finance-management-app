@@ -13,3 +13,8 @@ export { downloadBulkTemplate } from "./downloadBulkTemplate.api";
 export { uploadBulkImport } from "./uploadBulkImport.api";
 export { confirmBulkImport } from "./confirmBulkImport.api";
 export { downloadBulkImportErrors } from "./downloadBulkImportErrors.api";
+export { getMyProfile } from "./getMyProfile.api";
+export { updateMyProfile, type UpdateMyProfilePayload } from "./updateMyProfile.api";
+export { setMyMobile } from "./setMyMobile.api";
+export { resendMyMobileOtp } from "./resendMyMobileOtp.api";
+export { verifyMyMobileOtp } from "./verifyMyMobileOtp.api";

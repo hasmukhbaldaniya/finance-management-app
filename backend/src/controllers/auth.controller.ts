@@ -177,3 +177,39 @@ export async function resetPassword(req: Request, res: Response): Promise<void> 
 
   res.status(200).json({ message: "Password reset successful. Please log in." });
 }
+
+// Distinct from resetPassword above: this is a logged-in employee changing a
+// password they still remember (verified via currentPassword), not someone
+// who's locked out (verified via OTP) — see 012-employee-profile.md's Flow
+// for why these stay two separate flows rather than one.
+export async function changePassword(req: AuthenticatedRequest, res: Response): Promise<void> {
+  const employee = await Employee.findByPk(req.userId);
+  if (!employee) {
+    res.status(401).json({ error: "Not authenticated." });
+    return;
+  }
+
+  const currentPassword = typeof req.body?.currentPassword === "string" ? req.body.currentPassword : "";
+  const newPassword = typeof req.body?.newPassword === "string" ? req.body.newPassword : "";
+
+  const currentMatches = employee.passwordHash ? await verifyPassword(currentPassword, employee.passwordHash) : false;
+  if (!currentMatches) {
+    res.status(400).json({ error: "Current password is incorrect." });
+    return;
+  }
+
+  if (!isStrongPassword(newPassword)) {
+    res.status(400).json({ error: "Password does not meet the strength requirements." });
+    return;
+  }
+
+  if (newPassword === currentPassword) {
+    res.status(400).json({ error: "New password must be different from your current password." });
+    return;
+  }
+
+  employee.passwordHash = await hashPassword(newPassword);
+  await employee.save();
+
+  res.status(200).json({ message: "Password changed." });
+}
