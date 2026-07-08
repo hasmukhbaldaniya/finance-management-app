@@ -5,7 +5,7 @@ Product requirements for Finance Management, written as user stories before any 
 ## Convention
 
 - **Numbering**: `NNN-epic-name.md`, zero-padded three digits, incrementing. The next story after `001-authentication.md` is `002-...`.
-- **One file per epic**: a file can bundle multiple tightly-coupled flows as separate `## Story: <name>` sections (e.g. `001-authentication.md` covers both Login and Forgot Password, since they share the same screens/fields/validation source of truth). Only split an epic into its own additional file if it stops being tightly coupled to the others. **Exception**: `008`/`009`/`010`/`011` are all one epic (Employee Management) split across four files at explicit request, because the epic was large enough that each story (the invite wizard, the listing + lifecycle actions, bulk CSV/XLSX import, and the invited employee's own onboarding flow) has its own substantial API and data-model surface — not the default, but a documented deviation rather than a silent one. `011` was added later than the other three, once the epic's original "3 stories" framing needed a fourth.
+- **One file per epic**: a file can bundle multiple tightly-coupled flows as separate `## Story: <name>` sections (e.g. `001-authentication.md` covers both Login and Forgot Password, since they share the same screens/fields/validation source of truth). Only split an epic into its own additional file if it stops being tightly coupled to the others. **Exception**: `008`/`009`/`010`/`011` are all one epic (Employee Management) split across four files at explicit request, because the epic was large enough that each story (the invite wizard, the listing + lifecycle actions, bulk CSV/XLSX import, and the invited employee's own onboarding flow) has its own substantial API and data-model surface — not the default, but a documented deviation rather than a silent one. `011` was added later than the other three, once the epic's original "3 stories" framing needed a fourth. Likewise, `013`/`014`/`015`/`016` are one epic (Category Management) split across four files for the same reason — creation (a 4-step wizard in its own right), listing plus lifecycle actions, edit/duplicate, and the versioning scheme each carry enough independent API/data-model weight to warrant their own file.
 - **Status**: every file starts with a metadata block including `Status: Draft | Ready | In Progress | Done`.
   - `Draft` — being written/reviewed, not yet ready to implement.
   - `Ready` — reviewed and approved, safe to plan implementation from.
@@ -30,3 +30,7 @@ Product requirements for Finance Management, written as user stories before any 
 | 010 | [Bulk Invite Employees](./010-bulk-invite-employees.md) | Implemented |
 | 011 | [Employee Onboarding](./011-employee-onboarding.md) | Draft |
 | 012 | [Employee Profile](./012-employee-profile.md) | Done |
+| 013 | [Category Creation](./013-category-creation.md) | Draft |
+| 014 | [Category Listing](./014-category-listing.md) | Draft |
+| 015 | [Category Edit and Duplicate](./015-category-edit-and-duplicate.md) | Draft |
+| 016 | [Category Version History](./016-category-version-history.md) | Draft |
