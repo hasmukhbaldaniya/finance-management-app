@@ -73,7 +73,7 @@ export default function CategoriesManagementPage() {
   const sentinelRef = useInfiniteScroll(handleLoadMore, hasMore, isLoadingMore);
 
   return (
-    <div className="mx-auto max-w-6xl space-y-6 px-6 py-8">
+    <div className="mx-auto max-w-7xl space-y-6 px-6 py-8">
       <div className="flex items-center justify-between">
         <h1 className="text-2xl font-semibold tracking-tight">My Categories</h1>
         <Link href={ROUTES.CATEGORY_NEW} className={cn(buttonVariants())}>
@@ -105,7 +105,7 @@ export default function CategoriesManagementPage() {
         </div>
       ) : (
         <>
-          <div className="grid grid-cols-1 gap-4 sm:grid-cols-2 lg:grid-cols-3">
+          <div className="grid grid-cols-1 gap-5 sm:grid-cols-2 xl:grid-cols-3">
             {categories.map((category) => (
               <CategoryCard
                 key={category.id}

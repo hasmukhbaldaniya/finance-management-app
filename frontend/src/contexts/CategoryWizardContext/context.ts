@@ -17,6 +17,14 @@ export type CategoryWizardState = {
   // active category shows the right steps as already-completed immediately,
   // not just the ones revisited in this particular browser session.
   highestStepIndexReached: number;
+  // Set right after Step 1's create call returns a brand-new id for a
+  // Duplicate session — the source category's copied fields/policies already
+  // live in context at that point, but they only exist server-side under the
+  // *source* category, not this new one yet. Without this flag, the very
+  // next step page's own useLoadCategory would immediately refetch this
+  // brand-new (still Step-2-4-empty) category and clobber the copied data
+  // before the admin ever sees it. Cleared after being consulted once.
+  skipNextLoadForCategoryId: number | null;
   setCategoryId: (categoryId: number | null) => void;
   setStatus: (status: CategoryStatus | null) => void;
   setName: (name: string) => void;
@@ -27,6 +35,7 @@ export type CategoryWizardState = {
   setExceptionPolicies: (exceptionPolicies: CategoryPolicy[]) => void;
   setEnableProjectPolicies: (enableProjectPolicies: boolean) => void;
   setProjectPolicies: (projectPolicies: CategoryPolicy[]) => void;
+  setSkipNextLoadForCategoryId: (categoryId: number | null) => void;
   markStepReached: (stepIndex: number) => void;
   loadFromSnapshot: (snapshot: {
     id?: number;

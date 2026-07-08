@@ -20,6 +20,18 @@ export function useLoadCategory(categoryId: number) {
     setIsLoading(true);
     setLoadError(null);
 
+    // Right after Step 1 creates a brand-new category in a Duplicate
+    // session, context already holds the source's copied fields/policies —
+    // this category has nothing saved server-side for them yet, so skip
+    // the fetch this one time instead of overwriting that copied data with
+    // an empty snapshot. One-time: cleared immediately so a later revisit
+    // of this same step still refetches normally.
+    if (wizard.skipNextLoadForCategoryId === categoryId) {
+      wizard.setSkipNextLoadForCategoryId(null);
+      setIsLoading(false);
+      return;
+    }
+
     getCategoryDetail(categoryId)
       .then((response) => {
         if (cancelled) return;

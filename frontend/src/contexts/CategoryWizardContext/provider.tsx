@@ -31,6 +31,7 @@ export function CategoryWizardProvider({ children }: { children: ReactNode }) {
   const [enableProjectPolicies, setEnableProjectPolicies] = useState(false);
   const [projectPolicies, setProjectPolicies] = useState<CategoryPolicy[]>([]);
   const [highestStepIndexReached, setHighestStepIndexReached] = useState(0);
+  const [skipNextLoadForCategoryId, setSkipNextLoadForCategoryId] = useState<number | null>(null);
 
   function reset(): void {
     setCategoryId(null);
@@ -44,6 +45,7 @@ export function CategoryWizardProvider({ children }: { children: ReactNode }) {
     setEnableProjectPolicies(false);
     setProjectPolicies([]);
     setHighestStepIndexReached(0);
+    setSkipNextLoadForCategoryId(null);
   }
 
   function loadFromSnapshot(snapshot: {
@@ -88,6 +90,7 @@ export function CategoryWizardProvider({ children }: { children: ReactNode }) {
       enableProjectPolicies,
       projectPolicies,
       highestStepIndexReached,
+      skipNextLoadForCategoryId,
       setCategoryId,
       setStatus,
       setName,
@@ -98,6 +101,7 @@ export function CategoryWizardProvider({ children }: { children: ReactNode }) {
       setExceptionPolicies,
       setEnableProjectPolicies,
       setProjectPolicies,
+      setSkipNextLoadForCategoryId,
       markStepReached,
       loadFromSnapshot,
       reset,
@@ -114,6 +118,7 @@ export function CategoryWizardProvider({ children }: { children: ReactNode }) {
       enableProjectPolicies,
       projectPolicies,
       highestStepIndexReached,
+      skipNextLoadForCategoryId,
     ]
   );
 

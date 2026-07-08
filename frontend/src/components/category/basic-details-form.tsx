@@ -80,10 +80,18 @@ export function BasicDetailsForm() {
     setErrors(validationErrors);
     if (Object.keys(validationErrors).length > 0) return;
 
+    const wasNewCategory = wizard.categoryId === null;
     setIsSavingContinue(true);
     try {
       const id = await persist(false);
       if (id === null) return;
+      // A Duplicate session's copied fields/policies already live in context
+      // at this point but only exist server-side under the *source*
+      // category — protect them from being clobbered the moment Step 2's
+      // own useLoadCategory fetches this brand-new (still-empty) category.
+      if (wasNewCategory) {
+        wizard.setSkipNextLoadForCategoryId(id);
+      }
       wizard.markStepReached(1);
       router.push(ROUTES.categoryStep(id, CATEGORY_STEP_SEGMENTS.expenseForm));
     } catch (error) {
@@ -99,7 +107,7 @@ export function BasicDetailsForm() {
   }
 
   return (
-    <div className="space-y-6 rounded-lg border border-border bg-background p-6">
+    <div className="max-w-4xl space-y-6 rounded-lg border border-border bg-background p-8">
       <div className="space-y-2">
         <Label htmlFor="category-name">Category Name</Label>
         <Input
