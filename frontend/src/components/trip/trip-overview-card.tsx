@@ -1,6 +1,9 @@
 import type { ReactNode } from "react";
+import Link from "next/link";
 import { PencilSimpleIcon } from "@phosphor-icons/react";
-import { Button } from "@/components/ui/button";
+import { Button, buttonVariants } from "@/components/ui/button";
+import { cn } from "@/lib/utils";
+import { ROUTES } from "@/utils/constants/route.constant";
 import { countryCodeToFlagEmoji, formatTripOverviewDate, formatTripOverviewDateTime } from "@/utils/helpers/format.helper";
 import type { TripDetail } from "@/types/trip.type";
 
@@ -26,17 +29,25 @@ type TripOverviewCardProps = {
 };
 
 // 020's right panel — every field read-only, sourced from 018's Create Trip
-// data. The "Edit" button is acknowledged (matching the reference
-// screenshot) but rendered disabled — 020's own Out of Scope: neither this
-// story nor 018 specifies what Edit actually does yet.
+// data. Per 021-trip-edit.md, "Edit" is enabled only while status is "new";
+// any other status renders it disabled with an explanatory tooltip rather
+// than linking somewhere that would just reject the request.
 export function TripOverviewCard({ trip }: TripOverviewCardProps) {
+  const canEdit = trip.status === "new";
+
   return (
     <div className="rounded-lg border border-border bg-background">
       <div className="flex items-center justify-between border-b border-border p-4">
         <h2 className="font-semibold">Trip Overview</h2>
-        <Button type="button" variant="outline" size="sm" disabled title="Editing a trip isn't available yet">
-          <PencilSimpleIcon size={14} /> Edit
-        </Button>
+        {canEdit ? (
+          <Link href={ROUTES.tripEdit(trip.id)} className={cn(buttonVariants({ variant: "outline", size: "sm" }))}>
+            <PencilSimpleIcon size={14} /> Edit
+          </Link>
+        ) : (
+          <Button type="button" variant="outline" size="sm" disabled title="Only trips with New status can be edited">
+            <PencilSimpleIcon size={14} /> Edit
+          </Button>
+        )}
       </div>
       <div className="divide-y divide-border px-4">
         <OverviewRow label="Trip ID" value={trip.id} />

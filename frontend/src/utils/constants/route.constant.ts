@@ -6,6 +6,7 @@ export const ROUTES = {
   TRIPS: "/trips",
   TRIP_NEW: "/trips/new",
   tripDetails: (tripId: number) => `/trips/${tripId}`,
+  tripEdit: (tripId: number) => `/trips/${tripId}/edit`,
   CLAIMS: "/claims",
   APPROVALS: "/approvals",
   FINANCE: "/finance",

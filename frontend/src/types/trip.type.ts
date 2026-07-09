@@ -15,7 +15,13 @@ export type TripListItem = {
   approvedAmount: string | null;
 };
 
+// `id`/`countryId` make this a resubmittable value, not just a display
+// string — needed so 021's Edit Trip can pre-fill CitySelect with a real
+// selection (CitySelect's own `value` prop expects a full `City`-shaped
+// object).
 export type TripCityDetail = {
+  id: number;
+  countryId: number | null;
   name: string;
   countryName: string;
   countryCode: string;

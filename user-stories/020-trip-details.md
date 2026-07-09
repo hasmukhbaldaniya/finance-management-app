@@ -9,7 +9,7 @@ Covers the screen reached by clicking a trip's name on "My Trips" (`019-trip-lis
 
 **The reference screenshot's breadcrumb reads "My Trips / View Trip Claim," not "View Trip Details."** That wording is carried through as-is rather than silently "corrected" to match this epic's own naming — it strongly suggests the underlying product treats a Trip and its expense-claim as the same conceptual object (a trip *is* what gets claimed), which would explain why an expense list lives on this same screen rather than on some separate Claim entity. This doc doesn't resolve that naming question one way or the other — see [Open Questions](#open-questions--assumptions).
 
-**This story introduces a real gap of its own**: the Trip Overview panel has an **"Edit" button**, but `018`'s own Out of Scope explicitly says "Editing or deleting a trip after creation" is not covered by this epic so far (`019` covers deleting; nothing covers editing). This doc acknowledges the button exists and where it most plausibly leads, without fully specifying an Edit Trip flow — see [Out of Scope](#out-of-scope) and [Open Questions](#open-questions--assumptions).
+**The Trip Overview panel's "Edit" button is `021-trip-edit.md`'s concern** — it's enabled only while the trip's status is `"new"`, per that story.
 
 ---
 
@@ -26,7 +26,7 @@ Covers the screen reached by clicking a trip's name on "My Trips" (`019-trip-lis
 | Trip Details | Breadcrumb: "My Trips / View Trip Claim" | — | "My Trips" links back to `019`'s listing |
 | Trip Details | Page title: Trip Name | heading | e.g. "Happy test cases" |
 | Trip Details (left panel) | Expense list | list, empty in this story | See Flow point 2 |
-| Trip Details (right panel) | "Trip Overview" card title + "Edit" button | — | See [Out of Scope](#out-of-scope) for what Edit does |
+| Trip Details (right panel) | "Trip Overview" card title + "Edit" button | — | Enabled only when status is `"new"` — see `021-trip-edit.md` |
 | Trip Details (right panel) | Trip ID | read-only text | The same reference number shown in `019`'s `(#N)` on the listing — confirms that number is the trip's own database id |
 | Trip Details (right panel) | Trip Name | read-only text | |
 | Trip Details (right panel) | Start Date & Time | read-only text | Formatted "D MMM YYYY at hh:mm AM/PM", e.g. "15 Jul 2026 at 02:00 AM" — a different format than `019`'s own listing rows use for the same underlying value; see [Open Questions](#open-questions--assumptions) |
@@ -100,14 +100,13 @@ Not applicable.
 ## Out of Scope
 
 - **Logging expenses against a trip** — the entire left panel is a placeholder for a future Claims/Expenses story; this story only specifies its empty state.
-- **The "Edit" button's actual behavior** — acknowledged as present (matching the reference screenshot) but not specified. The most plausible design, by analogy with Category Management's own Edit (`015-category-edit-and-duplicate.md`, which reuses `013`'s creation wizard pre-filled), is that Edit reopens `018`'s Create Trip form pre-filled with this trip's values — but whether that's actually correct, whether an already-non-`"new"` trip should even be editable, and what changes (if any) to `018`'s validation an edit needs, are all unanswered. Don't build Edit Trip from this doc alone.
+- **The "Edit" button's actual behavior** — resolved by `021-trip-edit.md`: enabled only while status is `"new"`, reopening `018`'s Create Trip form pre-filled.
 - **Whatever "View Trip Claim" implies about Trip/Claim being the same or related entities** — this doc preserves the screenshot's own wording without resolving the underlying data-model question (see [Open Questions](#open-questions--assumptions)).
 - Any action beyond viewing and navigating back (no delete, no status change, no approval action anywhere on this screen).
 
 ## Open Questions / Assumptions
 
 - **Is "Claim" here just this screen's label for a Trip, or a genuinely separate entity a Trip owns?** The breadcrumb says "View Trip Claim," and the empty state's body copy says "No expenses have been added to this claim" (not "to this trip") — consistent internal wording that reads like intentional product terminology, not a typo. If Claim is a separate entity (e.g. one Trip has one Claim, and expenses belong to the Claim rather than directly to the Trip), that changes `020`'s own `GET /api/trips/:id` shape and probably deserves its own data-model story before Expenses gets built. Resolve before implementing the future Expenses story, not necessarily before implementing this one (this story's own scope doesn't depend on the answer, since the list is unconditionally empty either way).
-- **The Edit button's destination and behavior** — flagged above; needs its own decision, ideally as an amendment to `018` (the same file that owns Create Trip's form) rather than reinvented here.
 - **Two different date/time display formats for the same underlying `startAt`/`createdAt` values, across two different screens** (`019`'s listing rows vs. this page's Trip Overview) — reproduced faithfully from the reference screenshots rather than unified, since nothing indicates this was unintentional, but worth a deliberate look before implementation locks it in as two separate formatting code paths.
 - **Country flag icon next to Start/End Location** — new to this story (neither `018` nor `019` mention a flag icon anywhere); requires `City`/`Country` responses to carry enough to render one (assumed: `Country.code`, an ISO alpha-2 already in the schema per `018`'s Data Model, is enough to render a flag via a standard emoji-flag-from-country-code mapping).
 - **Row-click target**: this story assumes the *entire* trip name/row is clickable and navigates here, matching `019`'s own note that a details destination was an acknowledged-but-unspecified gap — confirm nothing else on the row (status badge, amount chips) should instead be its own separate click target.

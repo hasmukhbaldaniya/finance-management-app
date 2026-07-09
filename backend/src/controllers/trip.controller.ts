@@ -18,6 +18,53 @@ function asDate(value: unknown): Date | null {
   return Number.isNaN(date.getTime()) ? null : date;
 }
 
+type ValidatedTripInput = {
+  name: string;
+  startAt: Date;
+  endAt: Date;
+  startCityId: number;
+  endCityId: number;
+};
+
+// Shared between createTrip and updateTrip (021's Edit Trip reuses 018's
+// Create Trip validation verbatim, per that story's own Validation Rules).
+async function parseAndValidateTripInput(body: unknown): Promise<{ error: string } | ValidatedTripInput> {
+  const record = typeof body === "object" && body !== null ? (body as Record<string, unknown>) : {};
+
+  const name = typeof record.name === "string" ? record.name.trim() : "";
+  if (name.length < MIN_TRIP_NAME_LENGTH || name.length > MAX_TRIP_NAME_LENGTH) {
+    return { error: "Trip Name is required." };
+  }
+
+  const startAt = asDate(record.startAt);
+  if (!startAt) {
+    return { error: "Start Date & Time is required." };
+  }
+  const endAt = asDate(record.endAt);
+  if (!endAt) {
+    return { error: "End Date & Time is required." };
+  }
+  if (endAt.getTime() <= startAt.getTime()) {
+    return { error: "End Date & Time must be after the Start Date & Time." };
+  }
+
+  const startCityId = Number(record.startCityId);
+  if (!startCityId) {
+    return { error: "Start Location is required." };
+  }
+  const endCityId = Number(record.endCityId);
+  if (!endCityId) {
+    return { error: "End Location is required." };
+  }
+
+  const cities = await City.findAll({ where: { id: [startCityId, endCityId] } });
+  if (!cities.some((city) => city.id === startCityId) || !cities.some((city) => city.id === endCityId)) {
+    return { error: "Select a valid location." };
+  }
+
+  return { name, startAt, endAt, startCityId, endCityId };
+}
+
 // 018's Create Trip — validates every field, persists with status "new" and
 // totalAmount 0.00. See trip.model.ts's doc comment for why "draft" isn't a
 // value this handler ever writes, despite being a real column value
@@ -29,56 +76,61 @@ export async function createTrip(req: AuthenticatedRequest, res: Response): Prom
     return;
   }
 
-  const name = typeof req.body?.name === "string" ? req.body.name.trim() : "";
-  if (name.length < MIN_TRIP_NAME_LENGTH || name.length > MAX_TRIP_NAME_LENGTH) {
-    res.status(400).json({ error: "Trip Name is required." });
-    return;
-  }
-
-  const startAt = asDate(req.body?.startAt);
-  if (!startAt) {
-    res.status(400).json({ error: "Start Date & Time is required." });
-    return;
-  }
-  const endAt = asDate(req.body?.endAt);
-  if (!endAt) {
-    res.status(400).json({ error: "End Date & Time is required." });
-    return;
-  }
-  if (endAt.getTime() <= startAt.getTime()) {
-    res.status(400).json({ error: "End Date & Time must be after the Start Date & Time." });
-    return;
-  }
-
-  const startCityId = Number(req.body?.startCityId);
-  if (!startCityId) {
-    res.status(400).json({ error: "Start Location is required." });
-    return;
-  }
-  const endCityId = Number(req.body?.endCityId);
-  if (!endCityId) {
-    res.status(400).json({ error: "End Location is required." });
-    return;
-  }
-
-  const cities = await City.findAll({ where: { id: [startCityId, endCityId] } });
-  if (!cities.some((city) => city.id === startCityId) || !cities.some((city) => city.id === endCityId)) {
-    res.status(404).json({ error: "Select a valid location." });
+  const parsed = await parseAndValidateTripInput(req.body);
+  if ("error" in parsed) {
+    res.status(400).json({ error: parsed.error });
     return;
   }
 
   const trip = await Trip.create({
     organizationId,
     employeeId: req.userId,
-    name,
-    startAt,
-    endAt,
-    startCityId,
-    endCityId,
+    name: parsed.name,
+    startAt: parsed.startAt,
+    endAt: parsed.endAt,
+    startCityId: parsed.startCityId,
+    endCityId: parsed.endCityId,
     approvedAmount: null,
   });
 
   res.status(201).json({ id: trip.id, status: trip.status, totalAmount: trip.totalAmount });
+}
+
+// 021's Edit Trip — identical validation to createTrip, but updates the
+// existing row in place and is only ever allowed while status is "new",
+// enforced here (not just by the frontend disabling the Edit button) so a
+// stale client-side "enabled" state from before the status changed doesn't
+// get a free pass — see 021's own Edge Cases.
+export async function updateTrip(req: AuthenticatedRequest, res: Response): Promise<void> {
+  if (!req.userId) {
+    res.status(401).json({ error: NOT_AUTHENTICATED_MESSAGE });
+    return;
+  }
+
+  const trip = await Trip.findOne({ where: { id: Number(req.params.id), employeeId: req.userId } });
+  if (!trip) {
+    res.status(404).json({ error: TRIP_NOT_FOUND_MESSAGE });
+    return;
+  }
+  if (trip.status !== "new") {
+    res.status(409).json({ error: "Only trips with New status can be edited." });
+    return;
+  }
+
+  const parsed = await parseAndValidateTripInput(req.body);
+  if ("error" in parsed) {
+    res.status(400).json({ error: parsed.error });
+    return;
+  }
+
+  trip.name = parsed.name;
+  trip.startAt = parsed.startAt;
+  trip.endAt = parsed.endAt;
+  trip.startCityId = parsed.startCityId;
+  trip.endCityId = parsed.endCityId;
+  await trip.save();
+
+  res.status(200).json({ id: trip.id, status: trip.status, totalAmount: trip.totalAmount });
 }
 
 function dayRange(value: string): { start: Date; end: Date } | null {
@@ -150,7 +202,9 @@ export async function listTrips(req: AuthenticatedRequest, res: Response): Promi
 // including startCity/endCity as objects (not bare ids), so the page never
 // needs a second round-trip to GET /api/cities just to show a name/flag —
 // the same "one endpoint, everything it needs" posture 013's shared
-// category-detail endpoint already established.
+// category-detail endpoint already established. Also backs 021's Edit Trip
+// pre-fill, which is why each city object carries `id`/`countryId` too, not
+// just display strings — a resubmittable value, not only a label.
 export async function getTripDetail(req: AuthenticatedRequest, res: Response): Promise<void> {
   if (!req.userId) {
     res.status(401).json({ error: NOT_AUTHENTICATED_MESSAGE });
@@ -170,7 +224,13 @@ export async function getTripDetail(req: AuthenticatedRequest, res: Response): P
   function cityPayload(cityId: number) {
     const city = cities.find((candidate) => candidate.id === cityId);
     const country = city ? countryById.get(city.countryId) : undefined;
-    return { name: city?.name ?? "", countryName: country?.name ?? "", countryCode: country?.code ?? "" };
+    return {
+      id: city?.id ?? cityId,
+      countryId: city?.countryId ?? null,
+      name: city?.name ?? "",
+      countryName: country?.name ?? "",
+      countryCode: country?.code ?? "",
+    };
   }
 
   res.status(200).json({

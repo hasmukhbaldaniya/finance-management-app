@@ -141,7 +141,7 @@ New tables:
 - Logging expenses/claims against a trip, or computing `totalAmount` from anything — it's always `0.00` at creation and untouched by this story.
 - Any status besides `"new"` (e.g. ongoing/completed/cancelled) and whatever triggers those transitions.
 - The "My Trips" listing screen itself (search, filters, pagination, status badges, amount display) — entirely `019-trip-listing.md`'s concern.
-- Editing or deleting a trip after creation — `019` covers deleting a Draft trip; editing isn't specified anywhere yet.
+- Editing or deleting a trip after creation — `019` covers deleting a Draft trip, `021` covers editing a still-`"new"` trip by reusing this story's own Create Trip form.
 - Trip approval workflows or visibility beyond the creating employee (manager visibility, org-wide trip reporting, etc.).
 - Any UI for managing the `Country`/`City` master catalog — it's seeded once, the same as `Airline`.
 - Multi-currency handling for `totalAmount` — this story only ever writes a bare `0.00`, so currency formatting/symbol questions don't arise yet.

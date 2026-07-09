@@ -1,5 +1,5 @@
 import { Router } from "express";
-import { createTrip, deleteTrip, getTripDetail, listTrips } from "../controllers/trip.controller";
+import { createTrip, deleteTrip, getTripDetail, listTrips, updateTrip } from "../controllers/trip.controller";
 import { requireAuth } from "../middleware/require-auth";
 
 export const tripRouter = Router();
@@ -11,4 +11,5 @@ tripRouter.use(requireAuth);
 tripRouter.get("/", listTrips);
 tripRouter.post("/", createTrip);
 tripRouter.get("/:id", getTripDetail);
+tripRouter.patch("/:id", updateTrip);
 tripRouter.delete("/:id", deleteTrip);

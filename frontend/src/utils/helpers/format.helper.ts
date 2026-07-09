@@ -24,6 +24,17 @@ export function formatTripOverviewDate(value: string | Date): string {
   return new Date(value).toLocaleDateString("en-US", { day: "2-digit", month: "short", year: "numeric" });
 }
 
+// ISO string → the local-time value an <input type="datetime-local"> expects
+// ("YYYY-MM-DDTHH:mm") — used to pre-fill 021's Edit Trip form from a trip's
+// saved startAt/endAt. Built from the Date object's local getters (not a
+// slice of the ISO string itself), so it reflects the browser's local time
+// the same way the input's own value always does.
+export function toDatetimeLocalValue(value: string): string {
+  const date = new Date(value);
+  const pad = (num: number): string => String(num).padStart(2, "0");
+  return `${date.getFullYear()}-${pad(date.getMonth() + 1)}-${pad(date.getDate())}T${pad(date.getHours())}:${pad(date.getMinutes())}`;
+}
+
 // ISO alpha-2 country code → flag emoji, via Unicode regional indicator
 // symbols (each letter maps to U+1F1E6 + offset from 'A'). Standard,
 // widely-used technique — no external flag-icon library needed since every
