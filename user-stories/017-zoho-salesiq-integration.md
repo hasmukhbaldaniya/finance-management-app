@@ -7,12 +7,12 @@
 
 Adds a live-chat support widget (Zoho SalesIQ) to the authenticated app, so any logged-in employee can start a conversation with support without leaving whatever screen they're on. Today `frontend/src/app/(private)/help/page.tsx` is a bare `<ComingSoon title="Help" />` placeholder — this story gives that page (and the rest of the private area) a real, working support channel.
 
-**This is a frontend-only integration.** Zoho SalesIQ is a third-party embedded widget (a `<script>` snippet plus a small JS API for visitor identification) — there's no new backend table, endpoint, or webhook in this story. The only backend-adjacent artifact is a new frontend env var holding the organization's SalesIQ widget code.
+**This is a frontend-only integration.** Zoho SalesIQ is a third-party embedded widget (a `<script>` snippet plus a small JS API for visitor identification) — there's no new backend table, endpoint, or webhook in this story. The only backend-adjacent artifact is a new frontend env var holding the organization's full SalesIQ loader-script URL.
 
 **Scoping decisions below were proposed and not yet confirmed by the product owner** — this doc proceeds with the recommended default at each decision point so implementation isn't blocked, but each is flagged again in [Open Questions](#open-questions--assumptions) and should be signed off before/during implementation:
 - The widget loads app-wide across the authenticated `(private)/` area (every page under `dashboard/`, `trips/`, `claims/`, `approvals/`, `finance/`, `reports/`, `company-settings/*`, `profile/`, `help/`), not just on the Help page, and **not** on public/unauthenticated pages (`login/`, `register/*`, `forgot-password/*`, `onboarding/*`).
 - The logged-in employee's name, email, and organization name are passed to SalesIQ so support agents see a real identity instead of an anonymous visitor.
-- One organization-wide widget code, set via a single frontend env var — not a per-organization value a Company Administrator can configure in Company Settings.
+- One organization-wide widget URL, set via a single frontend env var — not a per-organization value a Company Administrator can configure in Company Settings.
 
 ---
 
@@ -33,7 +33,7 @@ Adds a live-chat support widget (Zoho SalesIQ) to the authenticated app, so any 
 1. `(private)/layout.tsx`'s `SessionProvider` — already the one place that fetches the logged-in employee's identity via `getMe()` before rendering any private page — is also where the SalesIQ embed script loads, once per session, after that identity is available. This mirrors how `SessionProvider` already centralizes `getMe()` so individual pages don't each re-fetch it (see `frontend/CLAUDE.md`'s `SessionContext` section).
 2. The widget script loads asynchronously and does not block page render — the rest of the app is fully usable before (and if) SalesIQ finishes loading.
 3. Once loaded, the widget shows its floating launcher bubble in the bottom-right corner on every authenticated page; clicking it opens the chat panel. Navigating between pages (client-side routing) does not reload or reset the widget — it persists across route changes, the same way `Header` already does as a `SessionProvider`-level component.
-4. **If the SalesIQ script fails to load** (network blocked, ad-blocker, Zoho outage, `NEXT_PUBLIC_ZOHO_SALESIQ_WIDGET_CODE` unset), the app continues to function normally with no floating launcher and no error shown to the user — a missing support-chat widget is a degraded, non-blocking experience, not an application error.
+4. **If the SalesIQ script fails to load** (network blocked, ad-blocker, Zoho outage, `NEXT_PUBLIC_ZOHO_SALESIQ_WIDGET_URL` unset), the app continues to function normally with no floating launcher and no error shown to the user — a missing support-chat widget is a degraded, non-blocking experience, not an application error.
 5. The widget does **not** load on any `(public)/` page (login, register, forgot-password, onboarding) — those routes never mount `SessionProvider`, so there's nothing to hook the load into without also duplicating session-independent loading logic those pages don't otherwise need (see [Out of Scope](#out-of-scope)).
 
 ### Validation Rules
@@ -44,7 +44,7 @@ Not applicable — this story has no form fields or user-submitted data.
 
 - **Given** a logged-in employee on any `(private)/` page, **when** the page finishes loading, **then** the SalesIQ floating launcher appears (assuming the widget code is configured and Zoho's script loads successfully).
 - **Given** the employee navigates from one private page to another, **when** the navigation completes, **then** the widget remains available without visibly reloading.
-- **Given** `NEXT_PUBLIC_ZOHO_SALESIQ_WIDGET_CODE` is unset or the script fails to load, **when** any private page renders, **then** the rest of the app works normally and no error is shown.
+- **Given** `NEXT_PUBLIC_ZOHO_SALESIQ_WIDGET_URL` is unset or the script fails to load, **when** any private page renders, **then** the rest of the app works normally and no error is shown.
 - **Given** a logged-out visitor on `/login` or `/register`, **when** the page loads, **then** no SalesIQ widget appears.
 
 ### Error / Toast Messages
@@ -131,7 +131,7 @@ No new backend REST endpoints, tables, or migrations. The only server-adjacent c
 
 | Variable | Where | Notes |
 |----------|-------|-------|
-| `NEXT_PUBLIC_ZOHO_SALESIQ_WIDGET_CODE` | `frontend/.env` / `.env.example` | The widget code Zoho SalesIQ issues per account (the value normally embedded in Zoho's own `<script>` snippet). `NEXT_PUBLIC_` prefix since it's read client-side, matching this codebase's existing convention (`NEXT_PUBLIC_API_BASE_URL`). No fallback — if unset, the widget simply never loads (see the first story's Flow point 4), the same fail-safe-but-silent posture, not a startup throw like `JWT_SECRET`'s. |
+| `NEXT_PUBLIC_ZOHO_SALESIQ_WIDGET_URL` | `frontend/.env` / `.env.example` | The full loader-script URL Zoho SalesIQ issues per account — the `src` attribute of Zoho's own embed snippet, e.g. `https://salesiq.zohopublic.in/widget?wc=<widget-code>`. Holds the whole URL, not just a bare code: the domain is region-specific (`.in`/`.com`/`.eu`/`.com.au`/...) and the widget code is a query param on it, not a separate JS property — confirmed against a real account's actual snippet, not assumed. `NEXT_PUBLIC_` prefix since it's read client-side, matching this codebase's existing convention (`NEXT_PUBLIC_API_BASE_URL`). No fallback — if unset, the widget simply never loads (see the first story's Flow point 4), the same fail-safe-but-silent posture, not a startup throw like `JWT_SECRET`'s. |
 
 ## Data Model
 
@@ -148,7 +148,7 @@ Not applicable — this epic has no user-submitted form data anywhere in its thr
 | ZS-01 | Load any private page with the widget code configured | Floating chat launcher appears |
 | ZS-02 | Load any public page (`/login`, `/register`, etc.) | No widget appears |
 | ZS-03 | Navigate between two private pages | Widget persists without reloading |
-| ZS-04 | Unset `NEXT_PUBLIC_ZOHO_SALESIQ_WIDGET_CODE`, load a private page | App renders normally, no widget, no error |
+| ZS-04 | Unset `NEXT_PUBLIC_ZOHO_SALESIQ_WIDGET_URL`, load a private page | App renders normally, no widget, no error |
 | ZS-05 | Start a chat as a logged-in employee, inspect the conversation from the Zoho SalesIQ agent console | Visitor shows the employee's real name/email/organization, not "Anonymous" |
 | ZS-06 | Click "Chat with Us" on the Help page | SalesIQ chat panel opens |
 | ZS-07 | Widget fails to load, then visit the Help page | Page renders, "Chat with Us" button is absent |
@@ -169,6 +169,6 @@ Not applicable — this epic has no user-submitted form data anywhere in its thr
   1. Widget scope: assumed **app-wide across `(private)/` only**, not public pages, not Help-page-only.
   2. Visitor identity: assumed **yes**, pass name/email/organization.
   3. Configuration: assumed **one org-wide env var**, not a per-organization admin-configurable setting.
-- **Does a live Zoho SalesIQ account and widget code already exist for this product?** Nothing in this story can actually be wired up end-to-end without one — confirm before implementation, not just before production deploy, since local development also needs a real (or sandbox) widget code to test against.
+- **Resolved**: a live Zoho SalesIQ account and widget URL exist and were provided during implementation (`salesiq.zohopublic.in` region) — set locally in `frontend/.env.local` (gitignored, never committed) for testing; this is the org-wide value referenced throughout this doc.
 - **Exact Zoho SalesIQ JS API method names** (visitor identification call, programmatic "open chat" call) are deliberately not specified here — Zoho's SDK surface is versioned and has shifted across product generations; implementation should reference Zoho's own current SalesIQ JS API docs at build time rather than this doc guessing at method signatures that could be stale by then.
 - **Whether the widget should be visually repositioned** (Zoho defaults to bottom-right, which may overlap other floating UI this app adds later) is left as an implementation-time detail, not specified here since no conflicting UI exists yet.
