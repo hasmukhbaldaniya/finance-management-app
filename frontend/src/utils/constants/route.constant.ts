@@ -1,3 +1,5 @@
+export type CategoryStepSegment = "basic-details" | "expense-form" | "policies" | "project-policies";
+
 export const ROUTES = {
   LOGIN: "/login",
   DASHBOARD: "/dashboard",
@@ -19,6 +21,9 @@ export const ROUTES = {
   EMPLOYEE_INVITE: "/company-settings/employees/invite",
   EMPLOYEE_BULK_INVITE: "/company-settings/employees/bulk-invite",
   employeeEdit: (employeeId: number) => `/company-settings/employees/${employeeId}/edit`,
+  CATEGORY_NEW: "/company-settings/categories/new",
+  categoryDetails: (categoryId: number) => `/company-settings/categories/${categoryId}`,
+  categoryStep: (categoryId: number, step: CategoryStepSegment) => `/company-settings/categories/${categoryId}/${step}`,
   REGISTER: {
     ORGANIZATION: "/register",
     DETAILS: "/register/details",
