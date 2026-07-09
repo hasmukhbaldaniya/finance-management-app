@@ -38,3 +38,6 @@ export { CategoryApprovalLevel } from "./category-approval-level.model";
 export { CategoryApprovalStage } from "./category-approval-stage.model";
 export { CategoryApprovalStageApprover } from "./category-approval-stage-approver.model";
 export { CategoryVersion, type CategoryWizardStep, type CategoryVersionSnapshot } from "./category-version.model";
+export { Country } from "./country.model";
+export { City } from "./city.model";
+export { Trip, type TripStatus } from "./trip.model";

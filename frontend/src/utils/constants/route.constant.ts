@@ -4,6 +4,8 @@ export const ROUTES = {
   LOGIN: "/login",
   DASHBOARD: "/dashboard",
   TRIPS: "/trips",
+  TRIP_NEW: "/trips/new",
+  tripDetails: (tripId: number) => `/trips/${tripId}`,
   CLAIMS: "/claims",
   APPROVALS: "/approvals",
   FINANCE: "/finance",

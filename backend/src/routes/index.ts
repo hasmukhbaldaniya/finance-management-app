@@ -3,6 +3,8 @@ import { airlineRouter } from "./airline.routes";
 import { associatedOrganizationRouter } from "./associated-organization.routes";
 import { authRouter } from "./auth.routes";
 import { categoryRouter } from "./category.routes";
+import { cityRouter } from "./city.routes";
+import { countryRouter } from "./country.routes";
 import { departmentRouter } from "./department.routes";
 import { employeeBulkInviteRouter } from "./employee-bulk-invite.routes";
 import { employeeOnboardingRouter } from "./employee-onboarding.routes";
@@ -12,6 +14,7 @@ import { healthRouter } from "./health.routes";
 import { organizationRouter } from "./organization.routes";
 import { projectRouter } from "./project.routes";
 import { roleRouter } from "./role.routes";
+import { tripRouter } from "./trip.routes";
 
 export const apiRouter = Router();
 
@@ -28,3 +31,6 @@ apiRouter.use("/employees/bulk", employeeBulkInviteRouter);
 apiRouter.use("/employees", employeeRouter);
 apiRouter.use("/projects", projectRouter);
 apiRouter.use("/airlines", airlineRouter);
+apiRouter.use("/countries", countryRouter);
+apiRouter.use("/cities", cityRouter);
+apiRouter.use("/trips", tripRouter);
