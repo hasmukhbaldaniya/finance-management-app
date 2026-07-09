@@ -6,6 +6,7 @@ import { getMe } from "@/apis/auth";
 import { Header } from "@/components/header";
 import { Button } from "@/components/ui/button";
 import { Spinner } from "@/components/ui/spinner";
+import { ZohoSalesIqWidget } from "@/components/zoho-salesiq-widget";
 import type { AuthUser } from "@/types/auth.type";
 import type { Organization } from "@/types/organization.type";
 import { ApiError, GENERIC_ERROR_MESSAGE } from "@/utils/apiManager/apiManager";
@@ -19,6 +20,7 @@ export function SessionProvider({ children }: { children: ReactNode }) {
   const [isOwner, setIsOwner] = useState(false);
   const [isLoading, setIsLoading] = useState(true);
   const [loadError, setLoadError] = useState<string | undefined>();
+  const [isSalesIqAvailable, setIsSalesIqAvailable] = useState(false);
 
   useEffect(() => {
     let isMounted = true;
@@ -69,7 +71,7 @@ export function SessionProvider({ children }: { children: ReactNode }) {
   }
 
   return (
-    <SessionContext.Provider value={{ user, organization, isOwner }}>
+    <SessionContext.Provider value={{ user, organization, isOwner, isSalesIqAvailable }}>
       {/*
         `fixed inset-0` (not h-svh/min-h-svh) is deliberate: pinning directly to
         the viewport makes this shell immune to any parent (html/body) sizing
@@ -82,6 +84,12 @@ export function SessionProvider({ children }: { children: ReactNode }) {
         <Header user={user} organization={organization} isOwner={isOwner} />
         <div className="flex flex-1 flex-col overflow-y-auto">{children}</div>
       </div>
+      <ZohoSalesIqWidget
+        visitorName={user.name}
+        visitorEmail={user.email}
+        organizationName={organization?.name ?? null}
+        onAvailabilityChange={setIsSalesIqAvailable}
+      />
     </SessionContext.Provider>
   );
 }

@@ -34,3 +34,4 @@ Product requirements for Finance Management, written as user stories before any 
 | 014 | [Category Listing](./014-category-listing.md) | Draft |
 | 015 | [Category Edit and Duplicate](./015-category-edit-and-duplicate.md) | Draft |
 | 016 | [Category Version History](./016-category-version-history.md) | Draft |
+| 017 | [Zoho SalesIQ Integration](./017-zoho-salesiq-integration.md) | Draft |
