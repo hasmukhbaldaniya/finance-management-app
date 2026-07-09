@@ -2,6 +2,7 @@ import { Router } from "express";
 import { airlineRouter } from "./airline.routes";
 import { associatedOrganizationRouter } from "./associated-organization.routes";
 import { authRouter } from "./auth.routes";
+import { categoryRouter } from "./category.routes";
 import { departmentRouter } from "./department.routes";
 import { employeeBulkInviteRouter } from "./employee-bulk-invite.routes";
 import { employeeOnboardingRouter } from "./employee-onboarding.routes";
@@ -16,6 +17,7 @@ export const apiRouter = Router();
 
 apiRouter.use("/health", healthRouter);
 apiRouter.use("/auth", authRouter);
+apiRouter.use("/categories", categoryRouter);
 apiRouter.use("/organizations", organizationRouter);
 apiRouter.use("/grades", gradeRouter);
 apiRouter.use("/departments", departmentRouter);
