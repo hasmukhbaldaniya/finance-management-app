@@ -20,8 +20,10 @@ import {
   getInvoiceFiles,
   getProcessingStatus,
   mergeInvoicePages,
+  processInvoiceFiles,
   saveExpenses,
   unmergeInvoicePages,
+  uploadInvoiceFiles,
 } from "@/apis/claim";
 import { getClaimableCategories } from "@/apis/category";
 import { AiProcessingPipeline } from "@/components/claim/ai-processing-pipeline";
@@ -35,7 +37,7 @@ import { Spinner } from "@/components/ui/spinner";
 import { getInvoiceFileContent } from "@/apis/claim/getInvoiceFileContent.api";
 import { formatClaimName, formatInr } from "@/utils/helpers/format.helper";
 import { ApiError, GENERIC_ERROR_MESSAGE } from "@/utils/apiManager/apiManager";
-import { MAX_EXPENSE_COUNT } from "@/utils/constants/claim.constant";
+import { MAX_INVOICE_FILE_COUNT } from "@/utils/constants/claim.constant";
 import { ROUTES } from "@/utils/constants/route.constant";
 import type { ClaimableCategory, ClaimInvoiceFile, DuplicateMatch, Expense } from "@/types/claim.type";
 import type { LocalExpense } from "@/components/claim/local-expense.type";
@@ -80,12 +82,12 @@ export function AiReviewScreen({ claimId }: { claimId: number }) {
   const [isSubmittingDraft, setIsSubmittingDraft] = useState(false);
   const [isSubmittingFinal, setIsSubmittingFinal] = useState(false);
   const [isMerging, setIsMerging] = useState(false);
+  const [isUploadingMore, setIsUploadingMore] = useState(false);
   const [fileToDelete, setFileToDelete] = useState<ClaimInvoiceFile | null>(null);
   const [splitExpenseTarget, setSplitExpenseTarget] = useState<LocalExpense | null>(null);
   const [isSplitClaimOpen, setIsSplitClaimOpen] = useState(false);
   const [zoom, setZoom] = useState(1);
-  const nextTempId = useRef(-1);
-  const pollTimeout = useRef<ReturnType<typeof setTimeout> | null>(null);
+  const addExpenseInputRef = useRef<HTMLInputElement>(null);
 
   useEffect(() => {
     getClaimableCategories()
@@ -93,55 +95,70 @@ export function AiReviewScreen({ claimId }: { claimId: number }) {
       .catch(() => setCategories([]));
   }, []);
 
-  useEffect(() => {
-    let isMounted = true;
-
-    async function poll(): Promise<void> {
-      try {
-        const status = await getProcessingStatus(claimId);
-        if (!isMounted) return;
-        setProcessingStatus(status);
-        if (status.isComplete) {
-          await loadReviewData(true);
-          if (isMounted) setIsProcessing(false);
-          return;
-        }
-        pollTimeout.current = setTimeout(poll, POLL_INTERVAL_MS);
-      } catch (error) {
-        if (!isMounted) return;
-        toast.error(error instanceof ApiError ? error.message : GENERIC_ERROR_MESSAGE);
-      }
+  // Shared by the initial mount's processing wait and by "Add Expense"'s
+  // own upload-then-process cycle — both are "wait until every uploaded
+  // source has resolved," just at different points in the claim's life.
+  async function pollUntilComplete(isCancelledRef: { current: boolean }): Promise<void> {
+    for (;;) {
+      if (isCancelledRef.current) return;
+      const status = await getProcessingStatus(claimId);
+      if (isCancelledRef.current) return;
+      setProcessingStatus(status);
+      if (status.isComplete) return;
+      await new Promise<void>((resolve) => setTimeout(resolve, POLL_INTERVAL_MS));
     }
+  }
 
-    void poll();
+  useEffect(() => {
+    const isCancelledRef = { current: false };
+    (async () => {
+      try {
+        await pollUntilComplete(isCancelledRef);
+        if (isCancelledRef.current) return;
+        await loadReviewData();
+        if (!isCancelledRef.current) setIsProcessing(false);
+      } catch (error) {
+        if (!isCancelledRef.current) toast.error(error instanceof ApiError ? error.message : GENERIC_ERROR_MESSAGE);
+      }
+    })();
     return () => {
-      isMounted = false;
-      if (pollTimeout.current) clearTimeout(pollTimeout.current);
+      isCancelledRef.current = true;
     };
     // eslint-disable-next-line react-hooks/exhaustive-deps
   }, [claimId]);
 
-  async function loadReviewData(markAutoFilled: boolean): Promise<void> {
+  // Returns the freshly-loaded expenses so callers (e.g. "Add Expense") can
+  // tell which ones are brand new without a second round trip. Auto-filled
+  // tracking is preserved for any expense id that already existed (so a
+  // field the employee already edited on an older expense doesn't get its
+  // "Auto-filled" badge wrongly restored) and freshly computed only for
+  // ids that weren't there before — covers the initial load, Merge/Unmerge,
+  // and adding another invoice, all in one place.
+  async function loadReviewData(): Promise<LocalExpense[]> {
     const [{ claim }, { files }] = await Promise.all([getClaimDetail(claimId), getInvoiceFiles(claimId)]);
     const nextExpenses = claim.expenses.map(localExpenseFromDetail);
     setClaimName(formatClaimName(claim));
-    setExpenses(nextExpenses);
     setInvoiceFiles(files);
-    if (nextExpenses.length > 0 && !nextExpenses.some((expense) => expense.id === selectedExpenseId)) {
-      setSelectedExpenseId(nextExpenses[0]!.id!);
-    }
 
-    if (markAutoFilled) {
-      const nextAutoFilled: Record<number, Set<number>> = {};
+    setAutoFilledByExpense((previous) => {
+      const next: Record<number, Set<number>> = {};
       nextExpenses.forEach((expense) => {
-        nextAutoFilled[expense.id!] = new Set(
-          Object.entries(expense.fieldValues)
-            .filter(([, value]) => value !== null && value !== undefined && value !== "")
-            .map(([fieldId]) => Number(fieldId))
-        );
+        const id = expense.id!;
+        next[id] =
+          previous[id] ??
+          new Set(
+            Object.entries(expense.fieldValues)
+              .filter(([, value]) => value !== null && value !== undefined && value !== "")
+              .map(([fieldId]) => Number(fieldId))
+          );
       });
-      setAutoFilledByExpense(nextAutoFilled);
-    }
+      return next;
+    });
+
+    setExpenses(nextExpenses);
+    setSelectedExpenseId((previousSelected) =>
+      nextExpenses.length > 0 && !nextExpenses.some((expense) => expense.id === previousSelected) ? nextExpenses[0]!.id! : previousSelected
+    );
 
     const duplicates: Record<number, DuplicateMatch | null> = {};
     await Promise.all(
@@ -156,6 +173,8 @@ export function AiReviewScreen({ claimId }: { claimId: number }) {
       })
     );
     setDuplicateByExpense(duplicates);
+
+    return nextExpenses;
   }
 
   function updateExpense(expenseId: number, patch: Partial<LocalExpense>): void {
@@ -170,22 +189,41 @@ export function AiReviewScreen({ claimId }: { claimId: number }) {
     });
   }
 
-  // Manually added, not tied to any uploaded invoice (mirrors the manual
-  // flow's own "Add Expense" — available here too since an AI-Powered claim
-  // can still have hand-entered expenses alongside the extracted ones).
-  function addManualExpense(): void {
-    if (expenses.length >= MAX_EXPENSE_COUNT) {
-      toast.error("You've reached the maximum of 10 expenses.");
+  // "Add Expense" in the AI-Powered flow means uploading one more bill and
+  // letting it go through the exact same AI pipeline as Step 1's own
+  // uploads — auto-categorized, fields auto-filled — not a blank manual
+  // row. Existing invoice sources are left untouched (processInvoiceFiles
+  // only ever processes sources that don't already have an AiExtractionLog).
+  async function handleAddExpenseFiles(fileList: FileList | null): Promise<void> {
+    const files = Array.from(fileList ?? []);
+    if (files.length === 0) return;
+    if (invoiceFiles.length + files.length > MAX_INVOICE_FILE_COUNT) {
+      toast.error(`You can upload up to ${MAX_INVOICE_FILE_COUNT} files.`);
       return;
     }
-    const tempId = nextTempId.current--;
-    setExpenses((previous) => [...previous, { id: tempId, categoryId: null, paidBy: null, fieldValues: {}, sourceInvoiceFileId: null, sourcePageNumber: null }]);
-    setSelectedExpenseId(tempId);
+
+    const previousIds = new Set(expenses.map((expense) => expense.id));
+    setIsUploadingMore(true);
+    try {
+      await uploadInvoiceFiles(claimId, files);
+      await processInvoiceFiles(claimId);
+      await pollUntilComplete({ current: false });
+      const nextExpenses = await loadReviewData();
+      const newExpense = nextExpenses.find((expense) => !previousIds.has(expense.id));
+      if (newExpense) setSelectedExpenseId(newExpense.id!);
+      toast.success(files.length > 1 ? "Invoices processed." : "Invoice processed.");
+    } catch (error) {
+      toast.error(error instanceof ApiError ? error.message : GENERIC_ERROR_MESSAGE);
+    } finally {
+      setIsUploadingMore(false);
+    }
   }
 
-  // Never persisted yet (no invoice, no prior save) — just drop it locally.
-  // A previously-saved manual expense is removed the same way; the next
-  // Save as Draft/Save Claim's full-replace semantics delete it server-side.
+  // A split-off portion beyond the first has no invoice of its own (see
+  // claim.controller.ts's splitExpense) — it's the one way a "manual,
+  // no-file" expense still shows up in this flow. Never persisted as new
+  // until the next save, so removing one locally is enough; the next Save
+  // as Draft/Save Claim's full-replace semantics delete it server-side.
   function removeManualExpense(expenseId: number): void {
     setExpenses((previous) => previous.filter((expense) => expense.id !== expenseId));
     if (selectedExpenseId === expenseId) setSelectedExpenseId(null);
@@ -240,7 +278,7 @@ export function AiReviewScreen({ claimId }: { claimId: number }) {
       await mergeInvoicePages(claimId, fileId, pageNumbers);
       toast.success("Pages merged.");
       setSelectedForMerge([]);
-      await loadReviewData(true);
+      await loadReviewData();
     } catch (error) {
       toast.error(error instanceof ApiError ? error.message : GENERIC_ERROR_MESSAGE);
     } finally {
@@ -253,7 +291,7 @@ export function AiReviewScreen({ claimId }: { claimId: number }) {
     try {
       await unmergeInvoicePages(claimId, expenseId);
       toast.success("Pages unmerged.");
-      await loadReviewData(true);
+      await loadReviewData();
     } catch (error) {
       toast.error(error instanceof ApiError ? error.message : GENERIC_ERROR_MESSAGE);
     } finally {
@@ -279,7 +317,7 @@ export function AiReviewScreen({ claimId }: { claimId: number }) {
       });
       if (isDraftSave) {
         toast.success("Claim saved as draft.");
-        await loadReviewData(false);
+        await loadReviewData();
       } else {
         toast.success("Claim saved.");
         router.push(ROUTES.CLAIMS);
@@ -308,8 +346,25 @@ export function AiReviewScreen({ claimId }: { claimId: number }) {
           </span>
         </div>
         <div className="flex items-center gap-2">
-          <Button type="button" variant="secondary" size="sm" onClick={addManualExpense} disabled={expenses.length >= MAX_EXPENSE_COUNT}>
-            <PlusIcon size={14} /> Add Expense
+          <input
+            ref={addExpenseInputRef}
+            type="file"
+            multiple
+            accept=".pdf,.jpg,.jpeg,.png"
+            className="hidden"
+            onChange={(event) => {
+              void handleAddExpenseFiles(event.target.files);
+              event.target.value = "";
+            }}
+          />
+          <Button
+            type="button"
+            variant="secondary"
+            size="sm"
+            onClick={() => addExpenseInputRef.current?.click()}
+            disabled={isUploadingMore || invoiceFiles.length >= MAX_INVOICE_FILE_COUNT}
+          >
+            {isUploadingMore ? <Spinner className="size-3.5" /> : <PlusIcon size={14} />} Add Expense
           </Button>
           <Button type="button" variant="secondary" size="sm" onClick={() => setIsSplitClaimOpen(true)} disabled={expenses.length < 2}>
             <ArrowsSplitIcon size={14} /> Split Claim
@@ -426,6 +481,13 @@ export function AiReviewScreen({ claimId }: { claimId: number }) {
                 </div>
               );
             })}
+
+            {isUploadingMore ? (
+              <div className="flex items-center gap-2 rounded-md border border-dashed border-border p-2 text-xs text-muted-foreground">
+                <Spinner className="size-3.5 shrink-0" />
+                Reading your new invoice…
+              </div>
+            ) : null}
 
             {manualExpenses.length > 0 ? (
               <div className="space-y-1.5 border-t border-border pt-3">
@@ -610,14 +672,14 @@ export function AiReviewScreen({ claimId }: { claimId: number }) {
         claimId={claimId}
         file={fileToDelete}
         onOpenChange={(open) => !open && setFileToDelete(null)}
-        onDeleted={() => loadReviewData(false)}
+        onDeleted={() => loadReviewData()}
       />
       <SplitExpenseDialog
         claimId={claimId}
         expense={splitExpenseTarget}
         categories={categories}
         onOpenChange={(open) => !open && setSplitExpenseTarget(null)}
-        onSplit={() => loadReviewData(false)}
+        onSplit={() => loadReviewData()}
       />
       <SplitClaimDialog claimId={claimId} expenses={expenses} categories={categories} open={isSplitClaimOpen} onOpenChange={setIsSplitClaimOpen} />
     </div>
