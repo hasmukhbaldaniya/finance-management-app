@@ -40,11 +40,12 @@ export const env = {
     password: requireEnv("SMTP_PASSWORD"),
     from: requireEnv("SMTP_FROM", "no-reply@finance-management.local"),
   },
-  // 023's AI/ML service — no fallback for the key itself (unset means the
-  // service returns a clear "not configured" error per source instead of
-  // silently faking a result; see ai-extraction.service.ts).
-  ai: {
-    apiKey: process.env.ANTHROPIC_API_KEY,
-    model: requireEnv("AI_MODEL", "claude-sonnet-5"),
+  // 023's AI/ML service — a standalone microservice (../ai-service), not
+  // in-process. This backend only knows its URL and an optional shared
+  // secret; the Anthropic API key itself lives only in that service's own
+  // env (see ai-extraction.service.ts, the HTTP client for it).
+  aiService: {
+    url: requireEnv("AI_SERVICE_URL", "http://localhost:4100"),
+    internalApiKey: process.env.AI_SERVICE_INTERNAL_API_KEY,
   },
 };
