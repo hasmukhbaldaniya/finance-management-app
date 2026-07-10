@@ -7,6 +7,7 @@ import {
   listInvoiceFiles,
   mergeInvoicePages,
   processInvoiceFiles,
+  removeInvoiceFile,
   unmergeInvoicePages,
   uploadInvoiceFiles,
 } from "../controllers/claim-ai.controller";
@@ -43,6 +44,7 @@ claimRouter.post("/:id/split", splitClaim);
 claimRouter.get("/:id/invoice-files", listInvoiceFiles);
 claimRouter.post("/:id/invoice-files", invoiceUploadMiddleware, uploadInvoiceFiles);
 claimRouter.get("/:id/invoice-files/:fileId/content", getInvoiceFileContent);
+claimRouter.delete("/:id/invoice-files/:fileId", removeInvoiceFile);
 claimRouter.post("/:id/invoice-files/:fileId/merge", mergeInvoicePages);
 claimRouter.post("/:id/process", processInvoiceFiles);
 claimRouter.get("/:id/process-status", getProcessingStatus);

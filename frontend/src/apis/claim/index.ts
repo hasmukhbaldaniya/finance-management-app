@@ -8,6 +8,7 @@ export { splitExpense, type SplitExpensePortion } from "./splitExpense.api";
 export { splitClaim, type SplitClaimPayload } from "./splitClaim.api";
 export { uploadInvoiceFiles } from "./uploadInvoiceFiles.api";
 export { getInvoiceFiles } from "./listInvoiceFiles.api";
+export { deleteInvoiceFile } from "./deleteInvoiceFile.api";
 export { processInvoiceFiles } from "./process.api";
 export { getProcessingStatus } from "./getProcessingStatus.api";
 export { mergeInvoicePages } from "./mergeInvoicePages.api";

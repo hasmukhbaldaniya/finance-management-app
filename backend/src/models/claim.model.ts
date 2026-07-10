@@ -20,6 +20,14 @@ export class Claim extends Model<InferAttributes<Claim>, InferCreationAttributes
   declare status: CreationOptional<ClaimStatus>;
   declare totalAmount: CreationOptional<string>;
   declare splitFromClaimId: number | null;
+  // True once saveExpenses has run at least once (draft or final save), or
+  // immediately for a claim created via Split Claim (already assembled from
+  // previously-saved expenses). An AI-Powered claim exists in this table as
+  // soon as Step 1 uploads files — necessary so the AI service has
+  // something to attach them to — but stays `false` here until the
+  // employee actually saves Step 2; listClaims filters on this so an
+  // abandoned review never shows up as a real claim.
+  declare hasBeenSaved: CreationOptional<boolean>;
   declare createdAt: CreationOptional<Date>;
   declare updatedAt: CreationOptional<Date>;
 }
@@ -36,6 +44,7 @@ Claim.init(
     status: { type: DataTypes.STRING, allowNull: false, defaultValue: "draft" },
     totalAmount: { type: DataTypes.DECIMAL(12, 2), allowNull: false, defaultValue: 0 },
     splitFromClaimId: { type: DataTypes.INTEGER, allowNull: true },
+    hasBeenSaved: { type: DataTypes.BOOLEAN, allowNull: false, defaultValue: false },
     createdAt: DataTypes.DATE,
     updatedAt: DataTypes.DATE,
   },

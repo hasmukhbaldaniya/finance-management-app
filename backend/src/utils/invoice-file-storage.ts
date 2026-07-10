@@ -1,5 +1,5 @@
 import { randomUUID } from "crypto";
-import { mkdir, readFile, writeFile } from "fs/promises";
+import { mkdir, readFile, unlink, writeFile } from "fs/promises";
 import path from "path";
 
 // Local-disk storage for uploaded invoice bills (023's Upload Invoices story)
@@ -24,4 +24,14 @@ export async function saveInvoiceFile(claimId: number, buffer: Buffer, originalF
 
 export async function readInvoiceFile(storedPath: string): Promise<Buffer> {
   return readFile(path.join(UPLOAD_ROOT, storedPath));
+}
+
+// Best-effort — a missing file is fine (nothing left to clean up), only a
+// genuine I/O error is worth surfacing.
+export async function deleteInvoiceFile(storedPath: string): Promise<void> {
+  try {
+    await unlink(path.join(UPLOAD_ROOT, storedPath));
+  } catch (err) {
+    if ((err as NodeJS.ErrnoException).code !== "ENOENT") throw err;
+  }
 }

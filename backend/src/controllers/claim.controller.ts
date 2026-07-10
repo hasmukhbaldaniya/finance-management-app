@@ -297,6 +297,7 @@ export async function saveExpenses(req: AuthenticatedRequest, res: Response): Pr
 
   claim.totalAmount = totalAmount.toFixed(2);
   claim.status = isDraftSave ? "draft" : "submitted";
+  claim.hasBeenSaved = true;
   await claim.save();
 
   // Duplicate check runs at both review (023's own Review step) and here at
@@ -448,6 +449,9 @@ export async function splitClaim(req: AuthenticatedRequest, res: Response): Prom
     tripId: newClaimInput.tripId,
     creationMethod: claim.creationMethod,
     splitFromClaimId: claim.id,
+    // Already assembled from previously-saved expenses — complete from the
+    // moment it's created, not an in-progress claim waiting on a first save.
+    hasBeenSaved: true,
   });
 
   await Expense.update({ claimId: newClaim.id }, { where: { id: toMove.map((expense) => expense.id) } });
@@ -493,7 +497,11 @@ export async function listClaims(req: AuthenticatedRequest, res: Response): Prom
   const page = Math.max(1, Math.trunc(Number(req.query.page)) || 1);
   const pageSize = Math.min(MAX_PAGE_SIZE, Math.max(1, Math.trunc(Number(req.query.pageSize)) || DEFAULT_PAGE_SIZE));
 
-  const conditions: WhereOptions[] = [{ employeeId: req.userId }];
+  // An AI-Powered claim exists in this table from Step 1 onward (needed so
+  // uploaded files have somewhere to attach for processing), but shouldn't
+  // appear here until the employee actually saves Step 2 — see Claim
+  // .hasBeenSaved's own doc comment.
+  const conditions: WhereOptions[] = [{ employeeId: req.userId }, { hasBeenSaved: true }];
 
   const search = typeof req.query.search === "string" ? req.query.search.trim() : "";
   if (search) {

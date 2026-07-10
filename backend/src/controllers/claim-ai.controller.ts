@@ -10,7 +10,7 @@ import {
 } from "../utils/constants/claim.constant";
 import { findDuplicateExpense } from "../utils/duplicate-expense-check";
 import { validateExpenseFieldValues } from "../utils/expense-fields";
-import { readInvoiceFile, saveInvoiceFile } from "../utils/invoice-file-storage";
+import { deleteInvoiceFile, readInvoiceFile, saveInvoiceFile } from "../utils/invoice-file-storage";
 import { extractPdfPages, getPdfPageCount } from "../utils/pdf-pages";
 
 const NOT_AUTHENTICATED_MESSAGE = "Not authenticated.";
@@ -135,6 +135,39 @@ export async function uploadInvoiceFiles(req: AuthenticatedRequest, res: Respons
   res.status(201).json({
     files: created.map((file) => ({ id: file.id, originalFileName: file.originalFileName, fileType: file.fileType, pageCount: file.pageCount })),
   });
+}
+
+// Removing an uploaded invoice (Step 1 or Step 2) takes its derived
+// Expense(s) with it — onDelete: SET NULL on Expense.sourceInvoiceFileId
+// would otherwise leave an orphaned expense with a dangling category/
+// fieldValues, so those are destroyed explicitly first.
+export async function removeInvoiceFile(req: AuthenticatedRequest, res: Response): Promise<void> {
+  if (!req.userId) {
+    res.status(401).json({ error: NOT_AUTHENTICATED_MESSAGE });
+    return;
+  }
+
+  const claim = await loadOwnedDraftClaim(Number(req.params.id), req.userId);
+  if (!claim) {
+    res.status(404).json({ error: CLAIM_NOT_FOUND_MESSAGE });
+    return;
+  }
+
+  const invoiceFile = await ClaimInvoiceFile.findOne({ where: { id: Number(req.params.fileId), claimId: claim.id } });
+  if (!invoiceFile) {
+    res.status(404).json({ error: "File not found." });
+    return;
+  }
+
+  await Expense.destroy({ where: { claimId: claim.id, sourceInvoiceFileId: invoiceFile.id } });
+  await deleteInvoiceFile(invoiceFile.storedPath);
+  await invoiceFile.destroy();
+
+  const expenses = await Expense.findAll({ where: { claimId: claim.id } });
+  claim.totalAmount = expenses.reduce((total, expense) => total + Number(expense.amount), 0).toFixed(2);
+  await claim.save();
+
+  res.status(200).json({ message: "Invoice removed." });
 }
 
 async function loadCategoriesForExtraction(organizationId: number): Promise<CategoryForExtraction[]> {
