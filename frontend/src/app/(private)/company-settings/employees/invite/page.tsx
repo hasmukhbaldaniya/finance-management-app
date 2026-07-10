@@ -8,10 +8,11 @@ import { PlusIcon, XIcon } from "@phosphor-icons/react";
 import { Button, buttonVariants } from "@/components/ui/button";
 import { cn } from "@/lib/utils";
 import { Checkbox } from "@/components/ui/checkbox";
+import { DatePicker } from "@/components/date-picker";
 import { Input } from "@/components/ui/input";
 import { Label } from "@/components/ui/label";
+import { SelectField } from "@/components/select-field";
 import { Spinner } from "@/components/ui/spinner";
-import { NativeSelect } from "@/components/employee-invite/native-select";
 import { SectionCard } from "@/components/employee-invite/section-card";
 import { StepNav, type StepNavItem } from "@/components/employee-invite/step-nav";
 import {
@@ -363,14 +364,14 @@ export default function InviteEmployeePage() {
             <div className="space-y-4">
               <div className="space-y-1.5">
                 <Label htmlFor="title">Title</Label>
-                <NativeSelect id="title" value={title} onChange={(e) => setTitle(e.target.value as EmployeeTitle)} hasError={Boolean(errors.title)}>
-                  <option value="">Select</option>
-                  {TITLES.map((option) => (
-                    <option key={option} value={option}>
-                      {option}
-                    </option>
-                  ))}
-                </NativeSelect>
+                <SelectField
+                  id="title"
+                  value={title}
+                  onValueChange={(value) => setTitle(value as EmployeeTitle)}
+                  hasError={Boolean(errors.title)}
+                  placeholder="Select"
+                  options={TITLES.map((option) => ({ value: option, label: option }))}
+                />
                 {errors.title ? <p className="text-xs text-destructive">{errors.title}</p> : null}
               </div>
 
@@ -395,13 +396,12 @@ export default function InviteEmployeePage() {
               <div className="grid grid-cols-[6rem_1fr] gap-2">
                 <div className="space-y-1.5">
                   <Label htmlFor="countryCode">Code</Label>
-                  <NativeSelect id="countryCode" value={countryCode} onChange={(e) => setCountryCode(e.target.value)}>
-                    {COUNTRY_CODES.map((code) => (
-                      <option key={code} value={code}>
-                        {code}
-                      </option>
-                    ))}
-                  </NativeSelect>
+                  <SelectField
+                    id="countryCode"
+                    value={countryCode}
+                    onValueChange={setCountryCode}
+                    options={COUNTRY_CODES.map((code) => ({ value: code, label: code }))}
+                  />
                 </div>
                 <div className="space-y-1.5">
                   <Label htmlFor="contactNumber">Contact Number</Label>
@@ -417,20 +417,20 @@ export default function InviteEmployeePage() {
 
               <div className="space-y-1.5">
                 <Label htmlFor="dob">Date of Birth</Label>
-                <Input id="dob" type="date" value={dob} onChange={(e) => setDob(e.target.value)} aria-invalid={Boolean(errors.dob)} />
+                <DatePicker id="dob" value={dob} onChange={setDob} placeholder="Select date of birth" className={cn(Boolean(errors.dob) && "border-destructive")} />
                 {errors.dob ? <p className="text-xs text-destructive">{errors.dob}</p> : null}
               </div>
 
               <div className="space-y-1.5">
                 <Label htmlFor="gender">Gender</Label>
-                <NativeSelect id="gender" value={gender} onChange={(e) => setGender(e.target.value as EmployeeGender)} hasError={Boolean(errors.gender)}>
-                  <option value="">Select</option>
-                  {GENDERS.map((option) => (
-                    <option key={option} value={option}>
-                      {option}
-                    </option>
-                  ))}
-                </NativeSelect>
+                <SelectField
+                  id="gender"
+                  value={gender}
+                  onValueChange={(value) => setGender(value as EmployeeGender)}
+                  hasError={Boolean(errors.gender)}
+                  placeholder="Select"
+                  options={GENDERS.map((option) => ({ value: option, label: option }))}
+                />
                 {errors.gender ? <p className="text-xs text-destructive">{errors.gender}</p> : null}
               </div>
 
@@ -446,40 +446,40 @@ export default function InviteEmployeePage() {
             <div className="space-y-4">
               <div className="space-y-1.5">
                 <Label htmlFor="roleId">Role</Label>
-                <NativeSelect id="roleId" value={roleId} onChange={(e) => setRoleId(e.target.value)} hasError={Boolean(errors.roleId)}>
-                  <option value="">Select</option>
-                  {roles.map((role) => (
-                    <option key={role.id} value={role.id}>
-                      {role.name}
-                    </option>
-                  ))}
-                </NativeSelect>
+                <SelectField
+                  id="roleId"
+                  value={roleId}
+                  onValueChange={setRoleId}
+                  hasError={Boolean(errors.roleId)}
+                  placeholder="Select"
+                  options={roles.map((role) => ({ value: String(role.id), label: role.name }))}
+                />
                 {errors.roleId ? <p className="text-xs text-destructive">{errors.roleId}</p> : null}
               </div>
 
               <div className="space-y-1.5">
                 <Label htmlFor="departmentId">Department</Label>
-                <NativeSelect id="departmentId" value={departmentId} onChange={(e) => setDepartmentId(e.target.value)} hasError={Boolean(errors.departmentId)}>
-                  <option value="">Select</option>
-                  {departments.map((department) => (
-                    <option key={department.id} value={department.id}>
-                      {department.name}
-                    </option>
-                  ))}
-                </NativeSelect>
+                <SelectField
+                  id="departmentId"
+                  value={departmentId}
+                  onValueChange={setDepartmentId}
+                  hasError={Boolean(errors.departmentId)}
+                  placeholder="Select"
+                  options={departments.map((department) => ({ value: String(department.id), label: department.name }))}
+                />
                 {errors.departmentId ? <p className="text-xs text-destructive">{errors.departmentId}</p> : null}
               </div>
 
               <div className="space-y-1.5">
                 <Label htmlFor="gradeId">Grade</Label>
-                <NativeSelect id="gradeId" value={gradeId} onChange={(e) => setGradeId(e.target.value)} hasError={Boolean(errors.gradeId)}>
-                  <option value="">Select</option>
-                  {grades.map((grade) => (
-                    <option key={grade.id} value={grade.id}>
-                      {grade.name}
-                    </option>
-                  ))}
-                </NativeSelect>
+                <SelectField
+                  id="gradeId"
+                  value={gradeId}
+                  onValueChange={setGradeId}
+                  hasError={Boolean(errors.gradeId)}
+                  placeholder="Select"
+                  options={grades.map((grade) => ({ value: String(grade.id), label: grade.name }))}
+                />
                 {errors.gradeId ? <p className="text-xs text-destructive">{errors.gradeId}</p> : null}
               </div>
 
@@ -522,19 +522,14 @@ export default function InviteEmployeePage() {
                 <div key={index} className="flex items-start gap-2">
                   <div className="w-1/2 space-y-1.5">
                     <Label htmlFor={`airline-${index}`}>Airline</Label>
-                    <NativeSelect
+                    <SelectField
                       id={`airline-${index}`}
                       value={row.airlineId}
-                      onChange={(e) => updateFfRow(index, { airlineId: e.target.value })}
+                      onValueChange={(value) => updateFfRow(index, { airlineId: value })}
                       hasError={Boolean(errors.ffRows?.[index])}
-                    >
-                      <option value="">Select</option>
-                      {airlines.map((airline) => (
-                        <option key={airline.id} value={airline.id}>
-                          {airline.name}
-                        </option>
-                      ))}
-                    </NativeSelect>
+                      placeholder="Select"
+                      options={airlines.map((airline) => ({ value: String(airline.id), label: airline.name }))}
+                    />
                   </div>
                   <div className="w-1/2 space-y-1.5">
                     <Label htmlFor={`ff-number-${index}`}>FF Number</Label>
@@ -577,16 +572,15 @@ export default function InviteEmployeePage() {
                       <Label htmlFor={`approver-${index}`}>
                         Level {row.level} Approver{row.level === 1 ? "" : " (optional)"}
                       </Label>
-                      <NativeSelect id={`approver-${index}`} value={row.approverEmployeeId} onChange={(e) => updateApprover(index, e.target.value)}>
-                        <option value="">Select</option>
-                        {employees
+                      <SelectField
+                        id={`approver-${index}`}
+                        value={row.approverEmployeeId}
+                        onValueChange={(value) => updateApprover(index, value)}
+                        placeholder="Select"
+                        options={employees
                           .filter((employee) => employee.id !== employeeId)
-                          .map((employee) => (
-                            <option key={employee.id} value={employee.id}>
-                              {employee.firstName} {employee.lastName} ({employee.email})
-                            </option>
-                          ))}
-                      </NativeSelect>
+                          .map((employee) => ({ value: String(employee.id), label: `${employee.firstName} ${employee.lastName} (${employee.email})` }))}
+                      />
                     </div>
                     {index > 0 ? (
                       <Button type="button" variant="ghost" size="icon" aria-label="Remove level" onClick={() => removeApproverLevel(index)}>

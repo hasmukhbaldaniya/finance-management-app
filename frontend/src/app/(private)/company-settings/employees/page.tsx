@@ -4,6 +4,7 @@ import Link from "next/link";
 import { CaretDownIcon, CaretUpIcon, DownloadSimpleIcon, FunnelIcon, MagnifyingGlassIcon, PencilSimpleIcon, XIcon } from "@phosphor-icons/react";
 import { useEffect, useState } from "react";
 import { toast } from "sonner";
+import { SelectField } from "@/components/select-field";
 import { Button, buttonVariants } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
 import { Spinner } from "@/components/ui/spinner";
@@ -342,18 +343,12 @@ export default function EmployeeListingPage() {
                     </TableHead>
                     <TableHead />
                     <TableHead>
-                      <select
+                      <SelectField
                         value={statusFilter}
-                        onChange={(event) => setStatusFilter(event.target.value as EmployeeStatusFilterValue | "")}
-                        className="h-8 w-full rounded-md border border-input bg-background px-2 text-xs font-normal outline-none focus-visible:border-ring focus-visible:ring-3 focus-visible:ring-ring/50"
-                      >
-                        <option value="">All</option>
-                        {STATUS_OPTIONS.map((option) => (
-                          <option key={option.value} value={option.value}>
-                            {option.label}
-                          </option>
-                        ))}
-                      </select>
+                        onValueChange={(next) => setStatusFilter(next as EmployeeStatusFilterValue | "")}
+                        options={[{ value: "", label: "All" }, ...STATUS_OPTIONS]}
+                        className="h-8 text-xs font-normal"
+                      />
                     </TableHead>
                     <TableHead />
                   </TableRow>

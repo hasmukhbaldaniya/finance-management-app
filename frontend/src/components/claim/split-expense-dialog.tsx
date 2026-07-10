@@ -3,6 +3,7 @@
 import { useEffect, useState } from "react";
 import { toast } from "sonner";
 import { splitExpense } from "@/apis/claim";
+import { SelectField } from "@/components/select-field";
 import { Button } from "@/components/ui/button";
 import { Dialog, DialogContent, DialogDescription, DialogFooter, DialogHeader, DialogTitle } from "@/components/ui/dialog";
 import { Input } from "@/components/ui/input";
@@ -97,14 +98,14 @@ export function SplitExpenseDialog({ claimId, expense, categories, onOpenChange,
               </div>
               <div className="space-y-1">
                 <Label>Paid By</Label>
-                <select
+                <SelectField
                   value={portion.paidBy}
-                  onChange={(event) => updatePortion(index, { paidBy: event.target.value as "company" | "self" })}
-                  className="h-9 w-full rounded-lg border border-input bg-transparent px-2 text-sm"
-                >
-                  <option value="self">Self Paid</option>
-                  <option value="company">Company Paid</option>
-                </select>
+                  onValueChange={(value) => updatePortion(index, { paidBy: value as "company" | "self" })}
+                  options={[
+                    { value: "self", label: "Self Paid" },
+                    { value: "company", label: "Company Paid" },
+                  ]}
+                />
               </div>
             </div>
           ))}

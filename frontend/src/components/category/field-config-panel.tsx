@@ -1,8 +1,10 @@
 "use client";
 
+import { SelectField } from "@/components/select-field";
 import { Input } from "@/components/ui/input";
 import { Label } from "@/components/ui/label";
 import { Switch } from "@/components/ui/switch";
+import { Textarea } from "@/components/ui/textarea";
 import { FileTypesPicker } from "./file-types-picker";
 import { OptionsListEditor } from "./options-list-editor";
 import {
@@ -88,31 +90,19 @@ export function FieldConfigPanel({ field, allFields, onChange }: FieldConfigPane
           <p className="text-xs text-muted-foreground">Add at least one Dropdown field to create conditional rules.</p>
         ) : field.conditionalVisibility ? (
           <div className="grid grid-cols-2 gap-2">
-            <select
-              value={field.conditionalVisibility.dependsOnFieldId}
-              onChange={(event) => onChange({ conditionalVisibility: { dependsOnFieldId: Number(event.target.value), equalsValue: "" } })}
-              className="h-8 rounded-lg border border-input bg-transparent px-2 text-sm"
-            >
-              {dropdownFields.map((option) => (
-                <option key={option.id} value={option.id}>
-                  {option.fieldName}
-                </option>
-              ))}
-            </select>
-            <select
+            <SelectField
+              value={String(field.conditionalVisibility.dependsOnFieldId)}
+              onValueChange={(value) => onChange({ conditionalVisibility: { dependsOnFieldId: Number(value), equalsValue: "" } })}
+              options={dropdownFields.map((option) => ({ value: String(option.id), label: option.fieldName }))}
+            />
+            <SelectField
               value={field.conditionalVisibility.equalsValue}
-              onChange={(event) =>
-                onChange({ conditionalVisibility: { dependsOnFieldId: field.conditionalVisibility!.dependsOnFieldId, equalsValue: event.target.value } })
+              onValueChange={(value) =>
+                onChange({ conditionalVisibility: { dependsOnFieldId: field.conditionalVisibility!.dependsOnFieldId, equalsValue: value } })
               }
-              className="h-8 rounded-lg border border-input bg-transparent px-2 text-sm"
-            >
-              <option value="">Select value…</option>
-              {conditionalDropdownOptions.map((option) => (
-                <option key={option} value={option}>
-                  {option}
-                </option>
-              ))}
-            </select>
+              placeholder="Select value…"
+              options={conditionalDropdownOptions.map((option) => ({ value: option, label: option }))}
+            />
           </div>
         ) : null}
       </div>
@@ -136,13 +126,12 @@ export function FieldConfigPanel({ field, allFields, onChange }: FieldConfigPane
           <>
             {field.redFlagMode === "ai" ? (
               <div className="space-y-1">
-                <textarea
+                <Textarea
                   value={field.redFlagValue ?? ""}
                   onChange={(event) => onChange({ redFlagValue: event.target.value })}
                   rows={3}
                   maxLength={MAX_RED_FLAG_DESCRIPTION_LENGTH}
                   placeholder="Describe your Red Flag…"
-                  className="flex w-full rounded-md border border-input bg-transparent px-3 py-2 text-sm shadow-xs outline-none focus-visible:border-ring focus-visible:ring-2 focus-visible:ring-ring/50"
                 />
                 <p className="text-xs text-muted-foreground">
                   {MIN_RED_FLAG_DESCRIPTION_LENGTH}-{MAX_RED_FLAG_DESCRIPTION_LENGTH} characters.
@@ -315,18 +304,11 @@ function FieldTypeSpecificConfig({ field, updateConfig, onChange, numericFieldNa
           <ToggleRow label="Allow Multi-Select" checked={config.allowMultiSelect === true} onChange={(checked) => updateConfig({ allowMultiSelect: checked })} />
           <div className="space-y-2">
             <Label>Values List</Label>
-            <select
+            <SelectField
               value={(config.valuesListKey as string | undefined) ?? ""}
-              onChange={(event) => updateConfig({ valuesListKey: event.target.value })}
-              className="h-8 w-full rounded-lg border border-input bg-transparent px-2 text-sm"
-            >
-              <option value="">Select…</option>
-              {CATEGORY_LIST_VALUE_SOURCES.map((source) => (
-                <option key={source.key} value={source.key}>
-                  {source.label}
-                </option>
-              ))}
-            </select>
+              onValueChange={(value) => updateConfig({ valuesListKey: value })}
+              options={CATEGORY_LIST_VALUE_SOURCES.map((source) => ({ value: source.key, label: source.label }))}
+            />
           </div>
         </div>
       );

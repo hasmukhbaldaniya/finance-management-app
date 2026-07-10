@@ -4,7 +4,7 @@ import { useRouter } from "next/navigation";
 import { useEffect, useState, type FormEvent } from "react";
 import { toast } from "sonner";
 import { AuthCard } from "@/components/auth-card";
-import { NativeSelect } from "@/components/employee-invite/native-select";
+import { SelectField } from "@/components/select-field";
 import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
 import { Label } from "@/components/ui/label";
@@ -96,21 +96,14 @@ export default function OnboardingProfilePage() {
       <form onSubmit={handleSubmit} noValidate className="space-y-4">
         <div className="space-y-1.5">
           <Label htmlFor="title">Title</Label>
-          <NativeSelect
+          <SelectField
             id="title"
             value={title}
-            onChange={(event) => setTitleInput(event.target.value as EmployeeTitle)}
+            onValueChange={(value) => setTitleInput(value as EmployeeTitle)}
             hasError={Boolean(errors.title)}
-          >
-            <option value="" disabled>
-              Select
-            </option>
-            {TITLES.map((option) => (
-              <option key={option} value={option}>
-                {option}
-              </option>
-            ))}
-          </NativeSelect>
+            placeholder="Select"
+            options={TITLES.map((option) => ({ value: option, label: option }))}
+          />
           {errors.title ? (
             <p className="text-xs text-destructive">{errors.title}</p>
           ) : null}

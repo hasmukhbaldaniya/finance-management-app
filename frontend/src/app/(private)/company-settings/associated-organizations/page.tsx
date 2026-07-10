@@ -3,6 +3,7 @@
 import { CaretDownIcon, CaretUpIcon, FunnelIcon, MagnifyingGlassIcon, XIcon } from "@phosphor-icons/react";
 import { useEffect, useState } from "react";
 import { toast } from "sonner";
+import { SelectField } from "@/components/select-field";
 import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
 import { Spinner } from "@/components/ui/spinner";
@@ -305,33 +306,21 @@ export default function AssociatedOrganizationsNetworkPage() {
                       </div>
                     </TableHead>
                     <TableHead>
-                      <select
+                      <SelectField
                         value={registrationsFilter}
-                        onChange={(event) => setRegistrationsFilter(event.target.value as RegistrationsLabel | "")}
-                        className="h-8 w-full rounded-md border border-input bg-background px-2 text-xs font-normal outline-none focus-visible:border-ring focus-visible:ring-3 focus-visible:ring-ring/50"
-                      >
-                        <option value="">All</option>
-                        {REGISTRATIONS_OPTIONS.map((option) => (
-                          <option key={option} value={option}>
-                            {option}
-                          </option>
-                        ))}
-                      </select>
+                        onValueChange={(next) => setRegistrationsFilter(next as RegistrationsLabel | "")}
+                        options={[{ value: "", label: "All" }, ...REGISTRATIONS_OPTIONS.map((option) => ({ value: option, label: option }))]}
+                        className="h-8 text-xs font-normal"
+                      />
                     </TableHead>
                     <TableHead />
                     <TableHead>
-                      <select
+                      <SelectField
                         value={statusFilter}
-                        onChange={(event) => setStatusFilter(event.target.value as "Active" | "Disabled" | "")}
-                        className="h-8 w-full rounded-md border border-input bg-background px-2 text-xs font-normal outline-none focus-visible:border-ring focus-visible:ring-3 focus-visible:ring-ring/50"
-                      >
-                        <option value="">All</option>
-                        {STATUS_OPTIONS.map((option) => (
-                          <option key={option} value={option}>
-                            {option}
-                          </option>
-                        ))}
-                      </select>
+                        onValueChange={(next) => setStatusFilter(next as "Active" | "Disabled" | "")}
+                        options={[{ value: "", label: "All" }, ...STATUS_OPTIONS.map((option) => ({ value: option, label: option }))]}
+                        className="h-8 text-xs font-normal"
+                      />
                     </TableHead>
                   </TableRow>
                 ) : null}

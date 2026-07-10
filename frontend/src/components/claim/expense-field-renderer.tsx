@@ -4,9 +4,13 @@ import { useEffect, useState } from "react";
 import { XIcon } from "@phosphor-icons/react";
 import { getAirlines } from "@/apis/airline";
 import { getCities } from "@/apis/city";
+import { DatePicker } from "@/components/date-picker";
+import { DateTimePicker } from "@/components/date-time-picker";
+import { SelectField } from "@/components/select-field";
 import { CitySelect } from "@/components/trip/city-select";
 import { Input } from "@/components/ui/input";
 import { Label } from "@/components/ui/label";
+import { Textarea } from "@/components/ui/textarea";
 import type { CategoryField } from "@/types/category.type";
 import type { City } from "@/types/city.type";
 import type { Airline } from "@/types/airline.type";
@@ -16,9 +20,6 @@ type UploadedFileMeta = { name: string; size: number };
 function isUploadedFileMetaArray(value: unknown): value is UploadedFileMeta[] {
   return Array.isArray(value) && value.every((item) => typeof item === "object" && item !== null && "name" in item);
 }
-
-const TEXTAREA_CLASS =
-  "flex w-full rounded-md border border-input bg-transparent px-3 py-2 text-sm shadow-xs outline-none focus-visible:border-ring focus-visible:ring-2 focus-visible:ring-ring/50";
 
 type ExpenseFieldRendererProps = {
   field: CategoryField;
@@ -124,12 +125,11 @@ export function ExpenseFieldRenderer({ field, value, computedValue, onChange, er
     case "large_text":
       return (
         <FieldWrapper label={label} tooltip={field.tooltip} error={error} isAutoFilled={isAutoFilled}>
-          <textarea
+          <Textarea
             value={(value as string | undefined) ?? ""}
             onChange={(event) => onChange(event.target.value)}
             maxLength={typeof config.maxLength === "number" ? config.maxLength : undefined}
             rows={3}
-            className={TEXTAREA_CLASS}
           />
         </FieldWrapper>
       );
@@ -144,18 +144,12 @@ export function ExpenseFieldRenderer({ field, value, computedValue, onChange, er
       const options = Array.isArray(config.options) ? (config.options as string[]) : [];
       return (
         <FieldWrapper label={label} tooltip={field.tooltip} error={error} isAutoFilled={isAutoFilled}>
-          <select
+          <SelectField
             value={(value as string | undefined) ?? ""}
-            onChange={(event) => onChange(event.target.value || null)}
-            className="h-9 w-full rounded-lg border border-input bg-transparent px-2 text-sm"
-          >
-            <option value="">Select…</option>
-            {options.map((option) => (
-              <option key={option} value={option}>
-                {option}
-              </option>
-            ))}
-          </select>
+            onValueChange={(next) => onChange(next || null)}
+            placeholder="Select…"
+            options={options.map((option) => ({ value: option, label: option }))}
+          />
         </FieldWrapper>
       );
     }
@@ -179,14 +173,14 @@ export function ExpenseFieldRenderer({ field, value, computedValue, onChange, er
     case "date":
       return (
         <FieldWrapper label={label} tooltip={field.tooltip} error={error} isAutoFilled={isAutoFilled}>
-          <Input type="date" value={(value as string | undefined) ?? ""} onChange={(event) => onChange(event.target.value || null)} />
+          <DatePicker value={(value as string | undefined) ?? ""} onChange={(next) => onChange(next || null)} />
         </FieldWrapper>
       );
 
     case "date_time":
       return (
         <FieldWrapper label={label} tooltip={field.tooltip} error={error} isAutoFilled={isAutoFilled}>
-          <Input type="datetime-local" value={(value as string | undefined) ?? ""} onChange={(event) => onChange(event.target.value || null)} />
+          <DateTimePicker value={(value as string | undefined) ?? ""} onChange={(next) => onChange(next || null)} />
         </FieldWrapper>
       );
 
@@ -270,18 +264,12 @@ function ListFieldRenderer({
   if (valuesListKey === "airlines") {
     return (
       <FieldWrapper label={label} tooltip={field.tooltip} error={error} isAutoFilled={isAutoFilled}>
-        <select
-          value={(value as number | string | undefined) ?? ""}
-          onChange={(event) => onChange(event.target.value ? Number(event.target.value) : null)}
-          className="h-9 w-full rounded-lg border border-input bg-transparent px-2 text-sm"
-        >
-          <option value="">Select…</option>
-          {airlines.map((airline) => (
-            <option key={airline.id} value={airline.id}>
-              {airline.name}
-            </option>
-          ))}
-        </select>
+        <SelectField
+          value={value !== null && value !== undefined ? String(value) : ""}
+          onValueChange={(next) => onChange(next ? Number(next) : null)}
+          placeholder="Select…"
+          options={airlines.map((airline) => ({ value: String(airline.id), label: airline.name }))}
+        />
       </FieldWrapper>
     );
   }

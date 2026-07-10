@@ -1,5 +1,7 @@
 "use client";
 
+import { DatePicker } from "@/components/date-picker";
+import { SelectField } from "@/components/select-field";
 import { Label } from "@/components/ui/label";
 import { CLAIM_STATUS_OPTIONS } from "@/utils/constants/claim.constant";
 import type { ClaimStatus } from "@/types/claim.type";
@@ -23,30 +25,18 @@ export function ClaimFilters({ filters, onChange }: ClaimFiltersProps) {
 
       <div className="space-y-2">
         <Label htmlFor="filter-created-date">Created Date</Label>
-        <input
-          id="filter-created-date"
-          type="date"
-          value={filters.createdDate}
-          onChange={(event) => onChange({ ...filters, createdDate: event.target.value })}
-          className="h-8 w-full rounded-lg border border-input bg-transparent px-2 text-sm"
-        />
+        <DatePicker id="filter-created-date" value={filters.createdDate} onChange={(value) => onChange({ ...filters, createdDate: value })} className="h-8" />
       </div>
 
       <div className="space-y-2">
         <Label htmlFor="filter-status">Status</Label>
-        <select
+        <SelectField
           id="filter-status"
           value={filters.status}
-          onChange={(event) => onChange({ ...filters, status: event.target.value as ClaimStatus | "" })}
-          className="h-8 w-full rounded-lg border border-input bg-transparent px-2 text-sm"
-        >
-          <option value="">All</option>
-          {CLAIM_STATUS_OPTIONS.map((option) => (
-            <option key={option.value} value={option.value}>
-              {option.label}
-            </option>
-          ))}
-        </select>
+          onValueChange={(value) => onChange({ ...filters, status: value as ClaimStatus | "" })}
+          placeholder="All"
+          options={[{ value: "", label: "All" }, ...CLAIM_STATUS_OPTIONS.map((option) => ({ value: option.value, label: option.label }))]}
+        />
       </div>
     </aside>
   );

@@ -13,6 +13,7 @@ import { WizardFooter } from "./wizard-footer";
 import { ZiptrripCategoryPicker } from "./ziptrrip-category-picker";
 import { Input } from "@/components/ui/input";
 import { Label } from "@/components/ui/label";
+import { Textarea } from "@/components/ui/textarea";
 
 type FieldErrors = {
   name?: string;
@@ -122,14 +123,13 @@ export function BasicDetailsForm() {
 
       <div className="space-y-2">
         <Label htmlFor="category-description">Description</Label>
-        <textarea
+        <Textarea
           id="category-description"
           value={wizard.description}
           onChange={(event) => wizard.setDescription(event.target.value)}
           placeholder="Describe when this category should be used..."
           maxLength={MAX_DESCRIPTION_LENGTH}
           rows={4}
-          className="flex w-full rounded-md border border-input bg-transparent px-3 py-2 text-sm shadow-xs outline-none focus-visible:border-ring focus-visible:ring-2 focus-visible:ring-ring/50"
         />
         <p className="text-xs text-muted-foreground">
           Our AI learns from this text to categorize uploaded bills. Write a clear, detailed description for best auto-categorization

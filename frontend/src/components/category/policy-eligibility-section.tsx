@@ -1,5 +1,8 @@
 "use client";
 
+import { CaretDownIcon } from "@phosphor-icons/react";
+import { Button } from "@/components/ui/button";
+import { DropdownMenu, DropdownMenuCheckboxItem, DropdownMenuContent, DropdownMenuTrigger } from "@/components/ui/dropdown-menu";
 import type { CategoryEligibilityType, CategoryPolicy } from "@/types/category.type";
 import type { PolicyKind, PolicyPickerOptions } from "./policy-shared-types";
 
@@ -31,6 +34,50 @@ function optionsFor(type: CategoryEligibilityType, options: PolicyPickerOptions)
     case "employee":
       return options.employees.map((employee) => ({ id: employee.id, label: `${employee.firstName} ${employee.lastName}`.trim() }));
   }
+}
+
+type MultiEntityPickerProps = {
+  options: { id: number; label: string }[];
+  selectedIds: number[];
+  onChange: (ids: number[]) => void;
+};
+
+// A real multi-select has no shadcn Select equivalent (it's single-value
+// only) — this codebase's own established pattern for exactly this case is
+// a DropdownMenuCheckboxItem list (see ziptrrip-category-picker.tsx), not a
+// native <select multiple>.
+function MultiEntityPicker({ options, selectedIds, onChange }: MultiEntityPickerProps) {
+  function toggle(id: number): void {
+    onChange(selectedIds.includes(id) ? selectedIds.filter((selected) => selected !== id) : [...selectedIds, id]);
+  }
+
+  const selectedLabels = options.filter((option) => selectedIds.includes(option.id)).map((option) => option.label);
+
+  return (
+    <DropdownMenu>
+      <DropdownMenuTrigger
+        render={
+          <Button type="button" variant="outline" className="w-full justify-between font-normal">
+            <span className="truncate text-left">{selectedLabels.length > 0 ? selectedLabels.join(", ") : "Select…"}</span>
+            <CaretDownIcon size={16} className="shrink-0" />
+          </Button>
+        }
+      />
+      <DropdownMenuContent className="w-(--anchor-width) p-2">
+        <div className="max-h-60 overflow-y-auto">
+          {options.length === 0 ? (
+            <p className="px-2 py-3 text-sm text-muted-foreground">No options available.</p>
+          ) : (
+            options.map((option) => (
+              <DropdownMenuCheckboxItem key={option.id} checked={selectedIds.includes(option.id)} onCheckedChange={() => toggle(option.id)} closeOnClick={false}>
+                {option.label}
+              </DropdownMenuCheckboxItem>
+            ))
+          )}
+        </div>
+      </DropdownMenuContent>
+    </DropdownMenu>
+  );
 }
 
 export function PolicyEligibilitySection({ policy, policyKind, options, onChange }: PolicyEligibilitySectionProps) {
@@ -65,18 +112,7 @@ export function PolicyEligibilitySection({ policy, policyKind, options, onChange
                 {label}
               </label>
               {entry ? (
-                <select
-                  multiple
-                  value={entry.entityIds.map(String)}
-                  onChange={(event) => updateEntityIds(type, Array.from(event.target.selectedOptions).map((option) => Number(option.value)))}
-                  className="h-24 w-full rounded-lg border border-input bg-transparent px-2 py-1 text-sm"
-                >
-                  {optionsFor(type, options).map((option) => (
-                    <option key={option.id} value={option.id}>
-                      {option.label}
-                    </option>
-                  ))}
-                </select>
+                <MultiEntityPicker options={optionsFor(type, options)} selectedIds={entry.entityIds} onChange={(entityIds) => updateEntityIds(type, entityIds)} />
               ) : null}
             </div>
           );

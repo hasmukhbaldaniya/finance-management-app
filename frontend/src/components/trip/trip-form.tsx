@@ -4,6 +4,7 @@ import { useState } from "react";
 import { useRouter } from "next/navigation";
 import { toast } from "sonner";
 import { createTrip, updateTrip } from "@/apis/trip";
+import { DateTimePicker } from "@/components/date-time-picker";
 import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
 import { Label } from "@/components/ui/label";
@@ -124,12 +125,12 @@ export function TripForm(props: TripFormProps) {
       <div className="grid grid-cols-1 gap-6 sm:grid-cols-2">
         <div className="space-y-2">
           <Label htmlFor="start-at">Start Date & Time</Label>
-          <Input id="start-at" type="datetime-local" value={startAt} onChange={(event) => setStartAt(event.target.value)} />
+          <DateTimePicker id="start-at" value={startAt} onChange={setStartAt} />
           {errors.startAt ? <p className="text-sm text-destructive">{errors.startAt}</p> : null}
         </div>
         <div className="space-y-2">
           <Label htmlFor="end-at">End Date & Time</Label>
-          <Input id="end-at" type="datetime-local" value={endAt} onChange={(event) => setEndAt(event.target.value)} />
+          <DateTimePicker id="end-at" value={endAt} onChange={setEndAt} />
           {errors.endAt ? <p className="text-sm text-destructive">{errors.endAt}</p> : null}
         </div>
       </div>

@@ -1,6 +1,7 @@
 "use client";
 
 import { PlusIcon, TrashIcon } from "@phosphor-icons/react";
+import { SelectField } from "@/components/select-field";
 import { Button } from "@/components/ui/button";
 import { Label } from "@/components/ui/label";
 import { Switch } from "@/components/ui/switch";
@@ -101,23 +102,18 @@ export function ApprovalLevelEditor({ title, level, employees, onChange, onRemov
                       ) : (
                         <span className="w-8" />
                       )}
-                      <select
-                        value={slot.employeeId ?? ""}
-                        onChange={(event) =>
+                      <SelectField
+                        value={slot.employeeId?.toString() ?? ""}
+                        onValueChange={(value) =>
                           updateStage(
                             stageIndex,
-                            slots.map((current, i) => (i === slotIndex ? { ...current, employeeId: Number(event.target.value) } : current))
+                            slots.map((current, i) => (i === slotIndex ? { ...current, employeeId: value ? Number(value) : null } : current))
                           )
                         }
-                        className="h-8 flex-1 rounded-lg border border-input bg-transparent px-2 text-sm"
-                      >
-                        <option value="">Select approver…</option>
-                        {employees.map((employee) => (
-                          <option key={employee.id} value={employee.id}>
-                            {employee.firstName} {employee.lastName}
-                          </option>
-                        ))}
-                      </select>
+                        placeholder="Select approver…"
+                        className="flex-1"
+                        options={employees.map((employee) => ({ value: String(employee.id), label: `${employee.firstName} ${employee.lastName}` }))}
+                      />
                       <Button
                         type="button"
                         variant="ghost"

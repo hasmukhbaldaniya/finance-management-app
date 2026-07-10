@@ -7,6 +7,7 @@ import { getCategoryLatestVersion, getCategoryVersionDetail, getCategoryVersions
 import { DetailsStepNav } from "./details-step-nav";
 import { FieldSummary } from "./field-summary";
 import { PolicySummary } from "./policy-summary";
+import { SelectField } from "@/components/select-field";
 import { Spinner } from "@/components/ui/spinner";
 import { CATEGORY_STEP_SEGMENTS } from "@/utils/constants/category.constant";
 import { ROUTES } from "@/utils/constants/route.constant";
@@ -82,17 +83,12 @@ export function CategoryDetailsView({ categoryId }: CategoryDetailsViewProps) {
           / {isDraft ? "Draft" : `Version ${displayedVersion ?? ""}`}
         </p>
         {!isDraft && versions.length > 0 ? (
-          <select
+          <SelectField
             value={displayedVersion ?? ""}
-            onChange={(event) => handleVersionChange(event.target.value)}
-            className="h-8 rounded-lg border border-input bg-transparent px-2 text-sm"
-          >
-            {versions.map((version) => (
-              <option key={version.version} value={version.version}>
-                Version {version.version}
-              </option>
-            ))}
-          </select>
+            onValueChange={handleVersionChange}
+            options={versions.map((version) => ({ value: version.version, label: `Version ${version.version}` }))}
+            className="w-auto"
+          />
         ) : null}
       </div>
 

@@ -1,6 +1,7 @@
 "use client";
 
 import { PlusIcon, TrashIcon } from "@phosphor-icons/react";
+import { SelectField } from "@/components/select-field";
 import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
 import { LIST_LIKE_FIELD_TYPES, NUMERIC_FIELD_TYPES } from "@/utils/constants/category.constant";
@@ -74,29 +75,17 @@ export function PolicyRulesSection({ policy, policyKind, fields, onChange }: Pol
                 <span className="text-xs font-medium">{rule.ruleType === "field_specific" ? "Field Specific" : "Combination"}</span>
                 {rule.ruleType === "field_specific" ? (
                   <>
-                    <select
-                      value={rule.fieldId ?? ""}
-                      onChange={(event) => updateRule(index, { fieldId: Number(event.target.value) })}
-                      className="h-8 rounded-lg border border-input bg-transparent px-2 text-sm"
-                    >
-                      <option value="">Select field…</option>
-                      {fieldSpecificOptions.map((field) => (
-                        <option key={field.id} value={field.id}>
-                          {field.fieldName}
-                        </option>
-                      ))}
-                    </select>
-                    <select
+                    <SelectField
+                      value={rule.fieldId?.toString() ?? ""}
+                      onValueChange={(value) => updateRule(index, { fieldId: value ? Number(value) : null })}
+                      placeholder="Select field…"
+                      options={fieldSpecificOptions.map((field) => ({ value: String(field.id), label: field.fieldName }))}
+                    />
+                    <SelectField
                       value={rule.operator ?? "equals"}
-                      onChange={(event) => updateRule(index, { operator: event.target.value })}
-                      className="h-8 rounded-lg border border-input bg-transparent px-2 text-sm"
-                    >
-                      {OPERATORS.map((operator) => (
-                        <option key={operator.value} value={operator.value}>
-                          {operator.label}
-                        </option>
-                      ))}
-                    </select>
+                      onValueChange={(value) => updateRule(index, { operator: value })}
+                      options={[...OPERATORS]}
+                    />
                     <Input
                       value={rule.value ?? ""}
                       onChange={(event) => updateRule(index, { value: event.target.value })}
@@ -106,18 +95,12 @@ export function PolicyRulesSection({ policy, policyKind, fields, onChange }: Pol
                   </>
                 ) : (
                   <>
-                    <select
-                      value={rule.comparisonFieldId ?? ""}
-                      onChange={(event) => updateRule(index, { comparisonFieldId: Number(event.target.value) })}
-                      className="h-8 rounded-lg border border-input bg-transparent px-2 text-sm"
-                    >
-                      <option value="">Select field…</option>
-                      {listLikeFields.map((field) => (
-                        <option key={field.id} value={field.id}>
-                          {field.fieldName}
-                        </option>
-                      ))}
-                    </select>
+                    <SelectField
+                      value={rule.comparisonFieldId?.toString() ?? ""}
+                      onValueChange={(value) => updateRule(index, { comparisonFieldId: value ? Number(value) : null })}
+                      placeholder="Select field…"
+                      options={listLikeFields.map((field) => ({ value: String(field.id), label: field.fieldName }))}
+                    />
                     <Input
                       value={rule.comparisonValue ?? ""}
                       onChange={(event) => updateRule(index, { comparisonValue: event.target.value })}
@@ -125,29 +108,17 @@ export function PolicyRulesSection({ policy, policyKind, fields, onChange }: Pol
                       className="w-28"
                     />
                     <span className="text-xs text-muted-foreground">then</span>
-                    <select
-                      value={rule.amountFieldId ?? ""}
-                      onChange={(event) => updateRule(index, { amountFieldId: Number(event.target.value) })}
-                      className="h-8 rounded-lg border border-input bg-transparent px-2 text-sm"
-                    >
-                      <option value="">Select field…</option>
-                      {numericFields.map((field) => (
-                        <option key={field.id} value={field.id}>
-                          {field.fieldName}
-                        </option>
-                      ))}
-                    </select>
-                    <select
+                    <SelectField
+                      value={rule.amountFieldId?.toString() ?? ""}
+                      onValueChange={(value) => updateRule(index, { amountFieldId: value ? Number(value) : null })}
+                      placeholder="Select field…"
+                      options={numericFields.map((field) => ({ value: String(field.id), label: field.fieldName }))}
+                    />
+                    <SelectField
                       value={rule.amountOperator ?? "equals"}
-                      onChange={(event) => updateRule(index, { amountOperator: event.target.value })}
-                      className="h-8 rounded-lg border border-input bg-transparent px-2 text-sm"
-                    >
-                      {OPERATORS.map((operator) => (
-                        <option key={operator.value} value={operator.value}>
-                          {operator.label}
-                        </option>
-                      ))}
-                    </select>
+                      onValueChange={(value) => updateRule(index, { amountOperator: value })}
+                      options={[...OPERATORS]}
+                    />
                     <Input
                       value={rule.amountValue ?? ""}
                       onChange={(event) => updateRule(index, { amountValue: event.target.value })}

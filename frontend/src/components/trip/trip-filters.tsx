@@ -1,5 +1,7 @@
 "use client";
 
+import { DatePicker } from "@/components/date-picker";
+import { SelectField } from "@/components/select-field";
 import { Label } from "@/components/ui/label";
 import { TRIP_STATUS_OPTIONS } from "@/utils/constants/trip.constant";
 import type { TripStatus } from "@/types/trip.type";
@@ -25,41 +27,28 @@ export function TripFilters({ filters, onChange }: TripFiltersProps) {
 
       <div className="space-y-2">
         <Label htmlFor="filter-trip-start-date">Trip Start Date</Label>
-        <input
+        <DatePicker
           id="filter-trip-start-date"
-          type="date"
           value={filters.tripStartDate}
-          onChange={(event) => onChange({ ...filters, tripStartDate: event.target.value })}
-          className="h-8 w-full rounded-lg border border-input bg-transparent px-2 text-sm"
+          onChange={(value) => onChange({ ...filters, tripStartDate: value })}
+          className="h-8"
         />
       </div>
 
       <div className="space-y-2">
         <Label htmlFor="filter-created-date">Created Date</Label>
-        <input
-          id="filter-created-date"
-          type="date"
-          value={filters.createdDate}
-          onChange={(event) => onChange({ ...filters, createdDate: event.target.value })}
-          className="h-8 w-full rounded-lg border border-input bg-transparent px-2 text-sm"
-        />
+        <DatePicker id="filter-created-date" value={filters.createdDate} onChange={(value) => onChange({ ...filters, createdDate: value })} className="h-8" />
       </div>
 
       <div className="space-y-2">
         <Label htmlFor="filter-status">Status</Label>
-        <select
+        <SelectField
           id="filter-status"
           value={filters.status}
-          onChange={(event) => onChange({ ...filters, status: event.target.value as TripStatus | "" })}
-          className="h-8 w-full rounded-lg border border-input bg-transparent px-2 text-sm"
-        >
-          <option value="">All</option>
-          {TRIP_STATUS_OPTIONS.map((option) => (
-            <option key={option.value} value={option.value}>
-              {option.label}
-            </option>
-          ))}
-        </select>
+          onValueChange={(value) => onChange({ ...filters, status: value as TripStatus | "" })}
+          placeholder="All"
+          options={[{ value: "", label: "All" }, ...TRIP_STATUS_OPTIONS.map((option) => ({ value: option.value, label: option.label }))]}
+        />
       </div>
     </aside>
   );

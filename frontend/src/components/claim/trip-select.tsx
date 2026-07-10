@@ -3,6 +3,7 @@
 import { useEffect, useState } from "react";
 import { CaretDownIcon, MagnifyingGlassIcon } from "@phosphor-icons/react";
 import { getTrips } from "@/apis/trip";
+import { DatePicker } from "@/components/date-picker";
 import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
 import { DropdownMenu, DropdownMenuContent, DropdownMenuItem, DropdownMenuTrigger } from "@/components/ui/dropdown-menu";
@@ -66,14 +67,9 @@ export function TripSelect({ value, onChange, placeholder }: TripSelectProps) {
               className="h-8 pl-7 text-sm"
             />
           </div>
-          <input
-            type="date"
-            value={tripStartDate}
-            onChange={(event) => setTripStartDate(event.target.value)}
-            onKeyDown={(event) => event.stopPropagation()}
-            aria-label="Filter by Start Date"
-            className="h-8 w-full rounded-lg border border-input bg-transparent px-2 text-sm"
-          />
+          <div onKeyDown={(event) => event.stopPropagation()}>
+            <DatePicker value={tripStartDate} onChange={setTripStartDate} placeholder="Filter by Start Date" className="h-8 text-sm" />
+          </div>
         </div>
         <div className="max-h-60 overflow-y-auto">
           {isLoading ? (

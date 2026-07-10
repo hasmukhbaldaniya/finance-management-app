@@ -2,12 +2,13 @@
 
 import { useEffect, useState, type FormEvent } from "react";
 import { toast } from "sonner";
+import { DatePicker } from "@/components/date-picker";
+import { SelectField } from "@/components/select-field";
 import { Button } from "@/components/ui/button";
 import { Dialog, DialogContent, DialogFooter, DialogHeader, DialogTitle } from "@/components/ui/dialog";
 import { Input } from "@/components/ui/input";
 import { Label } from "@/components/ui/label";
 import { Spinner } from "@/components/ui/spinner";
-import { NativeSelect } from "@/components/employee-invite/native-select";
 import { resendMyMobileOtp, setMyMobile, updateMyProfile, verifyMyMobileOtp } from "@/apis/employee";
 import type { EmployeeGender, EmployeeTitle, MyProfile } from "@/types/employee.type";
 import { ApiError, GENERIC_ERROR_MESSAGE } from "@/utils/apiManager/apiManager";
@@ -252,14 +253,14 @@ export function EditProfileDialog({ open, onOpenChange, profile, onSaved }: Edit
         <form onSubmit={handleSubmit} noValidate className="space-y-4">
           <div className="space-y-1.5">
             <Label htmlFor="edit-title">Title</Label>
-            <NativeSelect id="edit-title" value={title} onChange={(e) => setTitle(e.target.value as EmployeeTitle)} hasError={Boolean(errors.title)}>
-              <option value="">Select</option>
-              {TITLES.map((option) => (
-                <option key={option} value={option}>
-                  {option}
-                </option>
-              ))}
-            </NativeSelect>
+            <SelectField
+              id="edit-title"
+              value={title}
+              onValueChange={(value) => setTitle(value as EmployeeTitle)}
+              hasError={Boolean(errors.title)}
+              placeholder="Select"
+              options={TITLES.map((option) => ({ value: option, label: option }))}
+            />
             {errors.title ? <p className="text-xs text-destructive">{errors.title}</p> : null}
           </div>
 
@@ -300,20 +301,20 @@ export function EditProfileDialog({ open, onOpenChange, profile, onSaved }: Edit
 
           <div className="space-y-1.5">
             <Label htmlFor="edit-dob">Date of Birth</Label>
-            <Input id="edit-dob" type="date" value={dob} onChange={(e) => setDob(e.target.value)} aria-invalid={Boolean(errors.dob)} />
+            <DatePicker id="edit-dob" value={dob} onChange={setDob} placeholder="Select date of birth" className={errors.dob ? "border-destructive" : undefined} />
             {errors.dob ? <p className="text-xs text-destructive">{errors.dob}</p> : null}
           </div>
 
           <div className="space-y-1.5">
             <Label htmlFor="edit-gender">Gender</Label>
-            <NativeSelect id="edit-gender" value={gender} onChange={(e) => setGender(e.target.value as EmployeeGender)} hasError={Boolean(errors.gender)}>
-              <option value="">Select</option>
-              {GENDERS.map((option) => (
-                <option key={option} value={option}>
-                  {option}
-                </option>
-              ))}
-            </NativeSelect>
+            <SelectField
+              id="edit-gender"
+              value={gender}
+              onValueChange={(value) => setGender(value as EmployeeGender)}
+              hasError={Boolean(errors.gender)}
+              placeholder="Select"
+              options={GENDERS.map((option) => ({ value: option, label: option }))}
+            />
             {errors.gender ? <p className="text-xs text-destructive">{errors.gender}</p> : null}
           </div>
 
