@@ -91,20 +91,10 @@ export const CATEGORY_LIST_VALUE_SOURCES: readonly { key: string; label: string 
   { key: "based_locations", label: "Based Locations" },
 ];
 
-// A fixed city list backs every City List field — no per-field configuration
-// of *which* cities, only Min/Max selection count once Allow Multi-Select is on.
-export const CATEGORY_CITY_LIST: readonly string[] = [
-  "Mumbai",
-  "Delhi",
-  "Bengaluru",
-  "Hyderabad",
-  "Ahmedabad",
-  "Chennai",
-  "Kolkata",
-  "Pune",
-  "Jaipur",
-  "Surat",
-];
+// city_list fields used to be backed by this fixed 10-name array — as of
+// Claim Management's city_list migration, they're backed by the real
+// Country/City catalog instead (see @/components/trip/city-select.tsx),
+// so this constant was removed. Kept in sync with the backend's own copy.
 
 export const CATEGORY_WIZARD_STEP_LABELS: Record<CategoryWizardStep, { title: string; subtitle: string }> = {
   basicDetails: { title: "Basic Details", subtitle: "Setup category" },

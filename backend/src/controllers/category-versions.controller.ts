@@ -1,5 +1,6 @@
 import type { Response } from "express";
-import type { OwnerRequest } from "../middleware/require-owner";
+import type { AuthenticatedRequest } from "../middleware/require-auth";
+import { getActiveOrganizationId } from "../utils/auth";
 import { Category, CategoryVersion } from "../models";
 import { buildCategorySnapshot } from "../utils/category-snapshot";
 import { createCategoryVersion } from "../utils/category-versioning";
@@ -21,8 +22,8 @@ async function respondWithDraftSnapshot(category: Category, res: Response): Prom
   res.status(200).json({ category: snapshot, modifiedSteps: [] });
 }
 
-export async function getCategoryVersionDetail(req: OwnerRequest, res: Response): Promise<void> {
-  const organizationId = req.organizationId;
+export async function getCategoryVersionDetail(req: AuthenticatedRequest, res: Response): Promise<void> {
+  const organizationId = await getActiveOrganizationId(req.userId);
   if (!organizationId) {
     res.status(401).json({ error: NOT_AUTHENTICATED_MESSAGE });
     return;
@@ -54,8 +55,8 @@ export async function getCategoryVersionDetail(req: OwnerRequest, res: Response)
   res.status(200).json({ category: version.snapshot, modifiedSteps: version.modifiedSteps });
 }
 
-export async function getCategoryLatestVersion(req: OwnerRequest, res: Response): Promise<void> {
-  const organizationId = req.organizationId;
+export async function getCategoryLatestVersion(req: AuthenticatedRequest, res: Response): Promise<void> {
+  const organizationId = await getActiveOrganizationId(req.userId);
   if (!organizationId) {
     res.status(401).json({ error: NOT_AUTHENTICATED_MESSAGE });
     return;
@@ -92,8 +93,8 @@ export async function getCategoryLatestVersion(req: OwnerRequest, res: Response)
 // save — the frontend wizard calls this once, on Cancel/navigate-away/close,
 // for an already-active category. A draft category has nothing to version yet
 // (013's own Step 4 Submit creates 1.0 directly on activation instead).
-export async function finishCategoryEditSession(req: OwnerRequest, res: Response): Promise<void> {
-  const organizationId = req.organizationId;
+export async function finishCategoryEditSession(req: AuthenticatedRequest, res: Response): Promise<void> {
+  const organizationId = await getActiveOrganizationId(req.userId);
   if (!organizationId || !req.userId) {
     res.status(401).json({ error: NOT_AUTHENTICATED_MESSAGE });
     return;

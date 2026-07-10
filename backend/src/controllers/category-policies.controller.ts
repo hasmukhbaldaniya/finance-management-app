@@ -1,5 +1,6 @@
 import type { Response } from "express";
-import type { OwnerRequest } from "../middleware/require-owner";
+import type { AuthenticatedRequest } from "../middleware/require-auth";
+import { getActiveOrganizationId } from "../utils/auth";
 import { Category, CategoryPolicy } from "../models";
 import {
   parseIncomingPolicy,
@@ -13,8 +14,8 @@ import { MAX_CLAIM_POLICIES, MAX_EXCEPTION_POLICIES } from "../utils/constants/c
 const NOT_AUTHENTICATED_MESSAGE = "Not authenticated.";
 const CATEGORY_NOT_FOUND_MESSAGE = "Category not found.";
 
-export async function saveCategoryPolicies(req: OwnerRequest, res: Response): Promise<void> {
-  const organizationId = req.organizationId;
+export async function saveCategoryPolicies(req: AuthenticatedRequest, res: Response): Promise<void> {
+  const organizationId = await getActiveOrganizationId(req.userId);
   if (!organizationId || !req.userId) {
     res.status(401).json({ error: NOT_AUTHENTICATED_MESSAGE });
     return;

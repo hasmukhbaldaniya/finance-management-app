@@ -41,3 +41,7 @@ export { CategoryVersion, type CategoryWizardStep, type CategoryVersionSnapshot 
 export { Country } from "./country.model";
 export { City } from "./city.model";
 export { Trip, type TripStatus } from "./trip.model";
+export { Claim, type ClaimType, type ClaimCreationMethod, type ClaimStatus } from "./claim.model";
+export { Expense, type ExpensePaidBy } from "./expense.model";
+export { ClaimInvoiceFile, type ClaimInvoiceFileType } from "./claim-invoice-file.model";
+export { AiExtractionLog, type AiExtractionLogStatus, type AiExtractionRedFlagEvaluation } from "./ai-extraction-log.model";

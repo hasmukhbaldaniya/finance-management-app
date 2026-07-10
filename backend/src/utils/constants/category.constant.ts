@@ -83,18 +83,7 @@ export const CATEGORY_LIST_VALUE_SOURCES: readonly { key: string; label: string 
   { key: "based_locations", label: "Based Locations" },
 ];
 
-// A fixed, comprehensive city list backs every City List field — no
-// per-field configuration of *which* cities, only Min/Max selection count
-// once Allow Multi-Select is on (013's Field-specific configuration table).
-export const CATEGORY_CITY_LIST: readonly string[] = [
-  "Mumbai",
-  "Delhi",
-  "Bengaluru",
-  "Hyderabad",
-  "Ahmedabad",
-  "Chennai",
-  "Kolkata",
-  "Pune",
-  "Jaipur",
-  "Surat",
-];
+// city_list fields used to be backed by a fixed 10-name array here — as of
+// Claim Management's city_list migration (022), they're backed by Trip
+// Management's real Country/City catalog instead (see category-fields
+// .controller.ts's cityCount check), so this constant was removed.

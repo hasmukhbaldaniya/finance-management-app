@@ -35,6 +35,12 @@ export function toDatetimeLocalValue(value: string): string {
   return `${date.getFullYear()}-${pad(date.getMonth() + 1)}-${pad(date.getDate())}T${pad(date.getHours())}:${pad(date.getMinutes())}`;
 }
 
+// A trip-linked claim has no Claim Name of its own — the trip's own name
+// stands in for it (022's own Open Question, resolved this way).
+export function formatClaimName(claim: { name: string | null; tripName: string | null }): string {
+  return claim.name ?? claim.tripName ?? "Untitled Claim";
+}
+
 // ISO alpha-2 country code → flag emoji, via Unicode regional indicator
 // symbols (each letter maps to U+1F1E6 + offset from 'A'). Standard,
 // widely-used technique — no external flag-icon library needed since every

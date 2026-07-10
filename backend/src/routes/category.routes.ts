@@ -17,11 +17,14 @@ import {
   getCategoryVersionDetail,
 } from "../controllers/category-versions.controller";
 import { requireAuth } from "../middleware/require-auth";
-import { requireOwner } from "../middleware/require-owner";
 
 export const categoryRouter = Router();
 
-categoryRouter.use(requireAuth, requireOwner);
+// No requireOwner gate — any authenticated employee in the organization can
+// create and fully manage any category (changed at explicit request from
+// the original owner-only posture; categories are org-wide configuration,
+// not any one employee's own record).
+categoryRouter.use(requireAuth);
 
 categoryRouter.get("/", listCategories);
 categoryRouter.post("/", createCategory);

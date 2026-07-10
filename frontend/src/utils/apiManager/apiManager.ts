@@ -1,4 +1,7 @@
-const API_BASE_URL = process.env.NEXT_PUBLIC_API_BASE_URL ?? "http://localhost:4000/api";
+// Exported so callers that need a raw URL (not a fetch call) — e.g. an
+// <img>/<iframe> src for an authenticated file-serving endpoint — can build
+// one without duplicating this fallback.
+export const API_BASE_URL = process.env.NEXT_PUBLIC_API_BASE_URL ?? "http://localhost:4000/api";
 
 export const GENERIC_ERROR_MESSAGE = "Something went wrong. Please try again.";
 

@@ -1,6 +1,7 @@
 import type { Response } from "express";
 import { Op } from "sequelize";
-import type { OwnerRequest } from "../middleware/require-owner";
+import type { AuthenticatedRequest } from "../middleware/require-auth";
+import { getActiveOrganizationId } from "../utils/auth";
 import { Category, CategoryVersion, CategoryZiptrripMapping, Employee } from "../models";
 import { buildCategorySnapshot } from "../utils/category-snapshot";
 import { MAX_CATEGORY_NAME_LENGTH, MAX_DESCRIPTION_LENGTH, MIN_CATEGORY_NAME_LENGTH, ZIPTRRIP_CATEGORIES } from "../utils/constants/category.constant";
@@ -22,8 +23,8 @@ function parseZiptrripCategoryIds(raw: unknown): string[] {
 
 // Step 1's first save — creates the Category row, the point a numeric id
 // first exists for every later step's own save endpoint to target.
-export async function createCategory(req: OwnerRequest, res: Response): Promise<void> {
-  const organizationId = req.organizationId;
+export async function createCategory(req: AuthenticatedRequest, res: Response): Promise<void> {
+  const organizationId = await getActiveOrganizationId(req.userId);
   if (!organizationId || !req.userId) {
     res.status(401).json({ error: NOT_AUTHENTICATED_MESSAGE });
     return;
@@ -79,8 +80,8 @@ export async function createCategory(req: OwnerRequest, res: Response): Promise<
 
 // The one shared "load everything" endpoint every wizard step reads from —
 // see user-stories/013-category-creation.md's Overview.
-export async function getCategoryDetail(req: OwnerRequest, res: Response): Promise<void> {
-  const organizationId = req.organizationId;
+export async function getCategoryDetail(req: AuthenticatedRequest, res: Response): Promise<void> {
+  const organizationId = await getActiveOrganizationId(req.userId);
   if (!organizationId) {
     res.status(401).json({ error: NOT_AUTHENTICATED_MESSAGE });
     return;
@@ -96,8 +97,8 @@ export async function getCategoryDetail(req: OwnerRequest, res: Response): Promi
   res.status(200).json({ category: snapshot });
 }
 
-export async function updateCategoryBasicDetails(req: OwnerRequest, res: Response): Promise<void> {
-  const organizationId = req.organizationId;
+export async function updateCategoryBasicDetails(req: AuthenticatedRequest, res: Response): Promise<void> {
+  const organizationId = await getActiveOrganizationId(req.userId);
   if (!organizationId || !req.userId) {
     res.status(401).json({ error: NOT_AUTHENTICATED_MESSAGE });
     return;
@@ -161,8 +162,8 @@ export async function updateCategoryBasicDetails(req: OwnerRequest, res: Respons
 
 // 014's "My Categories" grid — infinite-scroll paginated, most-recently-
 // updated first (see 014's own Open Questions for why).
-export async function listCategories(req: OwnerRequest, res: Response): Promise<void> {
-  const organizationId = req.organizationId;
+export async function listCategories(req: AuthenticatedRequest, res: Response): Promise<void> {
+  const organizationId = await getActiveOrganizationId(req.userId);
   if (!organizationId) {
     res.status(401).json({ error: NOT_AUTHENTICATED_MESSAGE });
     return;
@@ -192,8 +193,8 @@ export async function listCategories(req: OwnerRequest, res: Response): Promise<
 }
 
 // 014's Delete action — draft-only, enforced here, not just hidden client-side.
-export async function deleteCategory(req: OwnerRequest, res: Response): Promise<void> {
-  const organizationId = req.organizationId;
+export async function deleteCategory(req: AuthenticatedRequest, res: Response): Promise<void> {
+  const organizationId = await getActiveOrganizationId(req.userId);
   if (!organizationId) {
     res.status(401).json({ error: NOT_AUTHENTICATED_MESSAGE });
     return;
@@ -215,8 +216,8 @@ export async function deleteCategory(req: OwnerRequest, res: Response): Promise<
 
 // 014's Enable/Disable toggle — active-only, both directions confirmed
 // client-side before this call is ever made.
-export async function updateCategoryEnabledStatus(req: OwnerRequest, res: Response): Promise<void> {
-  const organizationId = req.organizationId;
+export async function updateCategoryEnabledStatus(req: AuthenticatedRequest, res: Response): Promise<void> {
+  const organizationId = await getActiveOrganizationId(req.userId);
   if (!organizationId || !req.userId) {
     res.status(401).json({ error: NOT_AUTHENTICATED_MESSAGE });
     return;
@@ -241,8 +242,8 @@ export async function updateCategoryEnabledStatus(req: OwnerRequest, res: Respon
 }
 
 // 016's Version History drawer — draft categories have no real versions yet.
-export async function listCategoryVersions(req: OwnerRequest, res: Response): Promise<void> {
-  const organizationId = req.organizationId;
+export async function listCategoryVersions(req: AuthenticatedRequest, res: Response): Promise<void> {
+  const organizationId = await getActiveOrganizationId(req.userId);
   if (!organizationId) {
     res.status(401).json({ error: NOT_AUTHENTICATED_MESSAGE });
     return;

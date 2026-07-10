@@ -6,7 +6,6 @@ import { Switch } from "@/components/ui/switch";
 import { FileTypesPicker } from "./file-types-picker";
 import { OptionsListEditor } from "./options-list-editor";
 import {
-  CATEGORY_CITY_LIST,
   CATEGORY_FIELD_TYPE_LABELS,
   CATEGORY_LIST_VALUE_SOURCES,
   DEFAULT_FILE_COUNT,
@@ -281,6 +280,14 @@ function FieldTypeSpecificConfig({ field, updateConfig, onChange, numericFieldNa
               <code>^[A-Za-z0-9._%+-]+@[A-Za-z0-9.-]+\.[A-Za-z]{"{2,}"}$</code> · Phone (India): <code>^[6-9][0-9]{"{9}"}$</code>
             </p>
           </div>
+          {/* Claim Management's useAsInvoiceNumber amendment — optional,
+              unlike Use As Claim Amount/Expense Date, so no "exactly one"
+              enforcement here; the backend caps it at one per category. */}
+          <ToggleRow
+            label="Use As Invoice/Bill Number"
+            checked={config.useAsInvoiceNumber === true}
+            onChange={(checked) => updateConfig({ useAsInvoiceNumber: checked })}
+          />
         </div>
       );
 
@@ -341,9 +348,14 @@ function FieldTypeSpecificConfig({ field, updateConfig, onChange, numericFieldNa
               </div>
               <div className="space-y-2">
                 <Label>Maximum Required Selection</Label>
+                {/* No client-side cap — city_list now draws from the real,
+                    server-side Country/City catalog (Claim Management's
+                    city_list migration) instead of a fixed 10-name list, so
+                    the backend's own City.count() check is authoritative
+                    here, same as every other unconstrained numeric input in
+                    this panel (minValue/maxValue, minLength/maxLength). */}
                 <Input
                   type="number"
-                  max={CATEGORY_CITY_LIST.length}
                   value={(config.maxRequiredSelection as number | string | undefined) ?? ""}
                   onChange={(event) => updateConfig({ maxRequiredSelection: event.target.value === "" ? null : Number(event.target.value) })}
                 />

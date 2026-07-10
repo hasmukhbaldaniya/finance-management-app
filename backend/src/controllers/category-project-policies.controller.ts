@@ -1,5 +1,6 @@
 import type { Response } from "express";
-import type { OwnerRequest } from "../middleware/require-owner";
+import type { AuthenticatedRequest } from "../middleware/require-auth";
+import { getActiveOrganizationId } from "../utils/auth";
 import { Category, CategoryPolicy } from "../models";
 import { parseIncomingPolicy, validatePolicy, type IncomingPolicy, type PolicyValidationOptions } from "../utils/category-policy-validation";
 import { buildFieldLookups, persistPolicy } from "../utils/category-policy-persistence";
@@ -13,8 +14,8 @@ const CATEGORY_NOT_FOUND_MESSAGE = "Category not found.";
 // call: there's no separate submit/activate endpoint, so every successful
 // call here (whether reached via the "Save as Draft" or "Submit" button)
 // flips the category to "active".
-export async function saveCategoryProjectPolicies(req: OwnerRequest, res: Response): Promise<void> {
-  const organizationId = req.organizationId;
+export async function saveCategoryProjectPolicies(req: AuthenticatedRequest, res: Response): Promise<void> {
+  const organizationId = await getActiveOrganizationId(req.userId);
   if (!organizationId || !req.userId) {
     res.status(401).json({ error: NOT_AUTHENTICATED_MESSAGE });
     return;

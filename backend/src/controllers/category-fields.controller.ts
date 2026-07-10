@@ -1,9 +1,9 @@
 import type { Response } from "express";
-import type { OwnerRequest } from "../middleware/require-owner";
-import { Category, CategoryField, type CategoryFieldType } from "../models";
+import type { AuthenticatedRequest } from "../middleware/require-auth";
+import { getActiveOrganizationId } from "../utils/auth";
+import { Category, CategoryField, City, type CategoryFieldType } from "../models";
 import {
   ALLOWED_FILE_TYPES,
-  CATEGORY_CITY_LIST,
   CATEGORY_FIELD_TYPES,
   CATEGORY_LIST_VALUE_SOURCES,
   MAX_FIELD_NAME_LENGTH,
@@ -119,7 +119,7 @@ function asFiniteNumber(value: unknown): number | null {
 
 // Validates one field's Field Specific Configuration against its fieldType
 // — see user-stories/013-category-creation.md's per-type settings table.
-function validateFieldConfig(field: IncomingField, numericFieldNames: Set<string>, dateFieldNames: Set<string>): string | null {
+function validateFieldConfig(field: IncomingField, numericFieldNames: Set<string>, dateFieldNames: Set<string>, cityCount: number): string | null {
   const { config } = field;
   switch (field.fieldType) {
     case "invoice":
@@ -185,7 +185,7 @@ function validateFieldConfig(field: IncomingField, numericFieldNames: Set<string
           return "Enter minimum and maximum required selection.";
         }
         if (minRequired > maxRequired) return "Minimum value cannot be greater than maximum value.";
-        if (maxRequired > CATEGORY_CITY_LIST.length) return "Maximum required selection exceeds the available cities.";
+        if (maxRequired > cityCount) return "Maximum required selection exceeds the available cities.";
       }
       return null;
     }
@@ -208,8 +208,8 @@ function validateFieldConfig(field: IncomingField, numericFieldNames: Set<string
   }
 }
 
-export async function saveCategoryFields(req: OwnerRequest, res: Response): Promise<void> {
-  const organizationId = req.organizationId;
+export async function saveCategoryFields(req: AuthenticatedRequest, res: Response): Promise<void> {
+  const organizationId = await getActiveOrganizationId(req.userId);
   if (!organizationId || !req.userId) {
     res.status(401).json({ error: NOT_AUTHENTICATED_MESSAGE });
     return;
@@ -291,8 +291,12 @@ export async function saveCategoryFields(req: OwnerRequest, res: Response): Prom
     const numericFieldNames = new Set(incoming.filter((field) => field.fieldType === "amount" || field.fieldType === "number").map((field) => field.fieldName));
     const dateFieldNames = new Set(incoming.filter((field) => field.fieldType === "date").map((field) => field.fieldName));
 
+    // Only queried when a city_list field is actually present — every other
+    // save skips this round-trip entirely.
+    const cityCount = incoming.some((field) => field.fieldType === "city_list") ? await City.count() : 0;
+
     for (const field of incoming) {
-      const error = validateFieldConfig(field, numericFieldNames, dateFieldNames);
+      const error = validateFieldConfig(field, numericFieldNames, dateFieldNames, cityCount);
       if (error) {
         res.status(400).json({ error });
         return;
@@ -315,6 +319,13 @@ export async function saveCategoryFields(req: OwnerRequest, res: Response): Prom
     }
     if (amountFields.filter((field) => field.config.useAsClaimAmount === true).length !== 1) {
       res.status(400).json({ error: "At least one field must be selected as Claim Amount." });
+      return;
+    }
+    // useAsInvoiceNumber (022's amendment) is optional, unlike Amount/Date
+    // above — a category with no invoice-number concept (mileage, per-diem)
+    // simply never sets it, so only an upper bound of one is enforced here.
+    if (incoming.filter((field) => field.config.useAsInvoiceNumber === true).length > 1) {
+      res.status(400).json({ error: "Only one field can be marked as the invoice/bill number." });
       return;
     }
   }

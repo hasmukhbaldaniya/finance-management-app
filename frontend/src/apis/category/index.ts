@@ -10,3 +10,4 @@ export { saveCategoryProjectPolicies, type SaveCategoryProjectPoliciesPayload } 
 export { getCategoryVersions } from "./listVersions.api";
 export { getCategoryVersionDetail, getCategoryLatestVersion } from "./getVersionDetail.api";
 export { finishCategoryEditSession } from "./finishEditSession.api";
+export { getClaimableCategories } from "./listClaimable.api";
