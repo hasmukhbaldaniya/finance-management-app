@@ -13,4 +13,4 @@ export { getProcessingStatus } from "./getProcessingStatus.api";
 export { mergeInvoicePages } from "./mergeInvoicePages.api";
 export { unmergeInvoicePages } from "./unmergeInvoicePages.api";
 export { checkExpenseDuplicate } from "./checkDuplicate.api";
-export { getInvoiceFileContentUrl } from "./invoiceFileContentUrl";
+export { getInvoiceFileContent } from "./getInvoiceFileContent.api";

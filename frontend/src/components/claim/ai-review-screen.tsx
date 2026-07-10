@@ -19,7 +19,7 @@ import { CategorySelect } from "@/components/claim/category-select";
 import { ExpenseDynamicForm } from "@/components/claim/expense-dynamic-form";
 import { Button } from "@/components/ui/button";
 import { Spinner } from "@/components/ui/spinner";
-import { getInvoiceFileContentUrl } from "@/apis/claim/invoiceFileContentUrl";
+import { getInvoiceFileContent } from "@/apis/claim/getInvoiceFileContent.api";
 import { formatInr } from "@/utils/helpers/format.helper";
 import { ApiError, GENERIC_ERROR_MESSAGE } from "@/utils/apiManager/apiManager";
 import { ROUTES } from "@/utils/constants/route.constant";
@@ -150,6 +150,41 @@ export function AiReviewScreen({ claimId }: { claimId: number }) {
   const selectedCategory = categories.find((category) => category.id === selectedExpense?.categoryId) ?? null;
   const selectedInvoiceFile = invoiceFiles.find((file) => file.id === selectedExpense?.sourceInvoiceFileId) ?? null;
   const totalAmount = expenses.reduce((total, expense) => total + Number(expense.amount ?? 0), 0);
+
+  // Fetched as an authenticated Blob and rendered via an object URL — not a
+  // plain <img src="http://localhost:4000/...">, since whether a browser
+  // attaches the session cookie to a cross-origin subresource request isn't
+  // reliable across browsers/privacy settings (this is what actually broke
+  // the preview: the endpoint itself was always fine, verified with curl).
+  const [previewUrl, setPreviewUrl] = useState<string | null>(null);
+  const [isPreviewLoading, setIsPreviewLoading] = useState(false);
+
+  useEffect(() => {
+    if (!selectedInvoiceFile) {
+      setPreviewUrl(null);
+      return;
+    }
+    let isCancelled = false;
+    let objectUrl: string | null = null;
+    setIsPreviewLoading(true);
+    getInvoiceFileContent(claimId, selectedInvoiceFile.id)
+      .then((blob) => {
+        if (isCancelled) return;
+        objectUrl = URL.createObjectURL(blob);
+        setPreviewUrl(objectUrl);
+      })
+      .catch(() => {
+        if (!isCancelled) setPreviewUrl(null);
+      })
+      .finally(() => {
+        if (!isCancelled) setIsPreviewLoading(false);
+      });
+    return () => {
+      isCancelled = true;
+      if (objectUrl) URL.revokeObjectURL(objectUrl);
+    };
+    // eslint-disable-next-line react-hooks/exhaustive-deps
+  }, [claimId, selectedInvoiceFile?.id]);
 
   async function handleMerge(fileId: number): Promise<void> {
     setIsMerging(true);
@@ -307,15 +342,15 @@ export function AiReviewScreen({ claimId }: { claimId: number }) {
           {selectedInvoiceFile ? (
             <div className="flex w-full flex-col items-center gap-2">
               <span className="rounded-full bg-green-100 px-2.5 py-1 text-xs font-medium text-green-800">AI-Processed</span>
-              {selectedInvoiceFile.fileType === "pdf" ? (
-                <iframe title="Invoice preview" src={getInvoiceFileContentUrl(claimId, selectedInvoiceFile.id)} className="h-[60vh] w-full rounded-md border border-border" />
+              {isPreviewLoading || !previewUrl ? (
+                <div className="flex h-[60vh] w-full items-center justify-center">
+                  {isPreviewLoading ? <Spinner className="size-6" /> : <p className="text-sm text-muted-foreground">Couldn&apos;t load the preview.</p>}
+                </div>
+              ) : selectedInvoiceFile.fileType === "pdf" ? (
+                <iframe title="Invoice preview" src={previewUrl} className="h-[60vh] w-full rounded-md border border-border" />
               ) : (
                 // eslint-disable-next-line @next/next/no-img-element
-                <img
-                  src={getInvoiceFileContentUrl(claimId, selectedInvoiceFile.id)}
-                  alt={selectedInvoiceFile.originalFileName}
-                  className="max-h-[60vh] w-full rounded-md border border-border object-contain"
-                />
+                <img src={previewUrl} alt={selectedInvoiceFile.originalFileName} className="max-h-[60vh] w-full rounded-md border border-border object-contain" />
               )}
             </div>
           ) : (
