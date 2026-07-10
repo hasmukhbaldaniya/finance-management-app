@@ -1,0 +1,12 @@
+[project]
+name = "ai-service"
+version = "1.0.0"
+description = "Standalone AI/ML extraction microservice for Claim Management's Automated Extraction flow — stateless, called only by the main backend over HTTP."
+requires-python = ">=3.12"
+dependencies = [
+    "anthropic>=0.116.0",
+    "fastapi>=0.139.0",
+    "pydantic-settings>=2.14.2",
+    "python-dotenv>=1.2.2",
+    "uvicorn[standard]>=0.51.0",
+]
