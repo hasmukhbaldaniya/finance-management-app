@@ -87,7 +87,16 @@ export function Header({ user, organization, isOwner }: HeaderProps) {
         <div className="flex items-center gap-6">
           <nav className="flex items-center gap-1">
             {NAV_LINKS.map((link) => {
-              const isActive = link.activeMatch ? pathname.startsWith(link.activeMatch) : pathname === link.href;
+              // A section's nav link stays highlighted for every route
+              // nested under it (e.g. /claims/new, /claims/123/manual all
+              // count as "Claims"), not just its own exact path — every
+              // link's own href already doubles as that section's base
+              // path, except Company Settings, which keeps its explicit
+              // activeMatch since its own href points at one sub-page
+              // (Employees) rather than the shared /company-settings root.
+              const isActive = link.activeMatch
+                ? pathname.startsWith(link.activeMatch)
+                : pathname === link.href || pathname.startsWith(`${link.href}/`);
               return (
                 <Link
                   key={link.href}

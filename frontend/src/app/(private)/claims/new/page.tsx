@@ -1,14 +1,23 @@
 "use client";
 
 import Link from "next/link";
-import { ArrowRightIcon, PlusIcon, SparkleIcon } from "@phosphor-icons/react";
+import { useRouter } from "next/navigation";
+import { ArrowRightIcon, CaretLeftIcon, PlusIcon, SparkleIcon } from "@phosphor-icons/react";
+import { Button } from "@/components/ui/button";
 import { ROUTES } from "@/utils/constants/route.constant";
 
 // 022's Create Claim entry point — a pure fork, no shared fields live here.
 export default function CreateClaimEntryPage() {
+  const router = useRouter();
+
   return (
     <div className="mx-auto max-w-4xl space-y-8 px-6 py-8">
-      <h1 className="text-2xl font-semibold tracking-tight">Create Claim</h1>
+      <div className="flex items-center gap-3">
+        <Button type="button" variant="outline" size="sm" onClick={() => router.push(ROUTES.CLAIMS)}>
+          <CaretLeftIcon size={14} /> Back
+        </Button>
+        <h1 className="text-2xl font-semibold tracking-tight">Create Claim</h1>
+      </div>
 
       <div className="grid grid-cols-1 gap-6 sm:grid-cols-2">
         <Link
