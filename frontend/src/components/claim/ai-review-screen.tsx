@@ -366,7 +366,7 @@ export function AiReviewScreen({ claimId }: { claimId: number }) {
             onClick={() => addExpenseInputRef.current?.click()}
             disabled={isUploadingMore || invoiceFiles.length >= MAX_INVOICE_FILE_COUNT}
           >
-            {isUploadingMore ? <Spinner className="size-3.5" /> : <PlusIcon size={14} />} Add Expense
+            {isUploadingMore ? <Spinner size={14} /> : <PlusIcon size={14} />} Add Expense
           </Button>
           <Button type="button" variant="secondary" size="sm" onClick={() => setIsSplitClaimOpen(true)} disabled={expenses.length < 2}>
             <ArrowsSplitIcon size={14} /> Move to New Claim
@@ -486,7 +486,7 @@ export function AiReviewScreen({ claimId }: { claimId: number }) {
 
             {isUploadingMore ? (
               <div className="flex items-center gap-2 rounded-md border border-dashed border-border p-2 text-xs text-muted-foreground">
-                <Spinner className="size-3.5 shrink-0" />
+                <Spinner size={14} className="shrink-0" />
                 Reading your new invoice…
               </div>
             ) : null}
@@ -543,7 +543,7 @@ export function AiReviewScreen({ claimId }: { claimId: number }) {
               <p className="text-sm text-muted-foreground">Select an invoice to preview.</p>
             ) : isPreviewLoading || !previewUrl ? (
               <div className="flex h-[50vh] w-full items-center justify-center">
-                {isPreviewLoading ? <Spinner className="size-6" /> : <p className="text-sm text-muted-foreground">Couldn&apos;t load the preview.</p>}
+                {isPreviewLoading ? <Spinner size={24} /> : <p className="text-sm text-muted-foreground">Couldn&apos;t load the preview.</p>}
               </div>
             ) : selectedInvoiceFile.fileType === "pdf" ? (
               <iframe title="Invoice preview" src={previewUrl} className="h-[50vh] w-full rounded-md border border-border" />

@@ -224,7 +224,7 @@ export function EditProfileDialog({ open, onOpenChange, profile, onSaved }: Edit
               disabled={isResending}
               className="inline-flex items-center gap-1.5 text-sm text-primary underline-offset-4 hover:underline disabled:opacity-50"
             >
-              {isResending ? <Spinner className="size-3.5" /> : null}
+              {isResending ? <Spinner size={14} /> : null}
               Resend OTP
             </button>
           </div>

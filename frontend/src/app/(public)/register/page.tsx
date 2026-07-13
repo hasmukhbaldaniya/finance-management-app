@@ -134,7 +134,7 @@ export default function RegisterOrganizationPage() {
             </p>
           ) : gstStatus === "checking" ? (
             <p className="flex items-center gap-1.5 text-xs text-muted-foreground">
-              <Spinner className="size-3" /> Checking availability…
+              <Spinner size={12} /> Checking availability…
             </p>
           ) : gstStatus === "available" ? (
             <p className="text-xs text-muted-foreground">GST number is available.</p>

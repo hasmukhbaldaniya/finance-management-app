@@ -28,12 +28,12 @@ export function WizardFooter({ showSaveAsDraft, primaryLabel, isSavingDraft, isS
       </Button>
       {showSaveAsDraft ? (
         <Button type="button" variant="secondary" disabled={isBusy} onClick={onSaveAsDraft}>
-          {isSavingDraft ? <Spinner className="size-4" /> : null}
+          {isSavingDraft ? <Spinner size={16} /> : null}
           Save as Draft
         </Button>
       ) : null}
       <Button type="button" disabled={isBusy} onClick={onPrimary}>
-        {isSavingPrimary ? <Spinner className="size-4" /> : null}
+        {isSavingPrimary ? <Spinner size={16} /> : null}
         {primaryLabel}
       </Button>
     </div>

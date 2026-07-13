@@ -154,7 +154,7 @@ export function SplitWithColleaguesDialog({ claimId, expense, onOpenChange, onSp
           <div className="max-h-32 space-y-1 overflow-y-auto rounded-md border border-border p-2">
             {isSearching ? (
               <div className="flex justify-center py-2">
-                <Spinner className="size-4" />
+                <Spinner size={16} />
               </div>
             ) : candidates.length === 0 ? (
               <p className="px-1 py-2 text-xs text-muted-foreground">No colleagues found.</p>

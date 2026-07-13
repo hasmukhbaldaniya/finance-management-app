@@ -92,7 +92,7 @@ export default function CategoriesManagementPage() {
 
       {isLoading ? (
         <div className="flex justify-center py-16">
-          <Spinner className="size-6" />
+          <Spinner size={24} />
         </div>
       ) : loadError ? (
         <p className="py-16 text-center text-sm text-destructive">{loadError}</p>
@@ -118,7 +118,7 @@ export default function CategoriesManagementPage() {
           </div>
           {hasMore ? (
             <div ref={sentinelRef} className="flex justify-center py-4">
-              {isLoadingMore ? <Spinner className="size-5" /> : null}
+              {isLoadingMore ? <Spinner size={20} /> : null}
             </div>
           ) : null}
         </>

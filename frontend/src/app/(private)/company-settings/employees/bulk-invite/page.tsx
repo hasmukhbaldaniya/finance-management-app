@@ -177,7 +177,7 @@ export default function BulkInviteEmployeesPage() {
           {selectedFileName ? <p className="text-xs text-muted-foreground">Selected: {selectedFileName}</p> : null}
           {isUploading ? (
             <p className="flex items-center gap-1.5 text-xs text-muted-foreground">
-              <Spinner className="size-3.5" />
+              <Spinner size={14} />
               Validating…
             </p>
           ) : null}

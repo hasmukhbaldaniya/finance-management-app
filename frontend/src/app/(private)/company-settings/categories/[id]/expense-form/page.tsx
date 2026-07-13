@@ -16,7 +16,7 @@ export default function ExpenseFormPage() {
   if (isLoading) {
     return (
       <div className="flex justify-center py-16">
-        <Spinner className="size-6" />
+        <Spinner size={24} />
       </div>
     );
   }

@@ -62,7 +62,7 @@ export function CategoryDetailsView({ categoryId }: CategoryDetailsViewProps) {
   if (isLoading && !snapshot) {
     return (
       <div className="flex justify-center py-16">
-        <Spinner className="size-6" />
+        <Spinner size={24} />
       </div>
     );
   }

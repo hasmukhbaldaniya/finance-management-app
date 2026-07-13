@@ -51,7 +51,7 @@ function NewCategoryPage() {
   if (isLoading) {
     return (
       <div className="flex justify-center py-16">
-        <Spinner className="size-6" />
+        <Spinner size={24} />
       </div>
     );
   }
@@ -65,7 +65,7 @@ function NewCategoryPage() {
 
 export default function NewCategoryPageWrapper() {
   return (
-    <Suspense fallback={<div className="flex justify-center py-16"><Spinner className="size-6" /></div>}>
+    <Suspense fallback={<div className="flex justify-center py-16"><Spinner size={24} /></div>}>
       <NewCategoryPage />
     </Suspense>
   );
