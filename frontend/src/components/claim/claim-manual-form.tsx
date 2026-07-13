@@ -2,6 +2,9 @@
 
 import { useEffect, useState } from "react";
 import { useRouter } from "next/navigation";
+import Box from "@mui/material/Box";
+import Stack from "@mui/material/Stack";
+import Typography from "@mui/material/Typography";
 import { toast } from "@/components/ui/toast";
 import { PlusIcon } from "@phosphor-icons/react";
 import { createClaim, getClaimDetail, saveExpenses, updateClaim } from "@/apis/claim";
@@ -200,53 +203,55 @@ export function ClaimManualForm(props: ClaimManualFormProps) {
 
   if (isLoading) {
     return (
-      <div className="flex justify-center py-16">
+      <Box sx={{ display: "flex", justifyContent: "center", py: 8 }}>
         <Spinner size={24} />
-      </div>
+      </Box>
     );
   }
 
   return (
-    <div className="mx-auto max-w-4xl space-y-8 px-6 py-8">
-      <div className="flex items-center justify-between gap-3">
-        <h1 className="text-2xl font-semibold tracking-tight">{isEdit ? "Edit Claim" : "Add Manually"}</h1>
+    <Stack spacing={4} sx={{ mx: "auto", maxWidth: 896, px: 3, py: 4 }}>
+      <Stack direction="row" spacing={1.5} sx={{ alignItems: "center", justifyContent: "space-between" }}>
+        <Typography variant="h5" sx={{ fontWeight: 600, letterSpacing: "-0.01em" }}>
+          {isEdit ? "Edit Claim" : "Add Manually"}
+        </Typography>
         {claimId !== null ? (
           <Button type="button" variant="outline" size="sm" onClick={() => setIsSplitClaimOpen(true)} disabled={expenses.length < 2}>
             Move to New Claim
           </Button>
         ) : null}
-      </div>
+      </Stack>
 
-      <div className="space-y-3">
+      <Stack spacing={1.5}>
         <Label>Claim Type</Label>
-        <div className="flex gap-4 text-sm">
+        <Stack direction="row" spacing={2} sx={{ fontSize: "0.875rem" }}>
           {(
             [
               { value: "standalone" as const, label: "Create New Claim" },
               { value: "trip_linked" as const, label: "Link to Trip" },
             ] as const
           ).map((option) => (
-            <label key={option.value} className="flex items-center gap-2">
+            <Box component="label" key={option.value} sx={{ display: "flex", alignItems: "center", gap: 1 }}>
               <input type="radio" name="claim-type" checked={claimType === option.value} onChange={() => setClaimType(option.value)} />
               {option.label}
-            </label>
+            </Box>
           ))}
-        </div>
-      </div>
+        </Stack>
+      </Stack>
 
       {claimType === "standalone" ? (
-        <div className="max-w-md space-y-2">
+        <Stack spacing={1} sx={{ maxWidth: 448 }}>
           <Label htmlFor="claim-name">Claim Name</Label>
           <Input id="claim-name" value={name} onChange={(event) => setName(event.target.value)} maxLength={MAX_CLAIM_NAME_LENGTH} />
-        </div>
+        </Stack>
       ) : (
-        <div className="max-w-md space-y-2">
+        <Stack spacing={1} sx={{ maxWidth: 448 }}>
           <Label>Trip Name</Label>
           <TripSelect value={trip} onChange={setTrip} placeholder="Select trip" />
-        </div>
+        </Stack>
       )}
 
-      <div className="space-y-4">
+      <Stack spacing={2}>
         {expenses.map((expense, index) => (
           <ExpensePanel
             key={expense.id ?? `new-${index}`}
@@ -263,9 +268,9 @@ export function ClaimManualForm(props: ClaimManualFormProps) {
         <Button type="button" variant="outline" onClick={addExpense} disabled={expenses.length >= MAX_EXPENSE_COUNT}>
           <PlusIcon size={16} /> Add Expense
         </Button>
-      </div>
+      </Stack>
 
-      <div className="flex flex-wrap items-center justify-end gap-3 border-t border-border pt-6">
+      <Stack direction="row" spacing={1.5} sx={{ alignItems: "center", justifyContent: "flex-end", flexWrap: "wrap", borderTop: 1, borderColor: "divider", pt: 3 }}>
         <Button type="button" variant="outline" onClick={handleCancel}>
           Cancel
         </Button>
@@ -277,7 +282,7 @@ export function ClaimManualForm(props: ClaimManualFormProps) {
           {isSubmittingFinal ? <Spinner /> : null}
           Save Claim
         </Button>
-      </div>
+      </Stack>
 
       <SplitExpenseDialog
         claimId={claimId ?? 0}
@@ -295,6 +300,6 @@ export function ClaimManualForm(props: ClaimManualFormProps) {
       {claimId !== null ? (
         <SplitClaimDialog claimId={claimId} expenses={expenses} categories={categories} open={isSplitClaimOpen} onOpenChange={setIsSplitClaimOpen} />
       ) : null}
-    </div>
+    </Stack>
   );
 }
