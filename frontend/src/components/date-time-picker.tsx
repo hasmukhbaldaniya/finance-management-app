@@ -1,14 +1,7 @@
 "use client";
 
-import { useState } from "react";
 import { format } from "date-fns";
-import { CaretDownIcon } from "@phosphor-icons/react";
-import { Button } from "@/components/ui/button";
-import { Calendar } from "@/components/ui/calendar";
-import { Input } from "@/components/ui/input";
-import { Label } from "@/components/ui/label";
-import { Popover, PopoverContent, PopoverTrigger } from "@/components/ui/popover";
-import { cn } from "@/lib/utils";
+import { DateTimePicker as MuiDateTimePicker } from "@mui/x-date-pickers/DateTimePicker";
 
 type DateTimePickerProps = {
   value: string; // "" | "YYYY-MM-DDTHH:mm" — matches <input type="datetime-local">'s own value shape
@@ -19,58 +12,42 @@ type DateTimePickerProps = {
   disabled?: boolean;
 };
 
-function splitValue(value: string): { date: Date | undefined; time: string } {
-  if (!value) return { date: undefined, time: "" };
-  const [datePart, timePart = ""] = value.split("T");
-  const date = new Date(`${datePart}T00:00:00`);
-  return { date: Number.isNaN(date.getTime()) ? undefined : date, time: timePart };
+// Local time, not UTC — `new Date("YYYY-MM-DDTHH:mm")` (no timezone
+// suffix) already parses as local time in every JS engine, matching this
+// component's own long-standing contract and native
+// <input type="datetime-local">'s own behavior.
+function parseDateTime(value: string): Date | null {
+  if (!value) return null;
+  const date = new Date(value);
+  return Number.isNaN(date.getTime()) ? null : date;
 }
 
-function formatDateOnly(date: Date): string {
-  return format(date, "yyyy-MM-dd");
+function formatDateTime(date: Date): string {
+  return format(date, "yyyy-MM-dd'T'HH:mm");
 }
 
-// Calendar+Popover date picker with a time input alongside, replacing
-// native <input type="datetime-local"> — operates on the same
-// "YYYY-MM-DDTHH:mm" string value shape that input already used.
+// 026's MUI Migration — internals swap to @mui/x-date-pickers'
+// DateTimePicker, a single self-contained component combining calendar +
+// time selection in one popup — replacing the old hand-composed
+// Popover+Calendar+time-Input. Callers still only ever see the same
+// "YYYY-MM-DDTHH:mm" string, never a Date object. `placeholder` maps onto
+// the field's `label` — see date-picker.tsx's own comment for why.
 export function DateTimePicker({ value, onChange, placeholder = "Select date & time", id, className, disabled }: DateTimePickerProps) {
-  const [open, setOpen] = useState(false);
-  const { date, time } = splitValue(value);
-
-  function commit(nextDate: Date | undefined, nextTime: string): void {
-    if (!nextDate) {
-      onChange("");
-      return;
-    }
-    onChange(`${formatDateOnly(nextDate)}T${nextTime || "00:00"}`);
-  }
-
   return (
-    <Popover open={open} onOpenChange={setOpen}>
-      <PopoverTrigger
-        render={
-          <Button
-            id={id}
-            type="button"
-            variant="outline"
-            disabled={disabled}
-            data-empty={!date}
-            className={cn("w-full justify-between text-left font-normal data-[empty=true]:text-muted-foreground", className)}
-          >
-            {date ? `${format(date, "PPP")}${time ? `, ${time}` : ""}` : <span>{placeholder}</span>}
-            <CaretDownIcon size={16} className="shrink-0 opacity-60" />
-          </Button>
-        }
-      />
-      <PopoverContent className="w-auto space-y-2 p-2" align="start">
-        <Calendar mode="single" selected={date} defaultMonth={date} onSelect={(nextDate) => commit(nextDate, time)} />
-        <div className="space-y-1.5 border-t border-border px-1 pt-2">
-          <Label htmlFor={id ? `${id}-time` : undefined} className="text-xs text-muted-foreground">
-            Time
-          </Label>
-          <Input id={id ? `${id}-time` : undefined} type="time" value={time} onChange={(event) => commit(date, event.target.value)} />
-        </div>
-      </PopoverContent>
-    </Popover>
+    <MuiDateTimePicker
+      value={parseDateTime(value)}
+      onChange={(date) => onChange(date ? formatDateTime(date) : "")}
+      disabled={disabled}
+      format="PPP, HH:mm"
+      slotProps={{
+        textField: {
+          id,
+          className,
+          fullWidth: true,
+          size: "small",
+          label: placeholder,
+        },
+      }}
+    />
   );
 }
