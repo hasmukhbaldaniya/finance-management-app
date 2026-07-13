@@ -1,7 +1,8 @@
 "use client";
 
 import { useEffect, useState } from "react";
-import { cn } from "@/lib/utils";
+import Box from "@mui/material/Box";
+import Typography from "@mui/material/Typography";
 
 export type StepNavItem = {
   id: string;
@@ -43,35 +44,62 @@ export function StepNav({ steps }: StepNavProps) {
   }
 
   return (
-    <nav aria-label="Form sections" className="sticky top-4 hidden w-56 shrink-0 self-start md:block">
-      <ol className="space-y-1">
+    <Box component="nav" aria-label="Form sections" sx={{ position: "sticky", top: 16, width: 224, flexShrink: 0, alignSelf: "flex-start", display: { xs: "none", md: "block" } }}>
+      <Box component="ol" sx={{ display: "flex", flexDirection: "column", gap: 0.5, listStyle: "none", p: 0, m: 0 }}>
         {steps.map((step, index) => {
           const isActive = step.id === activeId;
           return (
-            <li key={step.id}>
-              <button
+            <Box component="li" key={step.id}>
+              <Box
+                component="button"
                 type="button"
                 onClick={() => handleClick(step.id)}
                 aria-current={isActive ? "step" : undefined}
-                className={cn(
-                  "flex w-full items-center gap-3 rounded-lg px-3 py-2 text-left text-sm transition-colors",
-                  isActive ? "bg-muted font-medium text-foreground" : "text-muted-foreground hover:bg-muted/50 hover:text-foreground"
-                )}
+                sx={{
+                  display: "flex",
+                  width: "100%",
+                  alignItems: "center",
+                  gap: 1.5,
+                  borderRadius: 2,
+                  px: 1.5,
+                  py: 1,
+                  textAlign: "left",
+                  fontSize: "0.875rem",
+                  background: "none",
+                  border: "none",
+                  cursor: "pointer",
+                  color: isActive ? "text.primary" : "text.secondary",
+                  fontWeight: isActive ? 500 : 400,
+                  bgcolor: isActive ? "action.selected" : "transparent",
+                  "&:hover": { bgcolor: "action.hover", color: "text.primary" },
+                }}
               >
-                <span
-                  className={cn(
-                    "flex size-6 shrink-0 items-center justify-center rounded-full border text-xs",
-                    isActive ? "border-primary bg-primary text-primary-foreground" : "border-border"
-                  )}
+                <Box
+                  sx={{
+                    display: "flex",
+                    width: 24,
+                    height: 24,
+                    flexShrink: 0,
+                    alignItems: "center",
+                    justifyContent: "center",
+                    borderRadius: "50%",
+                    border: 1,
+                    borderColor: isActive ? "primary.main" : "divider",
+                    bgcolor: isActive ? "primary.main" : "transparent",
+                    color: isActive ? "primary.contrastText" : "text.primary",
+                    fontSize: "0.75rem",
+                  }}
                 >
                   {index + 1}
-                </span>
-                {step.label}
-              </button>
-            </li>
+                </Box>
+                <Typography component="span" variant="body2" sx={{ color: "inherit", fontWeight: "inherit" }}>
+                  {step.label}
+                </Typography>
+              </Box>
+            </Box>
           );
         })}
-      </ol>
-    </nav>
+      </Box>
+    </Box>
   );
 }
