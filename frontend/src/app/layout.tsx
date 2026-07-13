@@ -1,6 +1,7 @@
 import type { Metadata } from "next";
 import { Geist_Mono, Montserrat } from "next/font/google";
 import { Toaster } from "@/components/ui/sonner";
+import { ThemeRegistry } from "@/theme/theme-registry";
 import "./globals.css";
 
 const montserrat = Montserrat({
@@ -30,8 +31,10 @@ export default function RootLayout({
       className={`${montserrat.variable} ${geistMono.variable} h-full antialiased`}
     >
       <body className="min-h-full flex flex-col">
-        {children}
-        <Toaster />
+        <ThemeRegistry>
+          {children}
+          <Toaster />
+        </ThemeRegistry>
       </body>
     </html>
   );
