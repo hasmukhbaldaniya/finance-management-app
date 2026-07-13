@@ -1,6 +1,9 @@
 "use client";
 
 import { useEffect, useState, type FormEvent } from "react";
+import Box from "@mui/material/Box";
+import Stack from "@mui/material/Stack";
+import Typography from "@mui/material/Typography";
 import { toast } from "@/components/ui/toast";
 import { Button } from "@/components/ui/button";
 import { Dialog, DialogContent, DialogFooter, DialogHeader, DialogTitle } from "@/components/ui/dialog";
@@ -90,8 +93,8 @@ export function GradeFormDialog({ open, onOpenChange, grade, onSaved, onDeleted 
           <DialogTitle>{grade ? "Edit Grade" : "New Grade"}</DialogTitle>
         </DialogHeader>
 
-        <form onSubmit={handleSubmit} noValidate className="space-y-4">
-          <div className="space-y-1.5">
+        <Stack component="form" onSubmit={handleSubmit} noValidate spacing={2}>
+          <Stack spacing={0.75}>
             <Label htmlFor="grade-name">Grade Name</Label>
             <Input
               id="grade-name"
@@ -102,18 +105,18 @@ export function GradeFormDialog({ open, onOpenChange, grade, onSaved, onDeleted 
               autoFocus
             />
             {nameError ? (
-              <p id="grade-name-error" className="text-xs text-destructive">
+              <Typography id="grade-name-error" variant="caption" color="error">
                 {nameError}
-              </p>
+              </Typography>
             ) : null}
-          </div>
+          </Stack>
 
           {grade ? (
-            <div className="rounded-md border border-border p-3">
+            <Box sx={{ borderRadius: 1.5, border: 1, borderColor: "divider", p: 1.5 }}>
               {isConfirmingDelete ? (
-                <div className="space-y-2">
-                  <p className="text-sm">Are you sure you want to delete this grade? This cannot be undone.</p>
-                  <div className="flex justify-end gap-2">
+                <Stack spacing={1}>
+                  <Typography variant="body2">Are you sure you want to delete this grade? This cannot be undone.</Typography>
+                  <Stack direction="row" spacing={1} sx={{ justifyContent: "flex-end" }}>
                     <Button type="button" variant="outline" size="sm" onClick={() => setIsConfirmingDelete(false)}>
                       Cancel
                     </Button>
@@ -121,19 +124,21 @@ export function GradeFormDialog({ open, onOpenChange, grade, onSaved, onDeleted 
                       {isDeleting ? <Spinner /> : null}
                       Delete
                     </Button>
-                  </div>
-                </div>
+                  </Stack>
+                </Stack>
               ) : (
-                <div className="flex items-center justify-between gap-3">
-                  <div>
-                    <p className="text-sm font-medium">Delete this grade</p>
+                <Stack direction="row" spacing={1.5} sx={{ alignItems: "center", justifyContent: "space-between" }}>
+                  <Box>
+                    <Typography variant="body2" sx={{ fontWeight: 500 }}>
+                      Delete this grade
+                    </Typography>
                     {!canDelete ? (
-                      <p className="text-xs text-muted-foreground">
+                      <Typography variant="caption" color="text.secondary">
                         This grade has {grade.membersCount} member(s) assigned. Disable it instead, or reassign those
                         members first.
-                      </p>
+                      </Typography>
                     ) : null}
-                  </div>
+                  </Box>
                   <Button
                     type="button"
                     variant="destructive"
@@ -143,9 +148,9 @@ export function GradeFormDialog({ open, onOpenChange, grade, onSaved, onDeleted 
                   >
                     Delete
                   </Button>
-                </div>
+                </Stack>
               )}
-            </div>
+            </Box>
           ) : null}
 
           <DialogFooter>
@@ -157,7 +162,7 @@ export function GradeFormDialog({ open, onOpenChange, grade, onSaved, onDeleted 
               Save
             </Button>
           </DialogFooter>
-        </form>
+        </Stack>
       </DialogContent>
     </Dialog>
   );

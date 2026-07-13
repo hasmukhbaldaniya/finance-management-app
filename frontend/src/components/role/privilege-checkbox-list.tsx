@@ -1,5 +1,6 @@
 "use client";
 
+import Stack from "@mui/material/Stack";
 import { Checkbox } from "@/components/ui/checkbox";
 import { Label } from "@/components/ui/label";
 import { PRIVILEGE_CATALOG, type PrivilegeKey } from "@/utils/constants/privilege.constant";
@@ -17,9 +18,9 @@ export function PrivilegeCheckboxList({ selected, onChange, disabled }: Privileg
   }
 
   return (
-    <div className="space-y-2">
+    <Stack spacing={1}>
       {PRIVILEGE_CATALOG.map((privilege) => (
-        <div key={privilege.key} className="flex items-center gap-2">
+        <Stack direction="row" key={privilege.key} spacing={1} sx={{ alignItems: "center" }}>
           <Checkbox
             id={`privilege-${privilege.key}`}
             checked={selected.includes(privilege.key)}
@@ -27,8 +28,8 @@ export function PrivilegeCheckboxList({ selected, onChange, disabled }: Privileg
             onCheckedChange={(checked) => handleToggle(privilege.key, checked === true)}
           />
           <Label htmlFor={`privilege-${privilege.key}`}>{privilege.label}</Label>
-        </div>
+        </Stack>
       ))}
-    </div>
+    </Stack>
   );
 }
