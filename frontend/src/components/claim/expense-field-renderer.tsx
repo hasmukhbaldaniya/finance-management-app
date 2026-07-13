@@ -1,9 +1,14 @@
 "use client";
 
 import { useEffect, useState } from "react";
+import Box from "@mui/material/Box";
+import Stack from "@mui/material/Stack";
+import Typography from "@mui/material/Typography";
+import Chip from "@mui/material/Chip";
 import { XIcon } from "@phosphor-icons/react";
 import { getAirlines } from "@/apis/airline";
 import { getCities } from "@/apis/city";
+import { statusTones } from "@/theme/colors";
 import { DatePicker } from "@/components/date-picker";
 import { DateTimePicker } from "@/components/date-time-picker";
 import { SelectField } from "@/components/select-field";
@@ -57,36 +62,64 @@ export function ExpenseFieldRenderer({ field, value, computedValue, onChange, er
 
       return (
         <FieldWrapper label={label} tooltip={field.tooltip} error={error} isAutoFilled={isAutoFilled}>
-          <label className="flex cursor-pointer flex-col items-center justify-center gap-1 rounded-lg border border-dashed border-input px-4 py-6 text-center text-sm text-muted-foreground hover:bg-muted/50">
-            <span>Click to upload{allowedFileTypes.length > 0 ? ` (${allowedFileTypes.join(", ")})` : ""}</span>
-            <input
+          <Stack
+            component="label"
+            spacing={0.5}
+            sx={{
+              alignItems: "center",
+              justifyContent: "center",
+              cursor: "pointer",
+              borderRadius: 2,
+              border: 1,
+              borderStyle: "dashed",
+              borderColor: "divider",
+              px: 2,
+              py: 3,
+              textAlign: "center",
+              fontSize: "0.875rem",
+              color: "text.secondary",
+              "&:hover": { bgcolor: "action.hover" },
+            }}
+          >
+            <Box component="span">Click to upload{allowedFileTypes.length > 0 ? ` (${allowedFileTypes.join(", ")})` : ""}</Box>
+            <Box
+              component="input"
               type="file"
               multiple
-              className="hidden"
+              sx={{ display: "none" }}
               onChange={(event) => {
-                const selected = Array.from(event.target.files ?? []).map((file) => ({ name: file.name, size: file.size }));
+                const selected = Array.from((event.target as HTMLInputElement).files ?? []).map((file) => ({ name: file.name, size: file.size }));
                 const combined = [...files, ...selected].slice(0, maxFileCount ?? undefined);
                 onChange(combined);
-                event.target.value = "";
+                (event.target as HTMLInputElement).value = "";
               }}
             />
-          </label>
+          </Stack>
           {files.length > 0 ? (
-            <ul className="space-y-1 text-sm">
+            <Stack component="ul" spacing={0.5} sx={{ fontSize: "0.875rem", listStyle: "none", p: 0, m: 0 }}>
               {files.map((file, index) => (
-                <li key={`${file.name}-${index}`} className="flex items-center justify-between gap-2 rounded-md border border-border px-2 py-1">
-                  <span className="truncate">{file.name}</span>
-                  <button
+                <Stack
+                  component="li"
+                  direction="row"
+                  key={`${file.name}-${index}`}
+                  spacing={1}
+                  sx={{ alignItems: "center", justifyContent: "space-between", borderRadius: 1.5, border: 1, borderColor: "divider", px: 1, py: 0.5 }}
+                >
+                  <Typography variant="body2" noWrap>
+                    {file.name}
+                  </Typography>
+                  <Box
+                    component="button"
                     type="button"
                     onClick={() => onChange(files.filter((_, fileIndex) => fileIndex !== index))}
-                    className="text-muted-foreground hover:text-destructive"
                     aria-label={`Remove ${file.name}`}
+                    sx={{ color: "text.secondary", background: "none", border: "none", cursor: "pointer", display: "flex", "&:hover": { color: "error.main" } }}
                   >
                     <XIcon size={14} />
-                  </button>
-                </li>
+                  </Box>
+                </Stack>
               ))}
-            </ul>
+            </Stack>
           ) : null}
         </FieldWrapper>
       );
@@ -106,7 +139,11 @@ export function ExpenseFieldRenderer({ field, value, computedValue, onChange, er
             min={typeof config.minValue === "number" ? config.minValue : undefined}
             max={typeof config.maxValue === "number" ? config.maxValue : undefined}
           />
-          {isComputed ? <p className="text-xs text-muted-foreground">Computed automatically.</p> : null}
+          {isComputed ? (
+            <Typography variant="caption" color="text.secondary">
+              Computed automatically.
+            </Typography>
+          ) : null}
         </FieldWrapper>
       );
     }
@@ -158,14 +195,14 @@ export function ExpenseFieldRenderer({ field, value, computedValue, onChange, er
       const options = Array.isArray(config.options) ? (config.options as string[]) : [];
       return (
         <FieldWrapper label={label} tooltip={field.tooltip} error={error} isAutoFilled={isAutoFilled}>
-          <div className="flex flex-wrap gap-4 text-sm">
+          <Stack direction="row" spacing={2} sx={{ flexWrap: "wrap", fontSize: "0.875rem" }}>
             {options.map((option) => (
-              <label key={option} className="flex items-center gap-2">
+              <Box component="label" key={option} sx={{ display: "flex", alignItems: "center", gap: 1 }}>
                 <input type="radio" name={`field-${field.id}`} checked={value === option} onChange={() => onChange(option)} />
                 {option}
-              </label>
+              </Box>
             ))}
-          </div>
+          </Stack>
         </FieldWrapper>
       );
     }
@@ -219,14 +256,20 @@ function FieldWrapper({
   children: React.ReactNode;
 }) {
   return (
-    <div className="space-y-1.5">
-      <div className="flex items-center gap-2">
+    <Stack spacing={0.75}>
+      <Stack direction="row" spacing={1} sx={{ alignItems: "center" }}>
         <Label title={tooltip ?? undefined}>{label}</Label>
-        {isAutoFilled ? <span className="rounded-full bg-green-100 px-2 py-0.5 text-[10px] font-medium text-green-800">Auto-filled</span> : null}
-      </div>
+        {isAutoFilled ? (
+          <Chip label="Auto-filled" size="small" sx={{ height: 18, fontSize: "0.625rem", fontWeight: 500, bgcolor: statusTones.accepted.background, color: statusTones.accepted.text }} />
+        ) : null}
+      </Stack>
       {children}
-      {error ? <p className="text-xs text-destructive">{error}</p> : null}
-    </div>
+      {error ? (
+        <Typography variant="caption" color="error">
+          {error}
+        </Typography>
+      ) : null}
+    </Stack>
   );
 }
 
@@ -335,21 +378,33 @@ function CityListFieldRenderer({
 
   return (
     <FieldWrapper label={label} tooltip={field.tooltip} error={error} isAutoFilled={isAutoFilled}>
-      <div className="space-y-2">
+      <Stack spacing={1}>
         {ids.length > 0 ? (
-          <ul className="flex flex-wrap gap-2">
+          <Stack component="ul" direction="row" spacing={1} sx={{ flexWrap: "wrap", listStyle: "none", p: 0, m: 0 }}>
             {ids.map((id) => {
               const city = cityFor(id);
               return (
-                <li key={id} className="flex items-center gap-1 rounded-full border border-border bg-muted px-2 py-1 text-xs">
+                <Stack
+                  component="li"
+                  direction="row"
+                  key={id}
+                  spacing={0.5}
+                  sx={{ alignItems: "center", borderRadius: 999, border: 1, borderColor: "divider", bgcolor: "action.hover", px: 1, py: 0.5, fontSize: "0.75rem" }}
+                >
                   {city ? `${city.name}, ${city.countryName}` : `#${id}`}
-                  <button type="button" onClick={() => onChange(ids.filter((existing) => existing !== id))} aria-label="Remove city">
+                  <Box
+                    component="button"
+                    type="button"
+                    onClick={() => onChange(ids.filter((existing) => existing !== id))}
+                    aria-label="Remove city"
+                    sx={{ display: "flex", background: "none", border: "none", cursor: "pointer" }}
+                  >
                     <XIcon size={12} />
-                  </button>
-                </li>
+                  </Box>
+                </Stack>
               );
             })}
-          </ul>
+          </Stack>
         ) : null}
         <CitySelect
           value={null}
@@ -360,7 +415,7 @@ function CityListFieldRenderer({
           }}
           placeholder="Add city"
         />
-      </div>
+      </Stack>
     </FieldWrapper>
   );
 }
