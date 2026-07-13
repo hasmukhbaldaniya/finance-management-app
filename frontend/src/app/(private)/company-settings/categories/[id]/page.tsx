@@ -2,6 +2,7 @@
 
 import { useParams } from "next/navigation";
 import { Suspense } from "react";
+import Box from "@mui/material/Box";
 import { CategoryDetailsView } from "@/components/category/category-details-view";
 import { Spinner } from "@/components/ui/spinner";
 
@@ -12,9 +13,9 @@ export default function CategoryDetailsPage() {
   return (
     <Suspense
       fallback={
-        <div className="flex justify-center py-16">
+        <Box sx={{ display: "flex", justifyContent: "center", py: 8 }}>
           <Spinner size={24} />
-        </div>
+        </Box>
       }
     >
       <CategoryDetailsView categoryId={categoryId} />

@@ -1,6 +1,8 @@
 "use client";
 
 import { useParams } from "next/navigation";
+import Box from "@mui/material/Box";
+import Typography from "@mui/material/Typography";
 import { PoliciesAndApprovalsForm } from "@/components/category/policies-and-approvals-form";
 import { WizardPageShell } from "@/components/category/wizard-page-shell";
 import { useLoadCategory } from "@/components/category/use-load-category";
@@ -15,14 +17,18 @@ export default function PoliciesAndApprovalsPage() {
 
   if (isLoading) {
     return (
-      <div className="flex justify-center py-16">
+      <Box sx={{ display: "flex", justifyContent: "center", py: 8 }}>
         <Spinner size={24} />
-      </div>
+      </Box>
     );
   }
 
   if (loadError) {
-    return <p className="px-6 py-16 text-center text-sm text-destructive">{loadError}</p>;
+    return (
+      <Typography variant="body2" color="error" sx={{ px: 3, py: 8, textAlign: "center" }}>
+        {loadError}
+      </Typography>
+    );
   }
 
   return (

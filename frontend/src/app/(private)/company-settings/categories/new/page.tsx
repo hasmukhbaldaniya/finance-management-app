@@ -2,6 +2,7 @@
 
 import { useSearchParams } from "next/navigation";
 import { Suspense, useEffect, useRef, useState } from "react";
+import Box from "@mui/material/Box";
 import { toast } from "@/components/ui/toast";
 import { getCategoryDetail } from "@/apis/category";
 import { BasicDetailsForm } from "@/components/category/basic-details-form";
@@ -50,9 +51,9 @@ function NewCategoryPage() {
 
   if (isLoading) {
     return (
-      <div className="flex justify-center py-16">
+      <Box sx={{ display: "flex", justifyContent: "center", py: 8 }}>
         <Spinner size={24} />
-      </div>
+      </Box>
     );
   }
 
@@ -65,7 +66,13 @@ function NewCategoryPage() {
 
 export default function NewCategoryPageWrapper() {
   return (
-    <Suspense fallback={<div className="flex justify-center py-16"><Spinner size={24} /></div>}>
+    <Suspense
+      fallback={
+        <Box sx={{ display: "flex", justifyContent: "center", py: 8 }}>
+          <Spinner size={24} />
+        </Box>
+      }
+    >
       <NewCategoryPage />
     </Suspense>
   );

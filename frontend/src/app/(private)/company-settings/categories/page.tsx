@@ -2,6 +2,9 @@
 
 import Link from "next/link";
 import { useEffect, useState } from "react";
+import Box from "@mui/material/Box";
+import Stack from "@mui/material/Stack";
+import Typography from "@mui/material/Typography";
 import { PlusIcon } from "@phosphor-icons/react";
 import { getCategories } from "@/apis/category";
 import { CategoryCard } from "@/components/category/category-card";
@@ -72,39 +75,45 @@ export default function CategoriesManagementPage() {
   const sentinelRef = useInfiniteScroll(handleLoadMore, hasMore, isLoadingMore);
 
   return (
-    <div className="mx-auto max-w-7xl space-y-6 px-6 py-8">
-      <div className="flex items-center justify-between">
-        <h1 className="text-2xl font-semibold tracking-tight">My Categories</h1>
+    <Stack spacing={3} sx={{ mx: "auto", maxWidth: 1280, px: 3, py: 4 }}>
+      <Stack direction="row" sx={{ alignItems: "center", justifyContent: "space-between" }}>
+        <Typography variant="h5" sx={{ fontWeight: 600, letterSpacing: "-0.01em" }}>
+          My Categories
+        </Typography>
         <Button component={Link} href={ROUTES.CATEGORY_NEW}>
           <PlusIcon size={16} /> Create Category
         </Button>
-      </div>
+      </Stack>
 
-      <div className="flex gap-4 border-b border-border text-sm font-medium">
-        <button type="button" className="border-b-2 border-primary px-1 pb-2 text-foreground">
+      <Stack direction="row" spacing={2} sx={{ borderBottom: 1, borderColor: "divider", fontSize: "0.875rem", fontWeight: 500 }}>
+        <Box component="button" type="button" sx={{ borderBottom: 2, borderColor: "primary.main", px: 0.5, pb: 1, background: "none", border: "none", borderBottomWidth: 2, borderBottomStyle: "solid", cursor: "pointer", color: "text.primary" }}>
           Cost Categories
-        </button>
-        <button type="button" disabled className="px-1 pb-2 text-muted-foreground/50">
+        </Box>
+        <Box component="button" type="button" disabled sx={{ px: 0.5, pb: 1, background: "none", border: "none", color: "text.disabled" }}>
           Daily Allowance
-        </button>
-      </div>
+        </Box>
+      </Stack>
 
       {isLoading ? (
-        <div className="flex justify-center py-16">
+        <Box sx={{ display: "flex", justifyContent: "center", py: 8 }}>
           <Spinner size={24} />
-        </div>
+        </Box>
       ) : loadError ? (
-        <p className="py-16 text-center text-sm text-destructive">{loadError}</p>
+        <Typography variant="body2" color="error" sx={{ py: 8, textAlign: "center" }}>
+          {loadError}
+        </Typography>
       ) : categories.length === 0 ? (
-        <div className="flex flex-col items-center gap-3 rounded-lg border border-dashed border-border py-16 text-center">
-          <p className="text-sm text-muted-foreground">No categories yet.</p>
+        <Stack spacing={1.5} sx={{ alignItems: "center", borderRadius: 2, border: 1, borderStyle: "dashed", borderColor: "divider", py: 8, textAlign: "center" }}>
+          <Typography variant="body2" color="text.secondary">
+            No categories yet.
+          </Typography>
           <Button component={Link} href={ROUTES.CATEGORY_NEW}>
             <PlusIcon size={16} /> Create Category
           </Button>
-        </div>
+        </Stack>
       ) : (
         <>
-          <div className="grid grid-cols-1 gap-5 sm:grid-cols-2 xl:grid-cols-3">
+          <Box sx={{ display: "grid", gridTemplateColumns: { xs: "1fr", sm: "1fr 1fr", xl: "1fr 1fr 1fr" }, gap: 2.5 }}>
             {categories.map((category) => (
               <CategoryCard
                 key={category.id}
@@ -114,11 +123,11 @@ export default function CategoriesManagementPage() {
                 onToggleEnabled={setToggleCategoryTarget}
               />
             ))}
-          </div>
+          </Box>
           {hasMore ? (
-            <div ref={sentinelRef} className="flex justify-center py-4">
+            <Box ref={sentinelRef} sx={{ display: "flex", justifyContent: "center", py: 2 }}>
               {isLoadingMore ? <Spinner size={20} /> : null}
-            </div>
+            </Box>
           ) : null}
         </>
       )}
@@ -136,6 +145,6 @@ export default function CategoriesManagementPage() {
           setCategories((previous) => previous.map((category) => (category.id === categoryId ? { ...category, isEnabled } : category)))
         }
       />
-    </div>
+    </Stack>
   );
 }
