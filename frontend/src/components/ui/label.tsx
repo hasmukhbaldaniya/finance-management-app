@@ -1,20 +1,13 @@
-"use client"
+import Typography from "@mui/material/Typography";
+import type { ComponentProps } from "react";
 
-import * as React from "react"
-
-import { cn } from "@/lib/utils"
-
-function Label({ className, ...props }: React.ComponentProps<"label">) {
-  return (
-    <label
-      data-slot="label"
-      className={cn(
-        "flex items-center gap-2 text-sm leading-none font-medium select-none group-data-[disabled=true]:pointer-events-none group-data-[disabled=true]:opacity-50 peer-disabled:cursor-not-allowed peer-disabled:opacity-50",
-        className
-      )}
-      {...props}
-    />
-  )
+// 026's MUI Migration — kept as a standalone label (MUI's own InputLabel
+// assumes a FormControl context this codebase doesn't use, since Input
+// above is a bare OutlinedInput, not a bundled TextField) — a styled
+// Typography rendering as a real <label>, same external className/
+// htmlFor/children shape every existing call site already uses.
+function Label({ className, ...props }: ComponentProps<"label">) {
+  return <Typography component="label" variant="body2" sx={{ display: "flex", alignItems: "center", gap: 1, fontWeight: 500 }} className={className} {...props} />;
 }
 
-export { Label }
+export { Label };

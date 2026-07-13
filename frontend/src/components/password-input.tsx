@@ -5,7 +5,7 @@ import { EyeIcon, EyeSlashIcon } from "@phosphor-icons/react";
 import { Input } from "@/components/ui/input";
 import { cn } from "@/lib/utils";
 
-type PasswordInputProps = Omit<React.ComponentProps<"input">, "type"> & {
+type PasswordInputProps = Omit<React.ComponentProps<"input">, "type" | "color" | "size"> & {
   className?: string;
 };
 
