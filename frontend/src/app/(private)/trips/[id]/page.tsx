@@ -3,6 +3,10 @@
 import Link from "next/link";
 import { useParams } from "next/navigation";
 import { useEffect, useState } from "react";
+import Box from "@mui/material/Box";
+import Stack from "@mui/material/Stack";
+import Typography from "@mui/material/Typography";
+import MuiLink from "@mui/material/Link";
 import { BriefcaseIcon, ChatCircleDotsIcon } from "@phosphor-icons/react";
 import { getTripDetail } from "@/apis/trip";
 import { EmptyExpenseList } from "@/components/trip/empty-expense-list";
@@ -43,38 +47,44 @@ export default function TripDetailsPage() {
 
   if (isLoading) {
     return (
-      <div className="flex justify-center py-16">
+      <Box sx={{ display: "flex", justifyContent: "center", py: 8 }}>
         <Spinner size={24} />
-      </div>
+      </Box>
     );
   }
 
   if (loadError || !trip) {
-    return <p className="px-6 py-16 text-center text-sm text-destructive">{loadError ?? "This trip could not be found."}</p>;
+    return (
+      <Typography variant="body2" color="error" sx={{ px: 3, py: 8, textAlign: "center" }}>
+        {loadError ?? "This trip could not be found."}
+      </Typography>
+    );
   }
 
   return (
-    <div className="mx-auto max-w-6xl space-y-6 px-6 py-6">
-      <nav aria-label="Breadcrumb" className="flex items-center gap-2 border-b border-border pb-4 text-sm">
-        <Link href={ROUTES.TRIPS} className="flex items-center gap-1.5 text-muted-foreground hover:text-foreground">
+    <Stack spacing={3} sx={{ mx: "auto", maxWidth: 1152, px: 3, py: 3 }}>
+      <Stack component="nav" direction="row" spacing={1} aria-label="Breadcrumb" sx={{ alignItems: "center", borderBottom: 1, borderColor: "divider", pb: 2, fontSize: "0.875rem" }}>
+        <MuiLink component={Link} href={ROUTES.TRIPS} color="text.secondary" sx={{ display: "flex", alignItems: "center", gap: 0.75, "&:hover": { color: "text.primary" } }}>
           <BriefcaseIcon size={16} /> My Trips
-        </Link>
-        <span className="text-muted-foreground">/</span>
-        <span className="flex items-center gap-1.5 font-medium text-primary">
+        </MuiLink>
+        <Typography color="text.secondary">/</Typography>
+        <Stack direction="row" spacing={0.75} sx={{ alignItems: "center", fontWeight: 500, color: "primary.main" }}>
           <ChatCircleDotsIcon size={16} /> View Trip Claim
-        </span>
-      </nav>
+        </Stack>
+      </Stack>
 
-      <h1 className="text-2xl font-semibold tracking-tight">{trip.name}</h1>
+      <Typography variant="h5" sx={{ fontWeight: 600, letterSpacing: "-0.01em" }}>
+        {trip.name}
+      </Typography>
 
-      <div className="grid grid-cols-1 gap-6 lg:grid-cols-3">
-        <div className="lg:col-span-2">
+      <Box sx={{ display: "grid", gridTemplateColumns: { xs: "1fr", lg: "2fr 1fr" }, gap: 3 }}>
+        <Box>
           <EmptyExpenseList />
-        </div>
-        <div>
+        </Box>
+        <Box>
           <TripOverviewCard trip={trip} />
-        </div>
-      </div>
-    </div>
+        </Box>
+      </Box>
+    </Stack>
   );
 }

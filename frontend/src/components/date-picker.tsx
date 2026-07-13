@@ -2,6 +2,7 @@
 
 import { format } from "date-fns";
 import { DatePicker as MuiDatePicker } from "@mui/x-date-pickers/DatePicker";
+import type { SxProps, Theme } from "@mui/material/styles";
 
 type DatePickerProps = {
   value: string; // "" | "YYYY-MM-DD" — matches <input type="date">'s own value shape
@@ -9,6 +10,7 @@ type DatePickerProps = {
   placeholder?: string;
   id?: string;
   className?: string;
+  sx?: SxProps<Theme>;
   disabled?: boolean;
 };
 
@@ -35,7 +37,7 @@ function formatDateOnly(date: Date): string {
 // sectioned date field has no single placeholder string slot (each
 // date/month/year section shows its own token when empty), so a
 // floating label is the closest equivalent "hint when empty" mechanism.
-export function DatePicker({ value, onChange, placeholder = "Select date", id, className, disabled }: DatePickerProps) {
+export function DatePicker({ value, onChange, placeholder = "Select date", id, className, sx, disabled }: DatePickerProps) {
   return (
     <MuiDatePicker
       value={parseDateOnly(value)}
@@ -46,6 +48,7 @@ export function DatePicker({ value, onChange, placeholder = "Select date", id, c
         textField: {
           id,
           className,
+          sx,
           fullWidth: true,
           size: "small",
           label: placeholder,
