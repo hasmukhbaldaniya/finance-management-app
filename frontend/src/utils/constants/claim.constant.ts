@@ -17,17 +17,6 @@ export const CLAIM_STATUS_OPTIONS: readonly { value: ClaimStatus; label: string 
   { value: "approved_for_reimbursement", label: "Approved for Reimbursement" },
 ];
 
-// Mirrors trip.constant.ts's own TRIP_STATUS_BADGE_STYLE/LABEL shape —
-// this epic only ever writes "draft"/"submitted", the rest exist so the
-// listing can display/filter sample data in those states (022's Overview).
-export const CLAIM_STATUS_BADGE_STYLE: Record<ClaimStatus, string> = {
-  draft: "bg-muted text-muted-foreground",
-  submitted: "bg-blue-100 text-blue-800",
-  pending_for_approval: "bg-amber-100 text-amber-800",
-  ready_for_submission: "bg-amber-100 text-amber-800",
-  approved_for_reimbursement: "bg-green-100 text-green-800",
-};
-
 export const CLAIM_STATUS_LABEL: Record<ClaimStatus, string> = {
   draft: "Draft",
   submitted: "Submitted",
