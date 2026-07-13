@@ -1,3 +1,5 @@
+import Stack from "@mui/material/Stack";
+import Typography from "@mui/material/Typography";
 import { Button } from "@/components/ui/button";
 import { CATEGORY_FIELD_TYPES, CATEGORY_FIELD_TYPE_LABELS } from "@/utils/constants/category.constant";
 import type { CategoryFieldType } from "@/types/category.type";
@@ -11,9 +13,11 @@ type FieldLibraryProps = {
 // interaction 013 specifies (see that story's Open Questions).
 export function FieldLibrary({ disabledTypes, onAdd }: FieldLibraryProps) {
   return (
-    <div className="w-full shrink-0 space-y-2 rounded-lg border border-border bg-background p-4 md:w-56">
-      <h2 className="text-sm font-semibold">Field Library</h2>
-      <div className="space-y-1">
+    <Stack spacing={1} sx={{ width: { xs: "100%", md: 224 }, flexShrink: 0, borderRadius: 2, border: 1, borderColor: "divider", bgcolor: "background.paper", p: 2 }}>
+      <Typography variant="subtitle2" sx={{ fontWeight: 600 }}>
+        Field Library
+      </Typography>
+      <Stack spacing={0.5}>
         {CATEGORY_FIELD_TYPES.map((fieldType) => (
           <Button
             key={fieldType}
@@ -21,12 +25,12 @@ export function FieldLibrary({ disabledTypes, onAdd }: FieldLibraryProps) {
             variant="outline"
             disabled={disabledTypes.has(fieldType)}
             onClick={() => onAdd(fieldType)}
-            className="w-full justify-start font-normal"
+            sx={{ width: "100%", justifyContent: "flex-start", fontWeight: 400 }}
           >
             {CATEGORY_FIELD_TYPE_LABELS[fieldType]}
           </Button>
         ))}
-      </div>
-    </div>
+      </Stack>
+    </Stack>
   );
 }

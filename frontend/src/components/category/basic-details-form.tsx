@@ -2,6 +2,8 @@
 
 import { useState } from "react";
 import { useRouter } from "next/navigation";
+import Stack from "@mui/material/Stack";
+import Typography from "@mui/material/Typography";
 import { toast } from "@/components/ui/toast";
 import { createCategory, updateCategoryBasicDetails } from "@/apis/category";
 import { useCategoryWizard } from "@/contexts/CategoryWizardContext";
@@ -108,8 +110,8 @@ export function BasicDetailsForm() {
   }
 
   return (
-    <div className="max-w-4xl space-y-6 rounded-lg border border-border bg-background p-8">
-      <div className="space-y-2">
+    <Stack spacing={3} sx={{ maxWidth: 896, borderRadius: 2, border: 1, borderColor: "divider", bgcolor: "background.paper", p: 4 }}>
+      <Stack spacing={1}>
         <Label htmlFor="category-name">Category Name</Label>
         <Input
           id="category-name"
@@ -118,10 +120,14 @@ export function BasicDetailsForm() {
           placeholder="e.g. Domestic Flight"
           maxLength={MAX_CATEGORY_NAME_LENGTH}
         />
-        {errors.name ? <p className="text-sm text-destructive">{errors.name}</p> : null}
-      </div>
+        {errors.name ? (
+          <Typography variant="body2" color="error">
+            {errors.name}
+          </Typography>
+        ) : null}
+      </Stack>
 
-      <div className="space-y-2">
+      <Stack spacing={1}>
         <Label htmlFor="category-description">Description</Label>
         <Textarea
           id="category-description"
@@ -131,17 +137,21 @@ export function BasicDetailsForm() {
           maxLength={MAX_DESCRIPTION_LENGTH}
           rows={4}
         />
-        <p className="text-xs text-muted-foreground">
+        <Typography variant="caption" color="text.secondary">
           Our AI learns from this text to categorize uploaded bills. Write a clear, detailed description for best auto-categorization
           results.
-        </p>
-        {errors.description ? <p className="text-sm text-destructive">{errors.description}</p> : null}
-      </div>
+        </Typography>
+        {errors.description ? (
+          <Typography variant="body2" color="error">
+            {errors.description}
+          </Typography>
+        ) : null}
+      </Stack>
 
-      <div className="space-y-2">
+      <Stack spacing={1}>
         <Label>Map Ziptrrip Category</Label>
         <ZiptrripCategoryPicker selectedKeys={wizard.ziptrripCategoryIds} onChange={wizard.setZiptrripCategoryIds} />
-      </div>
+      </Stack>
 
       <WizardFooter
         showSaveAsDraft={showSaveAsDraft}
@@ -151,6 +161,6 @@ export function BasicDetailsForm() {
         onSaveAsDraft={handleSaveAsDraft}
         onPrimary={handleSaveAndContinue}
       />
-    </div>
+    </Stack>
   );
 }

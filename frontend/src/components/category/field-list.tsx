@@ -1,8 +1,11 @@
 "use client";
 
+import Box from "@mui/material/Box";
+import Stack from "@mui/material/Stack";
+import Typography from "@mui/material/Typography";
+import { alpha } from "@mui/material/styles";
 import { ArrowDownIcon, ArrowUpIcon, TrashIcon } from "@phosphor-icons/react";
 import { Button } from "@/components/ui/button";
-import { cn } from "@/lib/utils";
 import { CATEGORY_FIELD_TYPE_LABELS } from "@/utils/constants/category.constant";
 import type { CategoryField } from "@/types/category.type";
 
@@ -20,29 +23,59 @@ type FieldListProps = {
 export function FieldList({ fields, selectedFieldId, onSelect, onMove, onDelete }: FieldListProps) {
   if (fields.length === 0) {
     return (
-      <div className="flex flex-1 items-center justify-center rounded-lg border border-dashed border-border p-8 text-center text-sm text-muted-foreground">
-        Click a field type from the Field Library to add it to this form.
-      </div>
+      <Box
+        sx={{
+          display: "flex",
+          flex: 1,
+          alignItems: "center",
+          justifyContent: "center",
+          borderRadius: 2,
+          border: 1,
+          borderStyle: "dashed",
+          borderColor: "divider",
+          p: 4,
+          textAlign: "center",
+        }}
+      >
+        <Typography variant="body2" color="text.secondary">
+          Click a field type from the Field Library to add it to this form.
+        </Typography>
+      </Box>
     );
   }
 
   return (
-    <ol className="flex-1 space-y-2">
+    <Stack component="ol" spacing={1} sx={{ flex: 1, listStyle: "none", p: 0, m: 0 }}>
       {fields.map((field, index) => (
-        <li
+        <Stack
+          component="li"
+          direction="row"
           key={field.id}
-          className={cn(
-            "flex items-center gap-2 rounded-lg border px-3 py-2",
-            field.id === selectedFieldId ? "border-primary bg-primary/5" : "border-border"
-          )}
+          spacing={1}
+          sx={{
+            alignItems: "center",
+            borderRadius: 2,
+            border: 1,
+            borderColor: field.id === selectedFieldId ? "primary.main" : "divider",
+            bgcolor: field.id === selectedFieldId ? (theme) => alpha(theme.palette.primary.main, 0.05) : "transparent",
+            px: 1.5,
+            py: 1,
+          }}
         >
-          <button type="button" onClick={() => onSelect(field.id)} className="min-w-0 flex-1 text-left">
-            <p className="truncate text-sm font-medium">{field.fieldName}</p>
-            <p className="text-xs text-muted-foreground">
+          <Box
+            component="button"
+            type="button"
+            onClick={() => onSelect(field.id)}
+            sx={{ minWidth: 0, flex: 1, textAlign: "left", background: "none", border: "none", cursor: "pointer" }}
+          >
+            <Typography variant="body2" noWrap sx={{ fontWeight: 500 }}>
+              {field.fieldName}
+            </Typography>
+            <Typography variant="caption" color="text.secondary">
               {CATEGORY_FIELD_TYPE_LABELS[field.fieldType]}
               {field.isRequired ? " · Required" : ""}
-            </p>
-          </button>
+            </Typography>
+          </Box>
           <Button
             type="button"
             variant="ghost"
@@ -64,10 +97,12 @@ export function FieldList({ fields, selectedFieldId, onSelect, onMove, onDelete 
             <ArrowDownIcon size={16} />
           </Button>
           <Button type="button" variant="ghost" size="icon" aria-label={`Delete ${field.fieldName}`} onClick={() => onDelete(field.id)}>
-            <TrashIcon size={16} className="text-destructive" />
+            <Box component="span" sx={{ color: "error.main", display: "flex" }}>
+              <TrashIcon size={16} />
+            </Box>
           </Button>
-        </li>
+        </Stack>
       ))}
-    </ol>
+    </Stack>
   );
 }

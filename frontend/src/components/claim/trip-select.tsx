@@ -54,7 +54,7 @@ export function TripSelect({ value, onChange, placeholder }: TripSelectProps) {
           </Button>
         }
       />
-      <DropdownMenuContent className="w-(--anchor-width) p-2">
+      <DropdownMenuContent matchTriggerWidth sx={{ p: 1 }}>
         <div className="mb-2 space-y-2">
           <div className="relative">
             <MagnifyingGlassIcon size={14} className="absolute top-1/2 left-2 -translate-y-1/2 text-muted-foreground" />

@@ -1,5 +1,7 @@
 "use client";
 
+import Box from "@mui/material/Box";
+import Stack from "@mui/material/Stack";
 import { PlusIcon, TrashIcon } from "@phosphor-icons/react";
 import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
@@ -26,18 +28,20 @@ export function OptionsListEditor({ options, onChange }: OptionsListEditorProps)
   }
 
   return (
-    <div className="space-y-2">
+    <Stack spacing={1}>
       {options.map((option, index) => (
-        <div key={index} className="flex items-center gap-2">
+        <Stack direction="row" key={index} spacing={1} sx={{ alignItems: "center" }}>
           <Input value={option} onChange={(event) => updateOption(index, event.target.value)} placeholder={`Option ${index + 1}`} />
           <Button type="button" variant="ghost" size="icon" aria-label={`Remove option ${index + 1}`} onClick={() => removeOption(index)}>
-            <TrashIcon size={16} className="text-destructive" />
+            <Box component="span" sx={{ color: "error.main", display: "flex" }}>
+              <TrashIcon size={16} />
+            </Box>
           </Button>
-        </div>
+        </Stack>
       ))}
       <Button type="button" variant="outline" size="sm" onClick={addOption}>
         <PlusIcon size={14} /> Add More Options
       </Button>
-    </div>
+    </Stack>
   );
 }

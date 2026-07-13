@@ -5,6 +5,7 @@ import MuiMenu from "@mui/material/Menu";
 import MuiMenuItem, { type MenuItemProps as MuiMenuItemProps } from "@mui/material/MenuItem";
 import Checkbox from "@mui/material/Checkbox";
 import Divider from "@mui/material/Divider";
+import type { SxProps, Theme } from "@mui/material/styles";
 
 // 026's MUI Migration — only the sub-components real call sites actually
 // use (DropdownMenu/DropdownMenuTrigger/DropdownMenuContent/
@@ -71,11 +72,14 @@ function DropdownMenuTrigger({ render, className, children }: DropdownMenuTrigge
 
 type DropdownMenuContentProps = {
   align?: "start" | "end";
-  className?: string;
+  sx?: SxProps<Theme>;
+  /** Matches the popup's width to its trigger's rendered width — the MUI
+   * equivalent of Base UI's `w-(--anchor-width)` anchor-sizing utility. */
+  matchTriggerWidth?: boolean;
   children: ReactNode;
 };
 
-function DropdownMenuContent({ align = "start", className, children }: DropdownMenuContentProps) {
+function DropdownMenuContent({ align = "start", sx, matchTriggerWidth = false, children }: DropdownMenuContentProps) {
   const { anchorEl, closeMenu } = useDropdownMenuContext();
   return (
     <MuiMenu
@@ -84,7 +88,7 @@ function DropdownMenuContent({ align = "start", className, children }: DropdownM
       onClose={closeMenu}
       anchorOrigin={{ vertical: "bottom", horizontal: align === "end" ? "right" : "left" }}
       transformOrigin={{ vertical: "top", horizontal: align === "end" ? "right" : "left" }}
-      slotProps={{ paper: { className } }}
+      slotProps={{ paper: { sx: { ...(matchTriggerWidth && anchorEl ? { width: anchorEl.offsetWidth } : {}), ...sx } } }}
     >
       {children}
     </MuiMenu>

@@ -44,7 +44,7 @@ export function CitySelect({ value, onChange, placeholder }: CitySelectProps) {
           </Button>
         }
       />
-      <DropdownMenuContent className="w-(--anchor-width) p-2">
+      <DropdownMenuContent matchTriggerWidth sx={{ p: 1 }}>
         <div className="relative mb-2">
           <MagnifyingGlassIcon size={14} className="absolute top-1/2 left-2 -translate-y-1/2 text-muted-foreground" />
           <Input
