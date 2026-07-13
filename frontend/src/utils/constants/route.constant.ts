@@ -13,6 +13,7 @@ export const ROUTES = {
   CLAIM_NEW_AI: "/claims/new/ai",
   claimManualEdit: (claimId: number) => `/claims/${claimId}/manual`,
   claimAiReview: (claimId: number) => `/claims/${claimId}/ai-review`,
+  splitRequestDetails: (splitRequestId: number) => `/claims/split-requests/${splitRequestId}`,
   APPROVALS: "/approvals",
   FINANCE: "/finance",
   REPORTS: "/reports",

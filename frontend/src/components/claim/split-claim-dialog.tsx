@@ -77,7 +77,7 @@ export function SplitClaimDialog({ claimId, expenses, categories, open, onOpenCh
     <Dialog open={open} onOpenChange={onOpenChange}>
       <DialogContent className="max-w-lg">
         <DialogHeader>
-          <DialogTitle>Split Claim</DialogTitle>
+          <DialogTitle>Move to New Claim</DialogTitle>
           <DialogDescription>Choose which expenses move to a brand-new claim.</DialogDescription>
         </DialogHeader>
 

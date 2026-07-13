@@ -398,8 +398,11 @@ export async function splitExpense(req: AuthenticatedRequest, res: Response): Pr
   res.status(200).json({ expenses: [expense, ...created].map((row) => ({ id: row.id, categoryId: row.categoryId, amount: row.amount, paidBy: row.paidBy })) });
 }
 
-// 022's Split a Claim — moves selected expenses onto a brand-new,
-// independent claim; only available while the original is still "draft".
+// 022's "Move Expenses to a New Claim" (originally called "Split a Claim" —
+// renamed in 025 to avoid colliding with that story's own, unrelated "Split
+// Claim" feature, cross-employee cost sharing via ExpenseSplitRequest).
+// Moves selected expenses onto a brand-new, independent claim the same
+// employee still owns; only available while the original is still "draft".
 export async function splitClaim(req: AuthenticatedRequest, res: Response): Promise<void> {
   const organizationId = await getActiveOrganizationId(req.userId);
   if (!organizationId || !req.userId) {
