@@ -1,6 +1,8 @@
 "use client";
 
 import { useEffect, useState } from "react";
+import Box from "@mui/material/Box";
+import Stack from "@mui/material/Stack";
 import { toast } from "@/components/ui/toast";
 import { splitExpense } from "@/apis/claim";
 import { SelectField } from "@/components/select-field";
@@ -79,24 +81,24 @@ export function SplitExpenseDialog({ claimId, expense, categories, onOpenChange,
 
   return (
     <Dialog open={expense !== null} onOpenChange={onOpenChange}>
-      <DialogContent className="max-w-lg">
+      <DialogContent sx={{ width: "100%", maxWidth: 512 }}>
         <DialogHeader>
           <DialogTitle>Split Expense</DialogTitle>
           <DialogDescription>Original amount: ₹{formatInr(originalAmount)}. Remaining to allocate: ₹{formatInr(remaining)}.</DialogDescription>
         </DialogHeader>
 
-        <div className="space-y-4">
+        <Stack spacing={2}>
           {portions.map((portion, index) => (
-            <div key={index} className="grid grid-cols-2 gap-2 rounded-md border border-border p-3">
-              <div className="col-span-2 space-y-1">
+            <Box key={index} sx={{ display: "grid", gridTemplateColumns: "1fr 1fr", gap: 1, borderRadius: 1.5, border: 1, borderColor: "divider", p: 1.5 }}>
+              <Stack spacing={0.5} sx={{ gridColumn: "span 2" }}>
                 <Label>Category</Label>
                 <CategorySelect categories={categories} value={portion.categoryId} onChange={(categoryId) => updatePortion(index, { categoryId })} />
-              </div>
-              <div className="space-y-1">
+              </Stack>
+              <Stack spacing={0.5}>
                 <Label>Amount</Label>
                 <Input type="number" value={portion.amount} onChange={(event) => updatePortion(index, { amount: event.target.value })} />
-              </div>
-              <div className="space-y-1">
+              </Stack>
+              <Stack spacing={0.5}>
                 <Label>Paid By</Label>
                 <SelectField
                   value={portion.paidBy}
@@ -106,13 +108,13 @@ export function SplitExpenseDialog({ claimId, expense, categories, onOpenChange,
                     { value: "company", label: "Company Paid" },
                   ]}
                 />
-              </div>
-            </div>
+              </Stack>
+            </Box>
           ))}
-          <Button type="button" variant="outline" size="sm" onClick={() => setPortions((previous) => [...previous, { categoryId: null, amount: "", paidBy: "self" }])}>
+          <Button type="button" variant="outline" size="sm" onClick={() => setPortions((previous) => [...previous, { categoryId: null, amount: "", paidBy: "self" }])} sx={{ alignSelf: "flex-start" }}>
             Add Portion
           </Button>
-        </div>
+        </Stack>
 
         <DialogFooter>
           <Button type="button" variant="outline" onClick={() => onOpenChange(false)}>

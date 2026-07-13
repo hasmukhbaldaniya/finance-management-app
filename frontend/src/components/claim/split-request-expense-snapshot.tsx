@@ -1,3 +1,6 @@
+import Box from "@mui/material/Box";
+import Stack from "@mui/material/Stack";
+import Typography from "@mui/material/Typography";
 import { formatDateTime } from "@/utils/helpers/format.helper";
 import type { SplitRequestExpenseSnapshot } from "@/types/split-request.type";
 
@@ -18,19 +21,27 @@ export function SplitRequestExpenseSnapshotView({ expense }: { expense: SplitReq
   const orderedFields = [...expense.fields].sort((a, b) => a.id - b.id);
 
   return (
-    <div className="space-y-3 rounded-lg border border-border p-4">
-      <div className="flex items-center justify-between text-sm">
-        <span className="font-medium">{expense.categoryName}</span>
-        <span className="text-muted-foreground">{expense.claimName ?? (expense.isTripLinked ? "Trip-linked claim" : "—")}</span>
-      </div>
-      <dl className="grid grid-cols-2 gap-x-4 gap-y-2 text-sm">
+    <Stack spacing={1.5} sx={{ borderRadius: 2, border: 1, borderColor: "divider", p: 2 }}>
+      <Stack direction="row" sx={{ alignItems: "center", justifyContent: "space-between", fontSize: "0.875rem" }}>
+        <Typography variant="body2" sx={{ fontWeight: 500 }}>
+          {expense.categoryName}
+        </Typography>
+        <Typography variant="body2" color="text.secondary">
+          {expense.claimName ?? (expense.isTripLinked ? "Trip-linked claim" : "—")}
+        </Typography>
+      </Stack>
+      <Box component="dl" sx={{ display: "grid", gridTemplateColumns: "1fr 1fr", columnGap: 2, rowGap: 1, fontSize: "0.875rem", m: 0 }}>
         {orderedFields.map((field) => (
-          <div key={field.id} className="contents">
-            <dt className="text-muted-foreground">{field.fieldName}</dt>
-            <dd>{formatFieldValue(field.fieldType, expense.fieldValues[String(field.id)])}</dd>
-          </div>
+          <Box key={field.id} sx={{ display: "contents" }}>
+            <Typography component="dt" variant="body2" color="text.secondary">
+              {field.fieldName}
+            </Typography>
+            <Typography component="dd" variant="body2" sx={{ m: 0 }}>
+              {formatFieldValue(field.fieldType, expense.fieldValues[String(field.id)])}
+            </Typography>
+          </Box>
         ))}
-      </dl>
-    </div>
+      </Box>
+    </Stack>
   );
 }

@@ -1,6 +1,9 @@
 "use client";
 
 import { useEffect, useState } from "react";
+import Box from "@mui/material/Box";
+import Stack from "@mui/material/Stack";
+import Typography from "@mui/material/Typography";
 import { toast } from "@/components/ui/toast";
 import { createSplitRequest } from "@/apis/split-request";
 import { getEmployees } from "@/apis/employee";
@@ -125,70 +128,78 @@ export function SplitWithColleaguesDialog({ claimId, expense, onOpenChange, onSp
 
   return (
     <Dialog open={expense !== null} onOpenChange={onOpenChange}>
-      <DialogContent className="max-w-lg">
+      <DialogContent sx={{ width: "100%", maxWidth: 512 }}>
         <DialogHeader>
           <DialogTitle>Split with Colleagues</DialogTitle>
           <DialogDescription>Invite colleagues to cover a share of this ₹{formatInr(originalAmount)} expense.</DialogDescription>
         </DialogHeader>
 
-        <div className="space-y-3 border-b border-border pb-4">
+        <Stack spacing={1.5} sx={{ borderBottom: 1, borderColor: "divider", pb: 2 }}>
           <Label>Split By</Label>
-          <div className="flex gap-4 text-sm">
+          <Stack direction="row" spacing={2} sx={{ fontSize: "0.875rem" }}>
             {(
               [
                 { value: "percentage" as const, label: "Percentage" },
                 { value: "amount" as const, label: "Amount" },
               ] as const
             ).map((option) => (
-              <label key={option.value} className="flex items-center gap-2">
+              <Box component="label" key={option.value} sx={{ display: "flex", alignItems: "center", gap: 1 }}>
                 <input type="radio" name="split-request-type" checked={splitType === option.value} onChange={() => setSplitType(option.value)} />
                 {option.label}
-              </label>
+              </Box>
             ))}
-          </div>
-        </div>
+          </Stack>
+        </Stack>
 
-        <div className="space-y-2">
+        <Stack spacing={1}>
           <Label>Colleagues</Label>
           <Input value={search} onChange={(event) => setSearch(event.target.value)} placeholder="Search by name" />
-          <div className="max-h-32 space-y-1 overflow-y-auto rounded-md border border-border p-2">
+          <Stack spacing={0.5} sx={{ maxHeight: 128, overflowY: "auto", borderRadius: 1.5, border: 1, borderColor: "divider", p: 1 }}>
             {isSearching ? (
-              <div className="flex justify-center py-2">
+              <Box sx={{ display: "flex", justifyContent: "center", py: 1 }}>
                 <Spinner size={16} />
-              </div>
+              </Box>
             ) : candidates.length === 0 ? (
-              <p className="px-1 py-2 text-xs text-muted-foreground">No colleagues found.</p>
+              <Typography variant="caption" color="text.secondary" sx={{ px: 0.5, py: 1 }}>
+                No colleagues found.
+              </Typography>
             ) : (
               candidates.map((employee) => (
-                <label key={employee.id} className="flex items-center gap-2 rounded px-1 py-1 text-sm hover:bg-muted">
+                <Box
+                  component="label"
+                  key={employee.id}
+                  sx={{ display: "flex", alignItems: "center", gap: 1, borderRadius: 1, px: 0.5, py: 0.5, fontSize: "0.875rem", "&:hover": { bgcolor: "action.hover" } }}
+                >
                   <input type="checkbox" checked={isSelected(employee.id)} onChange={() => toggle(employee)} />
                   {employee.firstName} {employee.lastName}
-                  <span className="text-xs text-muted-foreground">{employee.email}</span>
-                </label>
+                  <Typography component="span" variant="caption" color="text.secondary">
+                    {employee.email}
+                  </Typography>
+                </Box>
               ))
             )}
-          </div>
-        </div>
+          </Stack>
+        </Stack>
 
         {selected.length > 0 ? (
-          <div className="space-y-2 border-t border-border pt-4">
+          <Stack spacing={1} sx={{ borderTop: 1, borderColor: "divider", pt: 2 }}>
             <Label>{splitType === "percentage" ? "Percentage per colleague" : "Amount per colleague"}</Label>
             {selected.map((member) => (
-              <div key={member.employeeId} className="flex items-center justify-between gap-2 text-sm">
-                <span>{member.name}</span>
+              <Stack direction="row" key={member.employeeId} spacing={1} sx={{ alignItems: "center", justifyContent: "space-between", fontSize: "0.875rem" }}>
+                <Typography variant="body2">{member.name}</Typography>
                 <Input
                   type="number"
-                  className="w-28"
+                  sx={{ width: 112 }}
                   value={member.value}
                   onChange={(event) => updateValue(member.employeeId, event.target.value)}
                   placeholder={splitType === "percentage" ? "%" : "₹"}
                 />
-              </div>
+              </Stack>
             ))}
-            <p className="text-xs text-muted-foreground">
+            <Typography variant="caption" color="text.secondary">
               {splitType === "percentage" ? `You retain ${remainderPercentage}%.` : `You retain ₹${formatInr(remainderAmount ?? 0)}.`}
-            </p>
-          </div>
+            </Typography>
+          </Stack>
         ) : null}
 
         <DialogFooter>

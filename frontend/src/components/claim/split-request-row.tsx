@@ -1,4 +1,6 @@
 import Link from "next/link";
+import Stack from "@mui/material/Stack";
+import Typography from "@mui/material/Typography";
 import { CalendarBlankIcon } from "@phosphor-icons/react";
 import { AmountChip } from "@/components/trip/amount-chip";
 import { Button } from "@/components/ui/button";
@@ -12,24 +14,29 @@ import { SplitRequestStatusBadge } from "./split-request-status-badge";
 // Split Details link into /claims/split-requests/[id].
 export function SplitRequestRow({ request }: { request: SplitRequestListItem }) {
   return (
-    <div className="space-y-3 rounded-lg border border-border bg-background p-5">
-      <div className="flex items-start justify-between gap-3">
-        <h3 className="font-semibold">Split Request by: {request.requestedByName}</h3>
+    <Stack spacing={1.5} sx={{ borderRadius: 2, border: 1, borderColor: "divider", bgcolor: "background.paper", p: 2.5 }}>
+      <Stack direction="row" spacing={1.5} sx={{ alignItems: "flex-start", justifyContent: "space-between" }}>
+        <Typography variant="subtitle1" sx={{ fontWeight: 600 }}>
+          Split Request by: {request.requestedByName}
+        </Typography>
         <SplitRequestStatusBadge status={request.status} />
-      </div>
+      </Stack>
 
-      <div className="flex flex-wrap gap-6 text-sm text-muted-foreground">
-        <span className="flex items-center gap-1.5">
-          <CalendarBlankIcon size={14} /> Requested On <span className="font-medium text-foreground">{formatDateTime(request.requestedOn)}</span>
-        </span>
-      </div>
+      <Stack direction="row" spacing={3} sx={{ flexWrap: "wrap", fontSize: "0.875rem", color: "text.secondary" }}>
+        <Stack direction="row" spacing={0.75} sx={{ alignItems: "center" }}>
+          <CalendarBlankIcon size={14} /> Requested On{" "}
+          <Typography component="span" color="text.primary" sx={{ fontWeight: 500 }}>
+            {formatDateTime(request.requestedOn)}
+          </Typography>
+        </Stack>
+      </Stack>
 
-      <div className="flex items-center justify-between gap-3 border-t border-border pt-3">
+      <Stack direction="row" spacing={1.5} sx={{ alignItems: "center", justifyContent: "space-between", borderTop: 1, borderColor: "divider", pt: 1.5 }}>
         <AmountChip label="Requested Amount" amount={request.requestedAmount} />
         <Button component={Link} href={ROUTES.splitRequestDetails(request.id)} variant="outline" size="sm">
           Split Details
         </Button>
-      </div>
-    </div>
+      </Stack>
+    </Stack>
   );
 }

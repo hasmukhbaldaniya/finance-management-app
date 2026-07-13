@@ -2,6 +2,9 @@
 
 import { useState } from "react";
 import { useRouter } from "next/navigation";
+import Box from "@mui/material/Box";
+import Stack from "@mui/material/Stack";
+import Typography from "@mui/material/Typography";
 import { toast } from "@/components/ui/toast";
 import { splitClaim } from "@/apis/claim";
 import { Button } from "@/components/ui/button";
@@ -75,48 +78,56 @@ export function SplitClaimDialog({ claimId, expenses, categories, open, onOpenCh
 
   return (
     <Dialog open={open} onOpenChange={onOpenChange}>
-      <DialogContent className="max-w-lg">
+      <DialogContent sx={{ width: "100%", maxWidth: 512 }}>
         <DialogHeader>
           <DialogTitle>Move to New Claim</DialogTitle>
           <DialogDescription>Choose which expenses move to a brand-new claim.</DialogDescription>
         </DialogHeader>
 
-        <div className="max-h-48 space-y-2 overflow-y-auto">
+        <Stack spacing={1} sx={{ maxHeight: 192, overflowY: "auto" }}>
           {expenses.map((expense) => {
             const category = categories.find((candidate) => candidate.id === expense.categoryId);
             return (
-              <label key={expense.id} className="flex items-center justify-between gap-2 rounded-md border border-border p-2 text-sm">
-                <span className="flex items-center gap-2">
+              <Stack
+                component="label"
+                direction="row"
+                key={expense.id}
+                spacing={1}
+                sx={{ alignItems: "center", justifyContent: "space-between", borderRadius: 1.5, border: 1, borderColor: "divider", p: 1, fontSize: "0.875rem" }}
+              >
+                <Stack direction="row" spacing={1} sx={{ alignItems: "center" }}>
                   <input type="checkbox" checked={selectedIds.includes(expense.id!)} onChange={() => toggle(expense.id!)} />
                   {category?.name ?? "Uncategorized"}
-                </span>
-                <span className="text-muted-foreground">₹{formatInr(expense.amount ?? "0")}</span>
-              </label>
+                </Stack>
+                <Typography variant="body2" color="text.secondary">
+                  ₹{formatInr(expense.amount ?? "0")}
+                </Typography>
+              </Stack>
             );
           })}
-        </div>
+        </Stack>
 
-        <div className="space-y-3 border-t border-border pt-4">
+        <Stack spacing={1.5} sx={{ borderTop: 1, borderColor: "divider", pt: 2 }}>
           <Label>New claim</Label>
-          <div className="flex gap-4 text-sm">
+          <Stack direction="row" spacing={2} sx={{ fontSize: "0.875rem" }}>
             {(
               [
                 { value: "standalone" as const, label: "Create New Claim" },
                 { value: "trip_linked" as const, label: "Link to Trip" },
               ] as const
             ).map((option) => (
-              <label key={option.value} className="flex items-center gap-2">
+              <Box component="label" key={option.value} sx={{ display: "flex", alignItems: "center", gap: 1 }}>
                 <input type="radio" name="split-claim-type" checked={claimType === option.value} onChange={() => setClaimType(option.value)} />
                 {option.label}
-              </label>
+              </Box>
             ))}
-          </div>
+          </Stack>
           {claimType === "standalone" ? (
             <Input value={name} onChange={(event) => setName(event.target.value)} placeholder="Claim Name" />
           ) : (
             <TripSelect value={trip} onChange={setTrip} placeholder="Select trip" />
           )}
-        </div>
+        </Stack>
 
         <DialogFooter>
           <Button type="button" variant="outline" onClick={() => onOpenChange(false)}>
