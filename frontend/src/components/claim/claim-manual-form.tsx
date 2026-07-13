@@ -2,7 +2,7 @@
 
 import { useEffect, useState } from "react";
 import { useRouter } from "next/navigation";
-import { toast } from "sonner";
+import { toast } from "@/components/ui/toast";
 import { PlusIcon } from "@phosphor-icons/react";
 import { createClaim, getClaimDetail, saveExpenses, updateClaim } from "@/apis/claim";
 import { getClaimableCategories } from "@/apis/category";

@@ -2,7 +2,7 @@
 
 import { useState } from "react";
 import { useRouter } from "next/navigation";
-import { toast } from "sonner";
+import { toast } from "@/components/ui/toast";
 import { createTrip, updateTrip } from "@/apis/trip";
 import { DateTimePicker } from "@/components/date-time-picker";
 import { Button } from "@/components/ui/button";

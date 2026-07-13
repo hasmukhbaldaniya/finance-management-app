@@ -1,6 +1,6 @@
 import type { Metadata } from "next";
 import { Geist_Mono, Montserrat } from "next/font/google";
-import { Toaster } from "@/components/ui/sonner";
+import { Toaster } from "@/components/ui/toast";
 import { ThemeRegistry } from "@/theme/theme-registry";
 import "./globals.css";
 

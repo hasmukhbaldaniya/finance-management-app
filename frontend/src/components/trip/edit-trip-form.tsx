@@ -2,7 +2,7 @@
 
 import { useRouter } from "next/navigation";
 import { useEffect, useState } from "react";
-import { toast } from "sonner";
+import { toast } from "@/components/ui/toast";
 import { getTripDetail } from "@/apis/trip";
 import { Spinner } from "@/components/ui/spinner";
 import { ApiError, GENERIC_ERROR_MESSAGE } from "@/utils/apiManager/apiManager";

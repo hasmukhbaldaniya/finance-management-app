@@ -2,7 +2,7 @@
 
 import { useRef, useState } from "react";
 import { useRouter } from "next/navigation";
-import { toast } from "sonner";
+import { toast } from "@/components/ui/toast";
 import { getCategoryDetail, saveCategoryFields } from "@/apis/category";
 import { useCategoryWizard } from "@/contexts/CategoryWizardContext";
 import { ApiError, GENERIC_ERROR_MESSAGE } from "@/utils/apiManager/apiManager";

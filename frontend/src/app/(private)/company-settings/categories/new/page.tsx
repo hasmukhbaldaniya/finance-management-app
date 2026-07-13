@@ -2,7 +2,7 @@
 
 import { useSearchParams } from "next/navigation";
 import { Suspense, useEffect, useRef, useState } from "react";
-import { toast } from "sonner";
+import { toast } from "@/components/ui/toast";
 import { getCategoryDetail } from "@/apis/category";
 import { BasicDetailsForm } from "@/components/category/basic-details-form";
 import { WizardPageShell } from "@/components/category/wizard-page-shell";

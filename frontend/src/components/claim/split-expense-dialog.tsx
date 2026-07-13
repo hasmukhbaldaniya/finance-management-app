@@ -1,7 +1,7 @@
 "use client";
 
 import { useEffect, useState } from "react";
-import { toast } from "sonner";
+import { toast } from "@/components/ui/toast";
 import { splitExpense } from "@/apis/claim";
 import { SelectField } from "@/components/select-field";
 import { Button } from "@/components/ui/button";

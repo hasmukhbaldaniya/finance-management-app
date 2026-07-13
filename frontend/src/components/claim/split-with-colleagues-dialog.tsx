@@ -1,7 +1,7 @@
 "use client";
 
 import { useEffect, useState } from "react";
-import { toast } from "sonner";
+import { toast } from "@/components/ui/toast";
 import { createSplitRequest } from "@/apis/split-request";
 import { getEmployees } from "@/apis/employee";
 import { Button } from "@/components/ui/button";

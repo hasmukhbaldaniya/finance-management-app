@@ -2,7 +2,7 @@
 
 import { CaretDownIcon, CaretUpIcon, EyeIcon, PencilSimpleIcon } from "@phosphor-icons/react";
 import { useEffect, useState } from "react";
-import { toast } from "sonner";
+import { toast } from "@/components/ui/toast";
 import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
 import { Spinner } from "@/components/ui/spinner";

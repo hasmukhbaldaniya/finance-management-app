@@ -3,7 +3,7 @@
 import Link from "next/link";
 import { CaretDownIcon, CaretUpIcon, DownloadSimpleIcon, FunnelIcon, MagnifyingGlassIcon, PencilSimpleIcon, XIcon } from "@phosphor-icons/react";
 import { useEffect, useState } from "react";
-import { toast } from "sonner";
+import { toast } from "@/components/ui/toast";
 import { SelectField } from "@/components/select-field";
 import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
