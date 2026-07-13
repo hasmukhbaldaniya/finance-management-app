@@ -1,8 +1,7 @@
 import Link from "next/link";
 import { CalendarBlankIcon } from "@phosphor-icons/react";
 import { AmountChip } from "@/components/trip/amount-chip";
-import { buttonVariants } from "@/components/ui/button";
-import { cn } from "@/lib/utils";
+import { Button } from "@/components/ui/button";
 import { formatDateTime } from "@/utils/helpers/format.helper";
 import { ROUTES } from "@/utils/constants/route.constant";
 import type { SplitRequestListItem } from "@/types/split-request.type";
@@ -27,9 +26,9 @@ export function SplitRequestRow({ request }: { request: SplitRequestListItem }) 
 
       <div className="flex items-center justify-between gap-3 border-t border-border pt-3">
         <AmountChip label="Requested Amount" amount={request.requestedAmount} />
-        <Link href={ROUTES.splitRequestDetails(request.id)} className={cn(buttonVariants({ variant: "outline", size: "sm" }))}>
+        <Button component={Link} href={ROUTES.splitRequestDetails(request.id)} variant="outline" size="sm">
           Split Details
-        </Link>
+        </Button>
       </div>
     </div>
   );

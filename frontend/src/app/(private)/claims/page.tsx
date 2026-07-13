@@ -10,7 +10,7 @@ import { ClaimRow } from "@/components/claim/claim-row";
 import { DeleteClaimDialog } from "@/components/claim/delete-claim-dialog";
 import { SplitRequestRow } from "@/components/claim/split-request-row";
 import { DatePicker } from "@/components/date-picker";
-import { buttonVariants } from "@/components/ui/button";
+import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
 import { Label } from "@/components/ui/label";
 import { Spinner } from "@/components/ui/spinner";
@@ -186,9 +186,9 @@ export default function ClaimsPage() {
                 className="h-8 w-48 pl-7"
               />
             </div>
-            <Link href={ROUTES.CLAIM_NEW} className={cn(buttonVariants())}>
+            <Button component={Link} href={ROUTES.CLAIM_NEW}>
               <PlusIcon size={16} /> Create Claim
-            </Link>
+            </Button>
           </div>
         </div>
 
@@ -223,9 +223,9 @@ export default function ClaimsPage() {
           ) : claims.length === 0 ? (
             <div className="flex flex-col items-center gap-3 rounded-lg border border-dashed border-border py-16 text-center">
               <p className="text-sm text-muted-foreground">No claims yet.</p>
-              <Link href={ROUTES.CLAIM_NEW} className={cn(buttonVariants())}>
+              <Button component={Link} href={ROUTES.CLAIM_NEW}>
                 <PlusIcon size={16} /> Create Claim
-              </Link>
+              </Button>
             </div>
           ) : (
             <>

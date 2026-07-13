@@ -1,8 +1,7 @@
 import type { ReactNode } from "react";
 import Link from "next/link";
 import { PencilSimpleIcon } from "@phosphor-icons/react";
-import { Button, buttonVariants } from "@/components/ui/button";
-import { cn } from "@/lib/utils";
+import { Button } from "@/components/ui/button";
 import { ROUTES } from "@/utils/constants/route.constant";
 import { countryCodeToFlagEmoji, formatTripOverviewDate, formatTripOverviewDateTime } from "@/utils/helpers/format.helper";
 import type { TripDetail } from "@/types/trip.type";
@@ -40,9 +39,9 @@ export function TripOverviewCard({ trip }: TripOverviewCardProps) {
       <div className="flex items-center justify-between border-b border-border p-4">
         <h2 className="font-semibold">Trip Overview</h2>
         {canEdit ? (
-          <Link href={ROUTES.tripEdit(trip.id)} className={cn(buttonVariants({ variant: "outline", size: "sm" }))}>
+          <Button component={Link} href={ROUTES.tripEdit(trip.id)} variant="outline" size="sm">
             <PencilSimpleIcon size={14} /> Edit
-          </Link>
+          </Button>
         ) : (
           <Button type="button" variant="outline" size="sm" disabled title="Only trips with New status can be edited">
             <PencilSimpleIcon size={14} /> Edit

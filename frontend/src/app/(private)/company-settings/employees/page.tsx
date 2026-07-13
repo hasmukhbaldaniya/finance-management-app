@@ -5,7 +5,7 @@ import { CaretDownIcon, CaretUpIcon, DownloadSimpleIcon, FunnelIcon, MagnifyingG
 import { useEffect, useState } from "react";
 import { toast } from "sonner";
 import { SelectField } from "@/components/select-field";
-import { Button, buttonVariants } from "@/components/ui/button";
+import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
 import { Spinner } from "@/components/ui/spinner";
 import { Switch } from "@/components/ui/switch";
@@ -268,12 +268,10 @@ export default function EmployeeListingPage() {
             {isExporting ? <Spinner /> : <DownloadSimpleIcon data-icon="inline-start" />}
             Export
           </Button>
-          <Link href={ROUTES.EMPLOYEE_BULK_INVITE} className={cn(buttonVariants({ variant: "outline" }))}>
+          <Button component={Link} href={ROUTES.EMPLOYEE_BULK_INVITE} variant="outline">
             Bulk Invite
-          </Link>
-          <Link href={ROUTES.EMPLOYEE_INVITE} className={cn(buttonVariants())}>
-            Invite
-          </Link>
+          </Button>
+          <Button component={Link} href={ROUTES.EMPLOYEE_INVITE}>Invite</Button>
         </div>
       </div>
 

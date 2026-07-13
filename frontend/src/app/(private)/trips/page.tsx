@@ -7,11 +7,10 @@ import { getTrips } from "@/apis/trip";
 import { DeleteTripDialog } from "@/components/trip/delete-trip-dialog";
 import { TripFilters, type TripFiltersState } from "@/components/trip/trip-filters";
 import { TripRow } from "@/components/trip/trip-row";
-import { Button, buttonVariants } from "@/components/ui/button";
+import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
 import { Spinner } from "@/components/ui/spinner";
 import { useInfiniteScroll } from "@/hooks/useInfiniteScroll";
-import { cn } from "@/lib/utils";
 import type { TripListItem } from "@/types/trip.type";
 import { ApiError, GENERIC_ERROR_MESSAGE } from "@/utils/apiManager/apiManager";
 import { ROUTES } from "@/utils/constants/route.constant";
@@ -116,9 +115,9 @@ export default function TripsPage() {
             <Button type="button" variant="secondary" disabled title="Coming soon">
               Create Claim
             </Button>
-            <Link href={ROUTES.TRIP_NEW} className={cn(buttonVariants())}>
+            <Button component={Link} href={ROUTES.TRIP_NEW}>
               <PlusIcon size={16} /> Create Trip
-            </Link>
+            </Button>
           </div>
         </div>
 
@@ -131,9 +130,9 @@ export default function TripsPage() {
         ) : trips.length === 0 ? (
           <div className="flex flex-col items-center gap-3 rounded-lg border border-dashed border-border py-16 text-center">
             <p className="text-sm text-muted-foreground">No trips yet.</p>
-            <Link href={ROUTES.TRIP_NEW} className={cn(buttonVariants())}>
+            <Button component={Link} href={ROUTES.TRIP_NEW}>
               <PlusIcon size={16} /> Create Trip
-            </Link>
+            </Button>
           </div>
         ) : (
           <>

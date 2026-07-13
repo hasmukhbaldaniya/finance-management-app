@@ -8,10 +8,9 @@ import { CategoryCard } from "@/components/category/category-card";
 import { DeleteCategoryDialog } from "@/components/category/delete-category-dialog";
 import { EnableDisableCategoryDialog } from "@/components/category/enable-disable-category-dialog";
 import { VersionHistoryDrawer } from "@/components/category/version-history-drawer";
-import { buttonVariants } from "@/components/ui/button";
+import { Button } from "@/components/ui/button";
 import { Spinner } from "@/components/ui/spinner";
 import { useInfiniteScroll } from "@/hooks/useInfiniteScroll";
-import { cn } from "@/lib/utils";
 import type { CategoryListItem } from "@/types/category.type";
 import { ApiError, GENERIC_ERROR_MESSAGE } from "@/utils/apiManager/apiManager";
 import { ROUTES } from "@/utils/constants/route.constant";
@@ -76,9 +75,9 @@ export default function CategoriesManagementPage() {
     <div className="mx-auto max-w-7xl space-y-6 px-6 py-8">
       <div className="flex items-center justify-between">
         <h1 className="text-2xl font-semibold tracking-tight">My Categories</h1>
-        <Link href={ROUTES.CATEGORY_NEW} className={cn(buttonVariants())}>
+        <Button component={Link} href={ROUTES.CATEGORY_NEW}>
           <PlusIcon size={16} /> Create Category
-        </Link>
+        </Button>
       </div>
 
       <div className="flex gap-4 border-b border-border text-sm font-medium">
@@ -99,9 +98,9 @@ export default function CategoriesManagementPage() {
       ) : categories.length === 0 ? (
         <div className="flex flex-col items-center gap-3 rounded-lg border border-dashed border-border py-16 text-center">
           <p className="text-sm text-muted-foreground">No categories yet.</p>
-          <Link href={ROUTES.CATEGORY_NEW} className={cn(buttonVariants())}>
+          <Button component={Link} href={ROUTES.CATEGORY_NEW}>
             <PlusIcon size={16} /> Create Category
-          </Link>
+          </Button>
         </div>
       ) : (
         <>

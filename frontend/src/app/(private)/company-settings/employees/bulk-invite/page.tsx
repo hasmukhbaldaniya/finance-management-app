@@ -5,14 +5,13 @@ import { useRouter } from "next/navigation";
 import { useRef, useState, type ChangeEvent, type ReactNode } from "react";
 import { toast } from "sonner";
 import { CheckCircleIcon, DownloadSimpleIcon, WarningCircleIcon } from "@phosphor-icons/react";
-import { Button, buttonVariants } from "@/components/ui/button";
+import { Button } from "@/components/ui/button";
 import { Label } from "@/components/ui/label";
 import { Spinner } from "@/components/ui/spinner";
 import { confirmBulkImport, downloadBulkImportErrors, downloadBulkTemplate, uploadBulkImport } from "@/apis/employee";
 import type { BulkUploadSummary } from "@/types/employee.type";
 import { ApiError, GENERIC_ERROR_MESSAGE } from "@/utils/apiManager/apiManager";
 import { ROUTES } from "@/utils/constants/route.constant";
-import { cn } from "@/lib/utils";
 
 const MAX_FILE_SIZE_BYTES = 10 * 1024 * 1024;
 const ALLOWED_EXTENSIONS = [".csv", ".xlsx"];
@@ -211,9 +210,9 @@ export default function BulkInviteEmployeesPage() {
         ) : null}
 
         <div className="flex justify-end gap-2 pt-2">
-          <Link href={ROUTES.COMPANY_SETTINGS.EMPLOYEES} className={cn(buttonVariants({ variant: "outline" }))}>
+          <Button component={Link} href={ROUTES.COMPANY_SETTINGS.EMPLOYEES} variant="outline">
             Cancel
-          </Link>
+          </Button>
           <Button type="button" disabled={!canInvite || isConfirming} onClick={handleInvite}>
             {isUploading || isConfirming ? <Spinner /> : null}
             {isUploading ? "Uploading…" : "Invite"}

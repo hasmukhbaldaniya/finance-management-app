@@ -5,7 +5,7 @@ import { useRouter } from "next/navigation";
 import { useEffect, useState, type FormEvent } from "react";
 import { toast } from "sonner";
 import { PlusIcon, XIcon } from "@phosphor-icons/react";
-import { Button, buttonVariants } from "@/components/ui/button";
+import { Button } from "@/components/ui/button";
 import { cn } from "@/lib/utils";
 import { Checkbox } from "@/components/ui/checkbox";
 import { DatePicker } from "@/components/date-picker";
@@ -600,9 +600,9 @@ export default function InviteEmployeePage() {
           </SectionCard>
 
           <div className="flex justify-end gap-2">
-            <Link href={ROUTES.COMPANY_SETTINGS.EMPLOYEES} className={cn(buttonVariants({ variant: "outline", size: "sm" }))}>
+            <Button component={Link} href={ROUTES.COMPANY_SETTINGS.EMPLOYEES} variant="outline" size="sm">
               Cancel
-            </Link>
+            </Button>
             <Button type="submit" size="sm" disabled={isSubmitting}>
               {isSubmitting ? <Spinner /> : null}
               Send Invite
