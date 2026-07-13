@@ -3,6 +3,10 @@
 import { useEffect, useState } from "react";
 import Link from "next/link";
 import { useRouter, useSearchParams } from "next/navigation";
+import Box from "@mui/material/Box";
+import Stack from "@mui/material/Stack";
+import Typography from "@mui/material/Typography";
+import MuiLink from "@mui/material/Link";
 import { getCategoryLatestVersion, getCategoryVersionDetail, getCategoryVersions } from "@/apis/category";
 import { DetailsStepNav } from "./details-step-nav";
 import { FieldSummary } from "./field-summary";
@@ -17,6 +21,21 @@ import type { CategorySnapshot, CategoryVersionListItem, CategoryWizardStep } fr
 type CategoryDetailsViewProps = {
   categoryId: number;
 };
+
+function DetailRow({ label, value }: { label: string; value: string }) {
+  return (
+    <Box sx={{ display: "grid", gridTemplateColumns: "repeat(3, 1fr)", gap: 1, fontSize: "0.875rem" }}>
+      <Typography variant="body2" color="text.secondary">
+        {label}
+      </Typography>
+      <Typography variant="body2" sx={{ gridColumn: "span 2" }}>
+        {value}
+      </Typography>
+    </Box>
+  );
+}
+
+const sectionSx = { scrollMarginTop: 96, borderRadius: 2, border: 1, borderColor: "divider", p: 2 } as const;
 
 export function CategoryDetailsView({ categoryId }: CategoryDetailsViewProps) {
   const router = useRouter();
@@ -61,105 +80,122 @@ export function CategoryDetailsView({ categoryId }: CategoryDetailsViewProps) {
 
   if (isLoading && !snapshot) {
     return (
-      <div className="flex justify-center py-16">
+      <Box sx={{ display: "flex", justifyContent: "center", py: 8 }}>
         <Spinner size={24} />
-      </div>
+      </Box>
     );
   }
 
   if (loadError || !snapshot) {
-    return <p className="px-6 py-16 text-center text-sm text-destructive">{loadError ?? "This version could not be found."}</p>;
+    return (
+      <Typography variant="body2" color="error" sx={{ px: 3, py: 8, textAlign: "center" }}>
+        {loadError ?? "This version could not be found."}
+      </Typography>
+    );
   }
 
   const displayedVersion = currentVersion ?? versions[0]?.version ?? null;
 
   return (
-    <div className="mx-auto max-w-6xl px-6 py-8">
-      <div className="mb-6 flex flex-wrap items-center justify-between gap-3">
-        <p className="text-sm text-muted-foreground">
-          <Link href={ROUTES.COMPANY_SETTINGS.CATEGORIES} className="hover:underline">
+    <Box sx={{ mx: "auto", maxWidth: 1152, px: 3, py: 4 }}>
+      <Stack direction="row" spacing={1.5} sx={{ mb: 3, alignItems: "center", justifyContent: "space-between", flexWrap: "wrap" }}>
+        <Typography variant="body2" color="text.secondary">
+          <MuiLink component={Link} href={ROUTES.COMPANY_SETTINGS.CATEGORIES} sx={{ "&:hover": { textDecoration: "underline" } }}>
             Categories Management
-          </Link>{" "}
+          </MuiLink>{" "}
           / {isDraft ? "Draft" : `Version ${displayedVersion ?? ""}`}
-        </p>
+        </Typography>
         {!isDraft && versions.length > 0 ? (
           <SelectField
             value={displayedVersion ?? ""}
             onValueChange={handleVersionChange}
             options={versions.map((version) => ({ value: version.version, label: `Version ${version.version}` }))}
-            className="w-auto"
+            sx={{ width: "auto" }}
           />
         ) : null}
-      </div>
+      </Stack>
 
-      <div className="flex flex-col gap-6 md:flex-row">
+      <Stack direction={{ xs: "column", md: "row" }} spacing={3}>
         <DetailsStepNav modifiedSteps={modifiedSteps} />
-        <div className="min-w-0 flex-1 space-y-8">
-          <h1 className="text-2xl font-semibold">{snapshot.name}</h1>
+        <Stack spacing={4} sx={{ minWidth: 0, flex: 1 }}>
+          <Typography variant="h5" sx={{ fontWeight: 600 }}>
+            {snapshot.name}
+          </Typography>
 
-          <section id={CATEGORY_STEP_SEGMENTS.basicDetails} className="scroll-mt-24 space-y-2 rounded-lg border border-border p-4">
-            <h2 className="text-lg font-semibold">Basic Details</h2>
-            <div className="grid grid-cols-3 gap-2 text-sm">
-              <span className="text-muted-foreground">Category Name</span>
-              <span className="col-span-2">{snapshot.name}</span>
-            </div>
-            <div className="grid grid-cols-3 gap-2 text-sm">
-              <span className="text-muted-foreground">Description</span>
-              <span className="col-span-2">{snapshot.description || "—"}</span>
-            </div>
-            <div className="grid grid-cols-3 gap-2 text-sm">
-              <span className="text-muted-foreground">Map Ziptrrip Category</span>
-              <span className="col-span-2">{snapshot.ziptrripCategoryKeys.join(", ") || "None"}</span>
-            </div>
-          </section>
+          <Stack component="section" id={CATEGORY_STEP_SEGMENTS.basicDetails} spacing={1} sx={sectionSx}>
+            <Typography variant="h6" sx={{ fontWeight: 600 }}>
+              Basic Details
+            </Typography>
+            <DetailRow label="Category Name" value={snapshot.name} />
+            <DetailRow label="Description" value={snapshot.description || "—"} />
+            <DetailRow label="Map Ziptrrip Category" value={snapshot.ziptrripCategoryKeys.join(", ") || "None"} />
+          </Stack>
 
-          <section id={CATEGORY_STEP_SEGMENTS.expenseForm} className="scroll-mt-24 space-y-2 rounded-lg border border-border p-4">
-            <h2 className="text-lg font-semibold">Expense Form Builder</h2>
+          <Stack component="section" id={CATEGORY_STEP_SEGMENTS.expenseForm} spacing={1} sx={sectionSx}>
+            <Typography variant="h6" sx={{ fontWeight: 600 }}>
+              Expense Form Builder
+            </Typography>
             {snapshot.fields.length === 0 ? (
-              <p className="text-sm text-muted-foreground">No fields configured for this version.</p>
+              <Typography variant="body2" color="text.secondary">
+                No fields configured for this version.
+              </Typography>
             ) : (
-              <div className="space-y-2">
+              <Stack spacing={1}>
                 {snapshot.fields.map((field) => (
                   <FieldSummary key={field.id} field={field} />
                 ))}
-              </div>
+              </Stack>
             )}
-          </section>
+          </Stack>
 
-          <section id={CATEGORY_STEP_SEGMENTS.policiesAndApprovals} className="scroll-mt-24 space-y-4 rounded-lg border border-border p-4">
-            <h2 className="text-lg font-semibold">Policies & Approvals</h2>
-            <div className="space-y-2">
-              <h3 className="text-sm font-semibold text-muted-foreground">Claim Policies</h3>
+          <Stack component="section" id={CATEGORY_STEP_SEGMENTS.policiesAndApprovals} spacing={2} sx={sectionSx}>
+            <Typography variant="h6" sx={{ fontWeight: 600 }}>
+              Policies &amp; Approvals
+            </Typography>
+            <Stack spacing={1}>
+              <Typography variant="subtitle2" color="text.secondary" sx={{ fontWeight: 600 }}>
+                Claim Policies
+              </Typography>
               {snapshot.claimPolicies.length === 0 ? (
-                <p className="text-sm text-muted-foreground">No claim policies configured for this version.</p>
+                <Typography variant="body2" color="text.secondary">
+                  No claim policies configured for this version.
+                </Typography>
               ) : (
                 snapshot.claimPolicies.map((policy) => <PolicySummary key={policy.id} policy={policy} />)
               )}
-            </div>
-            <div className="space-y-2">
-              <h3 className="text-sm font-semibold text-muted-foreground">Exception Policies</h3>
+            </Stack>
+            <Stack spacing={1}>
+              <Typography variant="subtitle2" color="text.secondary" sx={{ fontWeight: 600 }}>
+                Exception Policies
+              </Typography>
               {snapshot.exceptionPolicies.length === 0 ? (
-                <p className="text-sm text-muted-foreground">No exception policies configured for this version.</p>
+                <Typography variant="body2" color="text.secondary">
+                  No exception policies configured for this version.
+                </Typography>
               ) : (
                 snapshot.exceptionPolicies.map((policy) => <PolicySummary key={policy.id} policy={policy} />)
               )}
-            </div>
-          </section>
+            </Stack>
+          </Stack>
 
-          <section id={CATEGORY_STEP_SEGMENTS.projectPolicies} className="scroll-mt-24 space-y-2 rounded-lg border border-border p-4">
-            <h2 className="text-lg font-semibold">Project Based Policies & Approvals</h2>
+          <Stack component="section" id={CATEGORY_STEP_SEGMENTS.projectPolicies} spacing={1} sx={sectionSx}>
+            <Typography variant="h6" sx={{ fontWeight: 600 }}>
+              Project Based Policies &amp; Approvals
+            </Typography>
             {!snapshot.enableProjectPolicies || snapshot.projectPolicies.length === 0 ? (
-              <p className="text-sm text-muted-foreground">No project-based policies configured for this version.</p>
+              <Typography variant="body2" color="text.secondary">
+                No project-based policies configured for this version.
+              </Typography>
             ) : (
-              <div className="space-y-2">
+              <Stack spacing={1}>
                 {snapshot.projectPolicies.map((policy) => (
                   <PolicySummary key={policy.id} policy={policy} />
                 ))}
-              </div>
+              </Stack>
             )}
-          </section>
-        </div>
-      </div>
-    </div>
+          </Stack>
+        </Stack>
+      </Stack>
+    </Box>
   );
 }

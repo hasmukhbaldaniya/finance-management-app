@@ -2,6 +2,10 @@
 
 import { useEffect, useState } from "react";
 import { useRouter } from "next/navigation";
+import Box from "@mui/material/Box";
+import Stack from "@mui/material/Stack";
+import Typography from "@mui/material/Typography";
+import { alpha } from "@mui/material/styles";
 import { toast } from "@/components/ui/toast";
 import { PlusIcon } from "@phosphor-icons/react";
 import { getCategoryDetail, saveCategoryProjectPolicies } from "@/apis/category";
@@ -111,44 +115,60 @@ export function ProjectPoliciesForm({ categoryId }: ProjectPoliciesFormProps) {
   }
 
   if (loadError) {
-    return <p className="text-sm text-destructive">{loadError}</p>;
+    return (
+      <Typography variant="body2" color="error">
+        {loadError}
+      </Typography>
+    );
   }
 
   if (!pickerOptions) {
     return (
-      <div className="flex justify-center py-16">
+      <Box sx={{ display: "flex", justifyContent: "center", py: 8 }}>
         <Spinner size={24} />
-      </div>
+      </Box>
     );
   }
 
   return (
-    <div className="space-y-6">
-      {formError ? <p className="rounded-lg border border-destructive/50 bg-destructive/5 p-3 text-sm text-destructive">{formError}</p> : null}
+    <Stack spacing={3}>
+      {formError ? (
+        <Typography
+          variant="body2"
+          color="error"
+          sx={{ borderRadius: 2, border: 1, borderColor: "error.light", bgcolor: (theme) => alpha(theme.palette.error.main, 0.05), p: 1.5 }}
+        >
+          {formError}
+        </Typography>
+      ) : null}
 
-      <div className="space-y-2 rounded-lg border border-border bg-background p-4">
-        <p className="text-sm font-medium">Enable Project Based Policies and Approval Flow?</p>
-        <div className="flex gap-4 text-sm">
-          <label className="flex items-center gap-2">
+      <Stack spacing={1} sx={{ borderRadius: 2, border: 1, borderColor: "divider", bgcolor: "background.paper", p: 2 }}>
+        <Typography variant="body2" sx={{ fontWeight: 500 }}>
+          Enable Project Based Policies and Approval Flow?
+        </Typography>
+        <Stack direction="row" spacing={2} sx={{ fontSize: "0.875rem" }}>
+          <Box component="label" sx={{ display: "flex", alignItems: "center", gap: 1 }}>
             <input type="radio" name="enable-project-policies" checked={wizard.enableProjectPolicies} onChange={() => handleToggle(true)} />
             Yes
-          </label>
-          <label className="flex items-center gap-2">
+          </Box>
+          <Box component="label" sx={{ display: "flex", alignItems: "center", gap: 1 }}>
             <input type="radio" name="enable-project-policies" checked={!wizard.enableProjectPolicies} onChange={() => handleToggle(false)} />
             No
-          </label>
-        </div>
-      </div>
+          </Box>
+        </Stack>
+      </Stack>
 
       {wizard.enableProjectPolicies ? (
-        <section className="space-y-3">
-          <div className="flex items-center justify-between">
-            <h2 className="text-lg font-semibold">Project Policies</h2>
+        <Stack component="section" spacing={1.5}>
+          <Stack direction="row" sx={{ alignItems: "center", justifyContent: "space-between" }}>
+            <Typography variant="h6" sx={{ fontWeight: 600 }}>
+              Project Policies
+            </Typography>
             <Button type="button" variant="outline" size="sm" disabled={wizard.projectPolicies.length >= MAX_PROJECT_POLICIES} onClick={addPolicy}>
               <PlusIcon size={14} /> Add Project Policy
             </Button>
-          </div>
-          <div className="space-y-3">
+          </Stack>
+          <Stack spacing={1.5}>
             {wizard.projectPolicies.map((policy, index) => (
               <PolicyCard
                 key={index}
@@ -163,8 +183,8 @@ export function ProjectPoliciesForm({ categoryId }: ProjectPoliciesFormProps) {
                 onDelete={() => deletePolicy(index)}
               />
             ))}
-          </div>
-        </section>
+          </Stack>
+        </Stack>
       ) : null}
 
       <WizardFooter
@@ -175,6 +195,6 @@ export function ProjectPoliciesForm({ categoryId }: ProjectPoliciesFormProps) {
         onSaveAsDraft={handleSaveAsDraft}
         onPrimary={handleSubmit}
       />
-    </div>
+    </Stack>
   );
 }

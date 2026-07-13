@@ -2,6 +2,10 @@
 
 import { useEffect, useState } from "react";
 import { useRouter } from "next/navigation";
+import Box from "@mui/material/Box";
+import Stack from "@mui/material/Stack";
+import Typography from "@mui/material/Typography";
+import { alpha } from "@mui/material/styles";
 import { toast } from "@/components/ui/toast";
 import { getCategoryDetail, saveCategoryPolicies } from "@/apis/category";
 import { getDepartments } from "@/apis/department";
@@ -140,29 +144,43 @@ export function PoliciesAndApprovalsForm({ categoryId }: PoliciesAndApprovalsFor
   }
 
   if (loadError) {
-    return <p className="text-sm text-destructive">{loadError}</p>;
+    return (
+      <Typography variant="body2" color="error">
+        {loadError}
+      </Typography>
+    );
   }
 
   if (!pickerOptions) {
     return (
-      <div className="flex justify-center py-16">
+      <Box sx={{ display: "flex", justifyContent: "center", py: 8 }}>
         <Spinner size={24} />
-      </div>
+      </Box>
     );
   }
 
   return (
-    <div className="space-y-6">
-      {formError ? <p className="rounded-lg border border-destructive/50 bg-destructive/5 p-3 text-sm text-destructive">{formError}</p> : null}
+    <Stack spacing={3}>
+      {formError ? (
+        <Typography
+          variant="body2"
+          color="error"
+          sx={{ borderRadius: 2, border: 1, borderColor: "error.light", bgcolor: (theme) => alpha(theme.palette.error.main, 0.05), p: 1.5 }}
+        >
+          {formError}
+        </Typography>
+      ) : null}
 
-      <section className="space-y-3">
-        <div className="flex items-center justify-between">
-          <h2 className="text-lg font-semibold">Claim Policies</h2>
+      <Stack component="section" spacing={1.5}>
+        <Stack direction="row" sx={{ alignItems: "center", justifyContent: "space-between" }}>
+          <Typography variant="h6" sx={{ fontWeight: 600 }}>
+            Claim Policies
+          </Typography>
           <Button type="button" variant="outline" size="sm" disabled={wizard.claimPolicies.length >= MAX_CLAIM_POLICIES} onClick={addClaimPolicy}>
             <PlusIcon size={14} /> Create Claim Policy
           </Button>
-        </div>
-        <div className="space-y-3">
+        </Stack>
+        <Stack spacing={1.5}>
           {wizard.claimPolicies.map((policy, index) => (
             <PolicyCard
               key={index}
@@ -175,17 +193,19 @@ export function PoliciesAndApprovalsForm({ categoryId }: PoliciesAndApprovalsFor
               onDelete={() => deleteClaimPolicy(index)}
             />
           ))}
-        </div>
-      </section>
+        </Stack>
+      </Stack>
 
-      <section className="space-y-3">
-        <div className="flex items-center justify-between">
-          <h2 className="text-lg font-semibold">Exception Policies</h2>
+      <Stack component="section" spacing={1.5}>
+        <Stack direction="row" sx={{ alignItems: "center", justifyContent: "space-between" }}>
+          <Typography variant="h6" sx={{ fontWeight: 600 }}>
+            Exception Policies
+          </Typography>
           <Button type="button" variant="outline" size="sm" disabled={wizard.exceptionPolicies.length >= MAX_EXCEPTION_POLICIES} onClick={addExceptionPolicy}>
             <PlusIcon size={14} /> Add Exception
           </Button>
-        </div>
-        <div className="space-y-3">
+        </Stack>
+        <Stack spacing={1.5}>
           {wizard.exceptionPolicies.map((policy, index) => (
             <PolicyCard
               key={index}
@@ -200,8 +220,8 @@ export function PoliciesAndApprovalsForm({ categoryId }: PoliciesAndApprovalsFor
               onDelete={() => deleteExceptionPolicy(index)}
             />
           ))}
-        </div>
-      </section>
+        </Stack>
+      </Stack>
 
       <WizardFooter
         showSaveAsDraft={showSaveAsDraft}
@@ -211,6 +231,6 @@ export function PoliciesAndApprovalsForm({ categoryId }: PoliciesAndApprovalsFor
         onSaveAsDraft={handleSaveAsDraft}
         onPrimary={handleSaveAndContinue}
       />
-    </div>
+    </Stack>
   );
 }

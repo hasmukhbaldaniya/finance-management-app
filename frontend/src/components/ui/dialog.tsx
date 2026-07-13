@@ -6,6 +6,7 @@ import Box from "@mui/material/Box";
 import IconButton from "@mui/material/IconButton";
 import Typography from "@mui/material/Typography";
 import { XIcon } from "@phosphor-icons/react";
+import type { SxProps, Theme } from "@mui/material/styles";
 
 // 026's MUI Migration — every real call site in this app only ever uses
 // Dialog/DialogContent/DialogHeader/DialogFooter/DialogTitle/
@@ -38,10 +39,10 @@ function Dialog({ open, onOpenChange, children }: DialogContextValue & { childre
   return <DialogContext.Provider value={{ open, onOpenChange }}>{children}</DialogContext.Provider>;
 }
 
-function DialogContent({ className, children }: { className?: string; children: ReactNode }) {
+function DialogContent({ className, sx, children }: { className?: string; sx?: SxProps<Theme>; children: ReactNode }) {
   const { open, onOpenChange } = useDialogContext();
   return (
-    <MuiDialog open={open} onClose={() => onOpenChange?.(false)} slotProps={{ paper: { className } }}>
+    <MuiDialog open={open} onClose={() => onOpenChange?.(false)} slotProps={{ paper: { className, sx } }}>
       <Box sx={{ position: "relative", display: "flex", flexDirection: "column", gap: 2, p: 2 }}>
         <IconButton aria-label="Close" onClick={() => onOpenChange?.(false)} size="small" sx={{ position: "absolute", top: 8, right: 8 }}>
           <XIcon />

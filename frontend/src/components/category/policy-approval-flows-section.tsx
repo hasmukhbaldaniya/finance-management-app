@@ -1,5 +1,7 @@
 "use client";
 
+import Stack from "@mui/material/Stack";
+import Typography from "@mui/material/Typography";
 import { PlusIcon } from "@phosphor-icons/react";
 import { Button } from "@/components/ui/button";
 import { MAX_APPROVAL_LEVEL, MIN_APPROVAL_LEVEL } from "@/utils/constants/category.constant";
@@ -50,8 +52,10 @@ export function PolicyApprovalFlowsSection({ policy, employees, onChange }: Poli
   }
 
   return (
-    <div className="space-y-3">
-      <h4 className="text-sm font-semibold">Approval Flows</h4>
+    <Stack spacing={1.5}>
+      <Typography variant="subtitle2" sx={{ fontWeight: 600 }}>
+        Approval Flows
+      </Typography>
       {numberedLevels.map((level, index) => (
         <ApprovalLevelEditor
           key={level.level}
@@ -62,10 +66,10 @@ export function PolicyApprovalFlowsSection({ policy, employees, onChange }: Poli
           onRemove={() => removeNumberedLevel(index)}
         />
       ))}
-      <Button type="button" variant="outline" size="sm" disabled={nextAvailableLevel === undefined} onClick={addLevel}>
+      <Button type="button" variant="outline" size="sm" disabled={nextAvailableLevel === undefined} onClick={addLevel} sx={{ alignSelf: "flex-start" }}>
         <PlusIcon size={12} /> Add Level
       </Button>
       <ApprovalLevelEditor title="Default Flow" level={defaultFlow} employees={employees} onChange={(updated) => replaceAll(updated, numberedLevels)} />
-    </div>
+    </Stack>
   );
 }
