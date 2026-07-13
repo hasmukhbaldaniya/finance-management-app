@@ -1,14 +1,6 @@
 import type { Meta, StoryObj } from "@storybook/react-vite";
 import { Button } from "@/components/ui/button";
-import {
-  DropdownMenu,
-  DropdownMenuContent,
-  DropdownMenuGroup,
-  DropdownMenuItem,
-  DropdownMenuLabel,
-  DropdownMenuSeparator,
-  DropdownMenuTrigger,
-} from "@/components/ui/dropdown-menu";
+import { DropdownMenu, DropdownMenuContent, DropdownMenuItem, DropdownMenuSeparator, DropdownMenuTrigger } from "@/components/ui/dropdown-menu";
 
 const meta = {
   title: "ui/DropdownMenu",
@@ -23,6 +15,7 @@ export default meta;
 type Story = StoryObj<typeof meta>;
 
 export const Default: Story = {
+  args: { children: null },
   render: () => (
     <DropdownMenu>
       <DropdownMenuTrigger render={<Button variant="outline">Open menu</Button>} />
@@ -35,20 +28,22 @@ export const Default: Story = {
   ),
 };
 
-export const WithLabelAndDestructiveItem: Story = {
+// Matches header.tsx's actual Profile menu shape — a plain identity div,
+// not a DropdownMenuLabel/Group (neither has a real caller anywhere in
+// the app, see this component's own file comment).
+export const WithIdentityAndDestructiveItem: Story = {
+  args: { children: null },
   render: () => (
     <DropdownMenu>
       <DropdownMenuTrigger render={<Button variant="outline">Jane Doe</Button>} />
       <DropdownMenuContent align="end">
-        <DropdownMenuGroup>
-          <DropdownMenuLabel>
-            <p className="font-semibold text-foreground">Jane Doe</p>
-            <p className="font-normal text-muted-foreground">Acme Corp</p>
-          </DropdownMenuLabel>
-          <DropdownMenuSeparator />
-          <DropdownMenuItem>View Profile</DropdownMenuItem>
-          <DropdownMenuItem variant="destructive">Logout</DropdownMenuItem>
-        </DropdownMenuGroup>
+        <div className="px-1.5 py-1">
+          <p className="text-sm font-semibold text-foreground">Jane Doe</p>
+          <p className="text-xs text-muted-foreground">Acme Corp</p>
+        </div>
+        <DropdownMenuSeparator />
+        <DropdownMenuItem>View Profile</DropdownMenuItem>
+        <DropdownMenuItem variant="destructive">Logout</DropdownMenuItem>
       </DropdownMenuContent>
     </DropdownMenu>
   ),
