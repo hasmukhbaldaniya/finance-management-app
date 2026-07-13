@@ -3,12 +3,17 @@
 import Link from "next/link";
 import { useParams } from "next/navigation";
 import { useEffect, useState } from "react";
+import Box from "@mui/material/Box";
+import Stack from "@mui/material/Stack";
+import Typography from "@mui/material/Typography";
+import MuiLink from "@mui/material/Link";
 import { CaretLeftIcon, XIcon } from "@phosphor-icons/react";
 import { getSplitRequestDetail, rejectSplitRequest } from "@/apis/split-request";
 import { SplitRequestRespondDialog } from "@/components/claim/split-request-respond-dialog";
 import { SplitRequestStatusBadge } from "@/components/claim/split-request-status-badge";
 import { Button } from "@/components/ui/button";
 import { Spinner } from "@/components/ui/spinner";
+import { Table, TableBody, TableCell, TableHead, TableHeader, TableRow } from "@/components/ui/table";
 import { useSession } from "@/contexts/SessionContext";
 import { formatDateTime, formatInr } from "@/utils/helpers/format.helper";
 import { ApiError, GENERIC_ERROR_MESSAGE } from "@/utils/apiManager/apiManager";
@@ -59,31 +64,44 @@ export default function SplitRequestDetailsPage() {
 
   if (isLoading) {
     return (
-      <div className="flex justify-center py-16">
+      <Box sx={{ display: "flex", justifyContent: "center", py: 8 }}>
         <Spinner size={24} />
-      </div>
+      </Box>
     );
   }
 
   if (loadError || !request) {
-    return <p className="py-16 text-center text-sm text-destructive">{loadError ?? "Split request not found."}</p>;
+    return (
+      <Typography variant="body2" color="error" sx={{ py: 8, textAlign: "center" }}>
+        {loadError ?? "Split request not found."}
+      </Typography>
+    );
   }
 
   const myMember = request.members.find((member) => member.employeeId === user.id);
   const canRespond = myMember?.status === "pending";
 
   return (
-    <div className="mx-auto max-w-4xl space-y-6 p-6">
-      <div className="flex flex-wrap items-center justify-between gap-3">
-        <div className="space-y-1">
-          <Link href={ROUTES.CLAIMS} className="inline-flex items-center gap-1 text-sm text-muted-foreground hover:text-foreground">
+    <Stack spacing={3} sx={{ mx: "auto", maxWidth: 896, p: 3 }}>
+      <Stack direction="row" spacing={1.5} sx={{ alignItems: "center", justifyContent: "space-between", flexWrap: "wrap" }}>
+        <Stack spacing={0.5}>
+          <MuiLink
+            component={Link}
+            href={ROUTES.CLAIMS}
+            color="text.secondary"
+            sx={{ display: "inline-flex", alignItems: "center", gap: 0.5, fontSize: "0.875rem", "&:hover": { color: "text.primary" } }}
+          >
             <CaretLeftIcon size={14} /> Back
-          </Link>
-          <h1 className="text-2xl font-semibold tracking-tight">Split Request #{request.id}</h1>
-          <p className="text-sm text-muted-foreground">Requested by: {request.requestedBy}</p>
-        </div>
+          </MuiLink>
+          <Typography variant="h5" sx={{ fontWeight: 600, letterSpacing: "-0.01em" }}>
+            Split Request #{request.id}
+          </Typography>
+          <Typography variant="body2" color="text.secondary">
+            Requested by: {request.requestedBy}
+          </Typography>
+        </Stack>
         {canRespond ? (
-          <div className="flex items-center gap-2">
+          <Stack direction="row" spacing={1} sx={{ alignItems: "center" }}>
             <Button type="button" variant="destructive" onClick={handleQuickReject} disabled={isRejecting}>
               {isRejecting ? <Spinner /> : null}
               Reject
@@ -91,55 +109,70 @@ export default function SplitRequestDetailsPage() {
             <Button type="button" onClick={() => setIsRespondOpen(true)}>
               Accept
             </Button>
-          </div>
+          </Stack>
         ) : null}
-      </div>
+      </Stack>
 
-      <div className="overflow-hidden rounded-lg border border-border">
-        <table className="w-full text-sm">
-          <thead className="bg-muted/50 text-left text-xs text-muted-foreground">
-            <tr>
-              <th className="px-4 py-3 font-medium">Category</th>
-              <th className="px-4 py-3 font-medium">Expense Amount</th>
-              <th className="px-4 py-3 font-medium">Your Share</th>
-              <th className="px-4 py-3 font-medium">Status</th>
-              <th className="px-4 py-3 font-medium">Action</th>
-            </tr>
-          </thead>
-          <tbody>
-            <tr className="border-t border-border">
-              <td className="px-4 py-3">{request.expense.categoryName}</td>
-              <td className="px-4 py-3">₹{formatInr(request.expense.amount)}</td>
-              <td className="px-4 py-3">{myMember ? `₹${formatInr(myMember.amount)} (${myMember.percentage}%)` : "—"}</td>
-              <td className="px-4 py-3">
+      <Box sx={{ borderRadius: 2, border: 1, borderColor: "divider", overflow: "hidden" }}>
+        <Table>
+          <TableHeader>
+            <TableRow>
+              <TableHead>Category</TableHead>
+              <TableHead>Expense Amount</TableHead>
+              <TableHead>Your Share</TableHead>
+              <TableHead>Status</TableHead>
+              <TableHead>Action</TableHead>
+            </TableRow>
+          </TableHeader>
+          <TableBody>
+            <TableRow>
+              <TableCell>{request.expense.categoryName}</TableCell>
+              <TableCell>₹{formatInr(request.expense.amount)}</TableCell>
+              <TableCell>{myMember ? `₹${formatInr(myMember.amount)} (${myMember.percentage}%)` : "—"}</TableCell>
+              <TableCell>
                 <SplitRequestStatusBadge status={myMember?.status ?? "pending"} />
-              </td>
-              <td className="px-4 py-3">
+              </TableCell>
+              <TableCell>
                 {canRespond ? (
-                  <div className="flex items-center gap-2">
+                  <Stack direction="row" spacing={1} sx={{ alignItems: "center" }}>
                     <Button type="button" variant="outline" size="sm" onClick={() => setIsRespondOpen(true)}>
                       View &amp; Accept
                     </Button>
-                    <button
+                    <Box
+                      component="button"
                       type="button"
                       aria-label="Reject split request"
                       onClick={handleQuickReject}
                       disabled={isRejecting}
-                      className="flex size-7 items-center justify-center rounded-md text-muted-foreground hover:bg-destructive/10 hover:text-destructive"
+                      sx={{
+                        display: "flex",
+                        width: 28,
+                        height: 28,
+                        alignItems: "center",
+                        justifyContent: "center",
+                        borderRadius: 1.5,
+                        color: "text.secondary",
+                        background: "none",
+                        border: "none",
+                        cursor: "pointer",
+                        "&:hover": { bgcolor: "error.main", color: "error.contrastText", opacity: 0.9 },
+                      }}
                     >
                       <XIcon size={14} />
-                    </button>
-                  </div>
+                    </Box>
+                  </Stack>
                 ) : (
-                  <span className="text-xs text-muted-foreground">Responded {request.requestedOn ? formatDateTime(request.requestedOn) : ""}</span>
+                  <Typography variant="caption" color="text.secondary">
+                    Responded {request.requestedOn ? formatDateTime(request.requestedOn) : ""}
+                  </Typography>
                 )}
-              </td>
-            </tr>
-          </tbody>
-        </table>
-      </div>
+              </TableCell>
+            </TableRow>
+          </TableBody>
+        </Table>
+      </Box>
 
       <SplitRequestRespondDialog request={isRespondOpen ? request : null} onOpenChange={setIsRespondOpen} onResponded={load} />
-    </div>
+    </Stack>
   );
 }

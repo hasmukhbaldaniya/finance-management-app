@@ -2,6 +2,9 @@
 
 import { useState } from "react";
 import { useRouter } from "next/navigation";
+import Box from "@mui/material/Box";
+import Stack from "@mui/material/Stack";
+import Typography from "@mui/material/Typography";
 import { toast } from "@/components/ui/toast";
 import { createClaim, processInvoiceFiles, uploadInvoiceFiles } from "@/apis/claim";
 import { InvoiceFileDropzone } from "@/components/claim/invoice-file-dropzone";
@@ -65,44 +68,46 @@ export default function NewAiClaimPage() {
   }
 
   return (
-    <div className="mx-auto max-w-3xl space-y-8 px-6 py-8">
-      <h1 className="text-2xl font-semibold tracking-tight">Automated Extraction</h1>
+    <Stack spacing={4} sx={{ mx: "auto", maxWidth: 768, px: 3, py: 4 }}>
+      <Typography variant="h5" sx={{ fontWeight: 600, letterSpacing: "-0.01em" }}>
+        Automated Extraction
+      </Typography>
 
-      <div className="space-y-3">
+      <Stack spacing={1.5}>
         <Label>Claim Type</Label>
-        <div className="flex gap-4 text-sm">
+        <Stack direction="row" spacing={2} sx={{ fontSize: "0.875rem" }}>
           {(
             [
               { value: "standalone" as const, label: "Create New Claim" },
               { value: "trip_linked" as const, label: "Link to Trip" },
             ] as const
           ).map((option) => (
-            <label key={option.value} className="flex items-center gap-2">
+            <Box component="label" key={option.value} sx={{ display: "flex", alignItems: "center", gap: 1 }}>
               <input type="radio" name="claim-type" checked={claimType === option.value} onChange={() => setClaimType(option.value)} />
               {option.label}
-            </label>
+            </Box>
           ))}
-        </div>
-      </div>
+        </Stack>
+      </Stack>
 
       {claimType === "standalone" ? (
-        <div className="max-w-md space-y-2">
+        <Stack spacing={1} sx={{ maxWidth: 448 }}>
           <Label htmlFor="claim-name">Claim Name</Label>
           <Input id="claim-name" value={name} onChange={(event) => setName(event.target.value)} maxLength={MAX_CLAIM_NAME_LENGTH} />
-        </div>
+        </Stack>
       ) : (
-        <div className="max-w-md space-y-2">
+        <Stack spacing={1} sx={{ maxWidth: 448 }}>
           <Label>Trip Name</Label>
           <TripSelect value={trip} onChange={setTrip} placeholder="Select trip" />
-        </div>
+        </Stack>
       )}
 
-      <div className="space-y-2">
+      <Stack spacing={1}>
         <Label>Invoices</Label>
         <InvoiceFileDropzone files={files} onChange={setFiles} />
-      </div>
+      </Stack>
 
-      <div className="flex flex-wrap items-center justify-end gap-3 border-t border-border pt-6">
+      <Stack direction="row" spacing={1.5} sx={{ alignItems: "center", justifyContent: "flex-end", flexWrap: "wrap", borderTop: 1, borderColor: "divider", pt: 3 }}>
         <Button type="button" variant="outline" disabled={isSubmitting} onClick={handleCancel}>
           Cancel
         </Button>
@@ -110,7 +115,7 @@ export default function NewAiClaimPage() {
           {isSubmitting ? <Spinner /> : null}
           Save & Next
         </Button>
-      </div>
-    </div>
+      </Stack>
+    </Stack>
   );
 }
