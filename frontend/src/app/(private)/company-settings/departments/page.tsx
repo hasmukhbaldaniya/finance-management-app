@@ -1,7 +1,11 @@
 "use client";
 
-import { CaretDownIcon, CaretUpIcon, PencilSimpleIcon } from "@phosphor-icons/react";
+import { PencilSimpleIcon } from "@phosphor-icons/react";
 import { useEffect, useState } from "react";
+import Box from "@mui/material/Box";
+import Stack from "@mui/material/Stack";
+import Typography from "@mui/material/Typography";
+import TableSortLabel from "@mui/material/TableSortLabel";
 import { toast } from "@/components/ui/toast";
 import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
@@ -15,7 +19,6 @@ import { useInfiniteScroll } from "@/hooks/useInfiniteScroll";
 import { getDepartments } from "@/apis/department";
 import type { Department, DepartmentSortBy, SortDirection } from "@/types/department.type";
 import { ApiError, GENERIC_ERROR_MESSAGE } from "@/utils/apiManager/apiManager";
-import { cn } from "@/lib/utils";
 
 const PAGE_SIZE = 20;
 const SEARCH_DEBOUNCE_MS = 300;
@@ -115,64 +118,54 @@ export default function DepartmentManagementPage() {
     setDepartments((previous) => previous.filter((d) => d.id !== departmentId));
   }
 
-  function renderSortIcon(column: DepartmentSortBy) {
-    if (sortBy !== column) return null;
-    return sortDir === "asc" ? <CaretUpIcon className="inline size-3" /> : <CaretDownIcon className="inline size-3" />;
-  }
-
   const sentinelRef = useInfiniteScroll(handleLoadMore, hasMore, isLoadingMore);
 
   return (
-    <div className="mx-auto flex min-h-0 w-full max-w-4xl flex-1 flex-col overflow-hidden px-4 py-10">
-      <div className="flex flex-wrap items-center justify-between gap-4">
-        <h1 className="text-2xl font-semibold tracking-tight">Department Management</h1>
+    <Box sx={{ mx: "auto", display: "flex", minHeight: 0, width: "100%", maxWidth: 896, flex: 1, flexDirection: "column", overflow: "hidden", px: 2, py: 5 }}>
+      <Stack direction="row" sx={{ alignItems: "center", justifyContent: "space-between", gap: 2, flexWrap: "wrap" }}>
+        <Typography variant="h5" sx={{ fontWeight: 600 }}>
+          Department Management
+        </Typography>
         <Button onClick={() => setFormDialog({ open: true, department: null })}>New Department</Button>
-      </div>
+      </Stack>
 
-      <div className="mt-4">
-        <Input
-          value={searchInput}
-          onChange={(event) => setSearchInput(event.target.value)}
-          placeholder="Search departments…"
-          className="max-w-xs"
-        />
-      </div>
+      <Box sx={{ mt: 2 }}>
+        <Input value={searchInput} onChange={(event) => setSearchInput(event.target.value)} placeholder="Search departments…" sx={{ maxWidth: 320 }} />
+      </Box>
 
       {loadError ? (
-        <div className="mt-6 flex flex-col items-center gap-4 text-center">
-          <p className="text-sm text-muted-foreground">{loadError}</p>
+        <Stack sx={{ mt: 3, alignItems: "center", gap: 2, textAlign: "center" }}>
+          <Typography variant="body2" color="text.secondary">
+            {loadError}
+          </Typography>
           <Button onClick={() => window.location.reload()}>Retry</Button>
-        </div>
+        </Stack>
       ) : isLoading ? (
-        <div className="mt-6 flex items-center justify-center gap-2 text-sm text-muted-foreground">
+        <Stack direction="row" sx={{ mt: 3, alignItems: "center", justifyContent: "center", gap: 1 }}>
           <Spinner />
-          Loading…
-        </div>
+          <Typography variant="body2" color="text.secondary">
+            Loading…
+          </Typography>
+        </Stack>
       ) : departments.length === 0 ? (
-        <p className="mt-6 text-sm text-muted-foreground">No departments found.</p>
+        <Typography variant="body2" color="text.secondary" sx={{ mt: 3 }}>
+          No departments found.
+        </Typography>
       ) : (
-        <div className="mt-6 flex min-h-0 flex-1 flex-col overflow-hidden rounded-lg border border-border">
-          <div className="min-h-0 flex-1 overflow-y-auto">
+        <Box sx={{ mt: 3, display: "flex", minHeight: 0, flex: 1, flexDirection: "column", overflow: "hidden", borderRadius: 2, border: 1, borderColor: "divider" }}>
+          <Box sx={{ minHeight: 0, flex: 1, overflowY: "auto" }}>
             <Table>
               <TableHeader>
                 <TableRow>
                   <TableHead>
-                    <button
-                      type="button"
-                      onClick={() => handleSort("name")}
-                      className="flex items-center gap-1 font-medium"
-                    >
-                      Departments {renderSortIcon("name")}
-                    </button>
+                    <TableSortLabel active={sortBy === "name"} direction={sortBy === "name" ? sortDir : "asc"} onClick={() => handleSort("name")}>
+                      Departments
+                    </TableSortLabel>
                   </TableHead>
                   <TableHead>
-                    <button
-                      type="button"
-                      onClick={() => handleSort("membersCount")}
-                      className="flex items-center gap-1 font-medium"
-                    >
-                      Members {renderSortIcon("membersCount")}
-                    </button>
+                    <TableSortLabel active={sortBy === "membersCount"} direction={sortBy === "membersCount" ? sortDir : "asc"} onClick={() => handleSort("membersCount")}>
+                      Members
+                    </TableSortLabel>
                   </TableHead>
                   <TableHead>Actions</TableHead>
                 </TableRow>
@@ -182,49 +175,55 @@ export default function DepartmentManagementPage() {
                   <TableRow key={department.id}>
                     <TableCell>{department.name}</TableCell>
                     <TableCell>
-                      <button
+                      <Box
+                        component="button"
                         type="button"
                         onClick={() => (department.membersCount > 0 ? setMembersDialogDepartment(department) : undefined)}
-                        className={cn(
-                          "underline-offset-4",
-                          department.membersCount > 0
-                            ? "text-primary hover:underline"
-                            : "cursor-default text-muted-foreground"
-                        )}
+                        sx={{
+                          textDecorationLine: "underline",
+                          textUnderlineOffset: "4px",
+                          color: department.membersCount > 0 ? "primary.main" : "text.secondary",
+                          cursor: department.membersCount > 0 ? "pointer" : "default",
+                          background: "none",
+                          border: "none",
+                          p: 0,
+                          font: "inherit",
+                        }}
                       >
                         {department.membersCount}
-                      </button>
+                      </Box>
                     </TableCell>
                     <TableCell>
-                      <div className="flex items-center gap-3">
-                        <button
+                      <Stack direction="row" spacing={1.5} sx={{ alignItems: "center" }}>
+                        <Box
+                          component="button"
                           type="button"
                           aria-label={`Edit ${department.name}`}
                           onClick={() => setFormDialog({ open: true, department })}
-                          className="text-muted-foreground hover:text-foreground"
+                          sx={{ display: "inline-flex", color: "text.secondary", background: "none", border: "none", p: 0, cursor: "pointer", "&:hover": { color: "text.primary" } }}
                         >
-                          <PencilSimpleIcon className="size-4" />
-                        </button>
+                          <PencilSimpleIcon size={16} />
+                        </Box>
                         <Switch
                           checked={department.isActive}
                           onCheckedChange={() => setStatusDialogDepartment(department)}
                           aria-label={department.isActive ? `Disable ${department.name}` : `Enable ${department.name}`}
                         />
-                      </div>
+                      </Stack>
                     </TableCell>
                   </TableRow>
                 ))}
               </TableBody>
             </Table>
 
-            {hasMore ? <div ref={sentinelRef} aria-hidden className="h-px" /> : null}
-          </div>
+            {hasMore ? <Box ref={sentinelRef} aria-hidden sx={{ height: "1px" }} /> : null}
+          </Box>
           {isLoadingMore ? (
-            <div className="flex justify-center border-t border-border p-3">
+            <Box sx={{ display: "flex", justifyContent: "center", borderTop: 1, borderColor: "divider", p: 1.5 }}>
               <Spinner />
-            </div>
+            </Box>
           ) : null}
-        </div>
+        </Box>
       )}
 
       <DepartmentFormDialog
@@ -250,6 +249,6 @@ export default function DepartmentManagementPage() {
         }}
         onStatusChanged={handleStatusChanged}
       />
-    </div>
+    </Box>
   );
 }
