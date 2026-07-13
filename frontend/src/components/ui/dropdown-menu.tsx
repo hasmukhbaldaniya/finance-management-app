@@ -5,6 +5,7 @@ import MuiMenu from "@mui/material/Menu";
 import MuiMenuItem, { type MenuItemProps as MuiMenuItemProps } from "@mui/material/MenuItem";
 import Checkbox from "@mui/material/Checkbox";
 import Divider from "@mui/material/Divider";
+import Box from "@mui/material/Box";
 import type { SxProps, Theme } from "@mui/material/styles";
 
 // 026's MUI Migration — only the sub-components real call sites actually
@@ -50,23 +51,23 @@ function DropdownMenu({ children }: { children: ReactNode }) {
 
 type DropdownMenuTriggerProps = {
   render?: ReactElement<{ onClick?: (event: MouseEvent<HTMLElement>) => void }>;
-  className?: string;
+  sx?: SxProps<Theme>;
   children?: ReactNode;
 };
 
 // Supports both existing usage shapes: a plain trigger with its own
-// className/children (header.tsx's Profile button), or Base UI's `render`
+// sx/children (header.tsx's Profile button), or Base UI's `render`
 // composition prop wrapping an existing element (the searchable pickers'
 // own outlined Button trigger) — cloned with onClick wired in either way.
-function DropdownMenuTrigger({ render, className, children }: DropdownMenuTriggerProps) {
+function DropdownMenuTrigger({ render, sx, children }: DropdownMenuTriggerProps) {
   const { openMenu } = useDropdownMenuContext();
   if (render && isValidElement(render)) {
     return cloneElement(render, { onClick: openMenu });
   }
   return (
-    <button type="button" className={className} onClick={openMenu}>
+    <Box component="button" type="button" onClick={openMenu} sx={sx}>
       {children}
-    </button>
+    </Box>
   );
 }
 

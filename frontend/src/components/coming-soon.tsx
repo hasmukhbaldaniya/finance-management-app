@@ -1,12 +1,19 @@
+import Stack from "@mui/material/Stack";
+import Typography from "@mui/material/Typography";
+
 type ComingSoonProps = {
   title: string;
 };
 
 export function ComingSoon({ title }: ComingSoonProps) {
   return (
-    <div className="flex flex-1 flex-col items-center justify-center gap-2 px-4 py-10 text-center">
-      <h1 className="text-2xl font-semibold tracking-tight">{title}</h1>
-      <p className="text-sm text-muted-foreground">This page is coming soon.</p>
-    </div>
+    <Stack spacing={1} sx={{ flex: 1, alignItems: "center", justifyContent: "center", px: 2, py: 5, textAlign: "center" }}>
+      <Typography variant="h5" sx={{ fontWeight: 600, letterSpacing: "-0.01em" }}>
+        {title}
+      </Typography>
+      <Typography variant="body2" color="text.secondary">
+        This page is coming soon.
+      </Typography>
+    </Stack>
   );
 }

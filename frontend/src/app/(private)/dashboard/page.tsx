@@ -1,23 +1,36 @@
 "use client";
 
+import Box from "@mui/material/Box";
+import Stack from "@mui/material/Stack";
+import Typography from "@mui/material/Typography";
 import { useSession } from "@/contexts/SessionContext";
 
 export default function DashboardPage() {
   const { user, organization } = useSession();
 
   return (
-    <div className="flex flex-1 flex-col items-center justify-center gap-6 px-4 py-10">
-      <div className="text-center">
-        <h1 className="text-2xl font-semibold tracking-tight">Welcome, {user.name}</h1>
-        <p className="mt-1 text-sm text-muted-foreground">{user.email}</p>
+    <Stack spacing={3} sx={{ flex: 1, alignItems: "center", justifyContent: "center", px: 2, py: 5 }}>
+      <Box sx={{ textAlign: "center" }}>
+        <Typography variant="h5" sx={{ fontWeight: 600, letterSpacing: "-0.01em" }}>
+          Welcome, {user.name}
+        </Typography>
+        <Typography variant="body2" color="text.secondary" sx={{ mt: 0.5 }}>
+          {user.email}
+        </Typography>
         {organization ? (
-          <div className="mt-4 rounded-lg border border-border bg-background px-4 py-3 text-left">
-            <p className="text-xs font-medium uppercase tracking-wide text-muted-foreground">Organization</p>
-            <p className="mt-1 text-sm font-semibold">{organization.name}</p>
-            <p className="text-sm text-muted-foreground">GSTIN: {organization.gstNumber}</p>
-          </div>
+          <Box sx={{ mt: 2, borderRadius: 2, border: 1, borderColor: "divider", bgcolor: "background.paper", px: 2, py: 1.5, textAlign: "left" }}>
+            <Typography variant="caption" color="text.secondary" sx={{ fontWeight: 500, textTransform: "uppercase", letterSpacing: "0.05em" }}>
+              Organization
+            </Typography>
+            <Typography variant="body2" sx={{ mt: 0.5, fontWeight: 600 }}>
+              {organization.name}
+            </Typography>
+            <Typography variant="body2" color="text.secondary">
+              GSTIN: {organization.gstNumber}
+            </Typography>
+          </Box>
         ) : null}
-      </div>
-    </div>
+      </Box>
+    </Stack>
   );
 }

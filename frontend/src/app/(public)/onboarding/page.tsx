@@ -181,9 +181,9 @@ export default function OnboardingPage() {
     <Suspense
       fallback={
         <AuthCard title="Verifying your invitation…" description="Please wait a moment.">
-          <div className="flex justify-center py-4">
+          <Box sx={{ display: "flex", justifyContent: "center", py: 2 }}>
             <Spinner />
-          </div>
+          </Box>
         </AuthCard>
       }
     >

@@ -1,6 +1,10 @@
 "use client";
 
 import { useEffect, useState } from "react";
+import Box from "@mui/material/Box";
+import Stack from "@mui/material/Stack";
+import Typography from "@mui/material/Typography";
+import Chip from "@mui/material/Chip";
 import { Button } from "@/components/ui/button";
 import { Spinner } from "@/components/ui/spinner";
 import { ChangePasswordDialog } from "@/components/profile/change-password-dialog";
@@ -8,7 +12,7 @@ import { EditProfileDialog } from "@/components/profile/edit-profile-dialog";
 import { getMyProfile } from "@/apis/employee";
 import type { MyProfile } from "@/types/employee.type";
 import { ApiError, GENERIC_ERROR_MESSAGE } from "@/utils/apiManager/apiManager";
-import { cn } from "@/lib/utils";
+import { statusTones } from "@/theme/colors";
 
 function display(value: string | null | undefined): string {
   return value && value.trim() ? value : "—";
@@ -21,10 +25,12 @@ type ProfileFieldProps = {
 
 function ProfileField({ label, value }: ProfileFieldProps) {
   return (
-    <div className="space-y-1">
-      <p className="text-xs font-medium text-muted-foreground">{label}</p>
-      <p className="text-sm">{value}</p>
-    </div>
+    <Stack spacing={0.5}>
+      <Typography variant="caption" color="text.secondary" sx={{ fontWeight: 500 }}>
+        {label}
+      </Typography>
+      <Typography variant="body2">{value}</Typography>
+    </Stack>
   );
 }
 
@@ -62,40 +68,46 @@ export default function ProfilePage() {
 
   if (isLoading) {
     return (
-      <div className="flex flex-1 items-center justify-center gap-2 py-10 text-sm text-muted-foreground">
+      <Stack direction="row" spacing={1} sx={{ flex: 1, alignItems: "center", justifyContent: "center", py: 5, fontSize: "0.875rem", color: "text.secondary" }}>
         <Spinner />
         Loading…
-      </div>
+      </Stack>
     );
   }
 
   if (loadError || !profile) {
     return (
-      <div className="mx-auto flex w-full max-w-3xl flex-1 flex-col items-center gap-4 px-4 py-10 text-center">
-        <p className="text-sm text-muted-foreground">{loadError ?? GENERIC_ERROR_MESSAGE}</p>
+      <Stack spacing={2} sx={{ mx: "auto", width: "100%", maxWidth: 768, flex: 1, alignItems: "center", px: 2, py: 5, textAlign: "center" }}>
+        <Typography variant="body2" color="text.secondary">
+          {loadError ?? GENERIC_ERROR_MESSAGE}
+        </Typography>
         <Button onClick={() => window.location.reload()}>Retry</Button>
-      </div>
+      </Stack>
     );
   }
 
   return (
-    <div className="mx-auto w-full max-w-3xl flex-1 px-4 py-10">
-      <div className="flex items-center justify-between gap-4">
-        <h1 className="text-2xl font-semibold tracking-tight">My Profile</h1>
-        <div className="flex items-center gap-2">
+    <Box sx={{ mx: "auto", width: "100%", maxWidth: 768, flex: 1, px: 2, py: 5 }}>
+      <Stack direction="row" spacing={2} sx={{ alignItems: "center", justifyContent: "space-between" }}>
+        <Typography variant="h5" sx={{ fontWeight: 600, letterSpacing: "-0.01em" }}>
+          My Profile
+        </Typography>
+        <Stack direction="row" spacing={1} sx={{ alignItems: "center" }}>
           <Button type="button" variant="outline" onClick={() => setIsPasswordOpen(true)}>
             Change Password
           </Button>
           <Button type="button" onClick={() => setIsEditOpen(true)}>
             Edit Profile
           </Button>
-        </div>
-      </div>
+        </Stack>
+      </Stack>
 
-      <div className="mt-6 space-y-8 rounded-lg border border-border bg-background p-6">
-        <section className="space-y-4">
-          <h2 className="text-sm font-semibold">Personal Details</h2>
-          <div className="grid grid-cols-1 gap-4 sm:grid-cols-2">
+      <Stack spacing={4} sx={{ mt: 3, borderRadius: 2, border: 1, borderColor: "divider", bgcolor: "background.paper", p: 3 }}>
+        <Stack component="section" spacing={2}>
+          <Typography variant="subtitle2" sx={{ fontWeight: 600 }}>
+            Personal Details
+          </Typography>
+          <Box sx={{ display: "grid", gridTemplateColumns: { xs: "1fr", sm: "1fr 1fr" }, gap: 2 }}>
             <ProfileField label="Title" value={display(profile.title)} />
             <ProfileField label="Full Name" value={`${profile.firstName} ${profile.lastName}`.trim()} />
             <ProfileField label="Email" value={profile.email} />
@@ -106,35 +118,39 @@ export default function ProfilePage() {
             <ProfileField label="Date of Birth" value={display(profile.dob)} />
             <ProfileField label="Gender" value={display(profile.gender)} />
             <ProfileField label="Employee ID" value={display(profile.employeeCode)} />
-          </div>
-        </section>
+          </Box>
+        </Stack>
 
-        <section className="space-y-4">
-          <h2 className="text-sm font-semibold">Organization</h2>
-          <div className="grid grid-cols-1 gap-4 sm:grid-cols-2">
+        <Stack component="section" spacing={2}>
+          <Typography variant="subtitle2" sx={{ fontWeight: 600 }}>
+            Organization
+          </Typography>
+          <Box sx={{ display: "grid", gridTemplateColumns: { xs: "1fr", sm: "1fr 1fr" }, gap: 2 }}>
             <ProfileField label="Organization" value={display(profile.organizationName)} />
             <ProfileField label="Role" value={display(profile.role)} />
             <ProfileField label="Department" value={display(profile.department)} />
             <ProfileField label="Grade" value={display(profile.grade)} />
-            <div className="space-y-1">
-              <p className="text-xs font-medium text-muted-foreground">Employee Status</p>
-              <span
-                className={cn(
-                  "inline-block rounded-full px-2.5 py-0.5 text-xs font-medium",
-                  profile.status === "active"
-                    ? "bg-green-100 text-green-700 dark:bg-green-900/40 dark:text-green-400"
-                    : "bg-muted text-muted-foreground"
-                )}
-              >
-                {profile.status === "active" ? "Active" : "Suspended"}
-              </span>
-            </div>
-          </div>
-        </section>
-      </div>
+            <Stack spacing={0.5}>
+              <Typography variant="caption" color="text.secondary" sx={{ fontWeight: 500 }}>
+                Employee Status
+              </Typography>
+              <Chip
+                label={profile.status === "active" ? "Active" : "Suspended"}
+                size="small"
+                sx={{
+                  alignSelf: "flex-start",
+                  fontWeight: 500,
+                  bgcolor: profile.status === "active" ? statusTones.accepted.background : "action.hover",
+                  color: profile.status === "active" ? statusTones.accepted.text : "text.secondary",
+                }}
+              />
+            </Stack>
+          </Box>
+        </Stack>
+      </Stack>
 
       <EditProfileDialog open={isEditOpen} onOpenChange={setIsEditOpen} profile={profile} onSaved={handleSaved} />
       <ChangePasswordDialog open={isPasswordOpen} onOpenChange={setIsPasswordOpen} />
-    </div>
+    </Box>
   );
 }
