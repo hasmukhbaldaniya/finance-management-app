@@ -3,6 +3,9 @@
 import Link from "next/link";
 import { useRouter } from "next/navigation";
 import { useState, type FormEvent } from "react";
+import Stack from "@mui/material/Stack";
+import MuiLink from "@mui/material/Link";
+import Typography from "@mui/material/Typography";
 import { toast } from "@/components/ui/toast";
 import { AuthCard } from "@/components/auth-card";
 import { PasswordInput } from "@/components/password-input";
@@ -65,8 +68,8 @@ export default function LoginPage() {
 
   return (
     <AuthCard title="Log in" description="Access your dashboard.">
-      <form onSubmit={handleSubmit} noValidate className="space-y-4">
-        <div className="space-y-1.5">
+      <Stack component="form" onSubmit={handleSubmit} noValidate spacing={2}>
+        <Stack spacing={0.75}>
           <Label htmlFor="identifier">Email or Phone Number</Label>
           <Input
             id="identifier"
@@ -78,13 +81,13 @@ export default function LoginPage() {
             aria-describedby={errors.identifier ? "identifier-error" : undefined}
           />
           {errors.identifier ? (
-            <p id="identifier-error" className="text-xs text-destructive">
+            <Typography id="identifier-error" variant="caption" color="error">
               {errors.identifier}
-            </p>
+            </Typography>
           ) : null}
-        </div>
+        </Stack>
 
-        <div className="space-y-1.5">
+        <Stack spacing={0.75}>
           <Label htmlFor="password">Password</Label>
           <PasswordInput
             id="password"
@@ -96,29 +99,29 @@ export default function LoginPage() {
             aria-describedby={errors.password ? "password-error" : undefined}
           />
           {errors.password ? (
-            <p id="password-error" className="text-xs text-destructive">
+            <Typography id="password-error" variant="caption" color="error">
               {errors.password}
-            </p>
+            </Typography>
           ) : null}
-        </div>
+        </Stack>
 
-        <Button type="submit" className="w-full" disabled={isSubmitting}>
+        <Button type="submit" sx={{ width: "100%" }} disabled={isSubmitting}>
           {isSubmitting ? <Spinner /> : null}
           {isSubmitting ? "Logging in…" : "Login"}
         </Button>
 
-        <p className="text-center text-sm">
-          <Link href={ROUTES.FORGOT_PASSWORD.REQUEST} className="text-primary underline-offset-4 hover:underline">
+        <Typography align="center" variant="body2">
+          <MuiLink component={Link} href={ROUTES.FORGOT_PASSWORD.REQUEST} underline="hover">
             Forgot password?
-          </Link>
-        </p>
+          </MuiLink>
+        </Typography>
 
-        <p className="text-center text-sm">
-          <Link href={ROUTES.REGISTER.ORGANIZATION} className="text-primary underline-offset-4 hover:underline">
+        <Typography align="center" variant="body2">
+          <MuiLink component={Link} href={ROUTES.REGISTER.ORGANIZATION} underline="hover">
             Register your company
-          </Link>
-        </p>
-      </form>
+          </MuiLink>
+        </Typography>
+      </Stack>
     </AuthCard>
   );
 }
