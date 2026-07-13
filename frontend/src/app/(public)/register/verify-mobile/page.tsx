@@ -3,6 +3,9 @@
 import Link from "next/link";
 import { useRouter } from "next/navigation";
 import { useEffect, useState } from "react";
+import Stack from "@mui/material/Stack";
+import MuiLink from "@mui/material/Link";
+import Typography from "@mui/material/Typography";
 import { toast } from "@/components/ui/toast";
 import { AuthCard } from "@/components/auth-card";
 import { Button } from "@/components/ui/button";
@@ -100,8 +103,8 @@ export default function RegisterVerifyMobilePage() {
 
   return (
     <AuthCard title="Verify your mobile number" description={`Enter the 6-digit code sent to ${mobileNumber}.`}>
-      <div className="space-y-4">
-        <div className="space-y-1.5">
+      <Stack spacing={2}>
+        <Stack spacing={0.75}>
           <Label htmlFor="otp">OTP</Label>
           <Input
             id="otp"
@@ -115,45 +118,42 @@ export default function RegisterVerifyMobilePage() {
             aria-describedby={error ? "otp-error" : undefined}
           />
           {error ? (
-            <p id="otp-error" className="text-xs text-destructive">
+            <Typography id="otp-error" variant="caption" color="error">
               {error}
-            </p>
+            </Typography>
           ) : null}
-        </div>
+        </Stack>
 
-        <div className="flex gap-3">
-          <Button type="button" variant="outline" className="flex-1" onClick={handleSkip} disabled={isBusy}>
+        <Stack direction="row" spacing={1.5}>
+          <Button type="button" variant="outline" sx={{ flex: 1 }} onClick={handleSkip} disabled={isBusy}>
             {pendingAction === "skip" ? <Spinner /> : null}
             Skip
           </Button>
-          <Button type="button" className="flex-1" onClick={handleSave} disabled={isBusy}>
+          <Button type="button" sx={{ flex: 1 }} onClick={handleSave} disabled={isBusy}>
             {pendingAction === "save" ? <Spinner /> : null}
             Save
           </Button>
-        </div>
+        </Stack>
 
-        <div className="text-center text-sm">
+        <Typography align="center" variant="body2">
           {secondsLeft > 0 ? (
-            <span className="text-muted-foreground">Resend OTP in {secondsLeft}s</span>
+            <Typography component="span" variant="body2" color="text.secondary">
+              Resend OTP in {secondsLeft}s
+            </Typography>
           ) : (
-            <button
-              type="button"
-              onClick={handleResend}
-              disabled={isResending}
-              className="inline-flex items-center gap-1.5 text-primary underline-offset-4 hover:underline disabled:opacity-50"
-            >
+            <Button type="button" variant="link" onClick={handleResend} disabled={isResending} sx={{ p: 0, minWidth: 0 }}>
               {isResending ? <Spinner size={14} /> : null}
               {isResending ? "Resending…" : "Resend OTP"}
-            </button>
+            </Button>
           )}
-        </div>
+        </Typography>
 
-        <p className="text-center text-sm">
-          <Link href={ROUTES.REGISTER.MOBILE} className="text-primary underline-offset-4 hover:underline">
+        <Typography align="center" variant="body2">
+          <MuiLink component={Link} href={ROUTES.REGISTER.MOBILE} underline="hover">
             ← Change mobile number
-          </Link>
-        </p>
-      </div>
+          </MuiLink>
+        </Typography>
+      </Stack>
     </AuthCard>
   );
 }

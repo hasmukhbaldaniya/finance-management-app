@@ -2,6 +2,8 @@
 
 import { useRouter } from "next/navigation";
 import { useEffect, useState, type FormEvent } from "react";
+import Stack from "@mui/material/Stack";
+import Typography from "@mui/material/Typography";
 import { toast } from "@/components/ui/toast";
 import { AuthCard } from "@/components/auth-card";
 import { SelectField } from "@/components/select-field";
@@ -93,8 +95,8 @@ export default function OnboardingProfilePage() {
 
   return (
     <AuthCard title="Confirm your details" description="Review your name and title — you can change these if needed.">
-      <form onSubmit={handleSubmit} noValidate className="space-y-4">
-        <div className="space-y-1.5">
+      <Stack component="form" onSubmit={handleSubmit} noValidate spacing={2}>
+        <Stack spacing={0.75}>
           <Label htmlFor="title">Title</Label>
           <SelectField
             id="title"
@@ -105,11 +107,13 @@ export default function OnboardingProfilePage() {
             options={TITLES.map((option) => ({ value: option, label: option }))}
           />
           {errors.title ? (
-            <p className="text-xs text-destructive">{errors.title}</p>
+            <Typography variant="caption" color="error">
+              {errors.title}
+            </Typography>
           ) : null}
-        </div>
+        </Stack>
 
-        <div className="space-y-1.5">
+        <Stack spacing={0.75}>
           <Label htmlFor="firstName">First Name</Label>
           <Input
             id="firstName"
@@ -121,13 +125,13 @@ export default function OnboardingProfilePage() {
             aria-describedby={errors.firstName ? "firstName-error" : undefined}
           />
           {errors.firstName ? (
-            <p id="firstName-error" className="text-xs text-destructive">
+            <Typography id="firstName-error" variant="caption" color="error">
               {errors.firstName}
-            </p>
+            </Typography>
           ) : null}
-        </div>
+        </Stack>
 
-        <div className="space-y-1.5">
+        <Stack spacing={0.75}>
           <Label htmlFor="lastName">Last Name</Label>
           <Input
             id="lastName"
@@ -139,17 +143,17 @@ export default function OnboardingProfilePage() {
             aria-describedby={errors.lastName ? "lastName-error" : undefined}
           />
           {errors.lastName ? (
-            <p id="lastName-error" className="text-xs text-destructive">
+            <Typography id="lastName-error" variant="caption" color="error">
               {errors.lastName}
-            </p>
+            </Typography>
           ) : null}
-        </div>
+        </Stack>
 
-        <Button type="submit" className="w-full" disabled={isSubmitting}>
+        <Button type="submit" sx={{ width: "100%" }} disabled={isSubmitting}>
           {isSubmitting ? <Spinner /> : null}
           {isSubmitting ? "Saving…" : "Continue"}
         </Button>
-      </form>
+      </Stack>
     </AuthCard>
   );
 }

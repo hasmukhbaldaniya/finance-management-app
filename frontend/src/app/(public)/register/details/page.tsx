@@ -3,6 +3,9 @@
 import Link from "next/link";
 import { useRouter } from "next/navigation";
 import { useEffect, useState, type FormEvent } from "react";
+import Stack from "@mui/material/Stack";
+import MuiLink from "@mui/material/Link";
+import Typography from "@mui/material/Typography";
 import { toast } from "@/components/ui/toast";
 import { AuthCard } from "@/components/auth-card";
 import { PasswordInput } from "@/components/password-input";
@@ -106,8 +109,8 @@ export default function RegisterDetailsPage() {
 
   return (
     <AuthCard title="Personal details" description="Create your admin account for this organization.">
-      <form onSubmit={handleSubmit} noValidate className="space-y-4">
-        <div className="space-y-1.5">
+      <Stack component="form" onSubmit={handleSubmit} noValidate spacing={2}>
+        <Stack spacing={0.75}>
           <Label htmlFor="firstName">First Name</Label>
           <Input
             id="firstName"
@@ -119,13 +122,13 @@ export default function RegisterDetailsPage() {
             aria-describedby={errors.firstName ? "firstName-error" : undefined}
           />
           {errors.firstName ? (
-            <p id="firstName-error" className="text-xs text-destructive">
+            <Typography id="firstName-error" variant="caption" color="error">
               {errors.firstName}
-            </p>
+            </Typography>
           ) : null}
-        </div>
+        </Stack>
 
-        <div className="space-y-1.5">
+        <Stack spacing={0.75}>
           <Label htmlFor="lastName">Last Name</Label>
           <Input
             id="lastName"
@@ -137,13 +140,13 @@ export default function RegisterDetailsPage() {
             aria-describedby={errors.lastName ? "lastName-error" : undefined}
           />
           {errors.lastName ? (
-            <p id="lastName-error" className="text-xs text-destructive">
+            <Typography id="lastName-error" variant="caption" color="error">
               {errors.lastName}
-            </p>
+            </Typography>
           ) : null}
-        </div>
+        </Stack>
 
-        <div className="space-y-1.5">
+        <Stack spacing={0.75}>
           <Label htmlFor="email">Email</Label>
           <Input
             id="email"
@@ -156,13 +159,13 @@ export default function RegisterDetailsPage() {
             aria-describedby={errors.email ? "email-error" : undefined}
           />
           {errors.email ? (
-            <p id="email-error" className="text-xs text-destructive">
+            <Typography id="email-error" variant="caption" color="error">
               {errors.email}
-            </p>
+            </Typography>
           ) : null}
-        </div>
+        </Stack>
 
-        <div className="space-y-1.5">
+        <Stack spacing={0.75}>
           <Label htmlFor="password">Password</Label>
           <PasswordInput
             id="password"
@@ -174,13 +177,13 @@ export default function RegisterDetailsPage() {
             aria-describedby={errors.password ? "password-error" : undefined}
           />
           {errors.password ? (
-            <p id="password-error" className="text-xs text-destructive">
+            <Typography id="password-error" variant="caption" color="error">
               {errors.password}
-            </p>
+            </Typography>
           ) : null}
-        </div>
+        </Stack>
 
-        <div className="space-y-1.5">
+        <Stack spacing={0.75}>
           <Label htmlFor="confirmPassword">Confirm Password</Label>
           <PasswordInput
             id="confirmPassword"
@@ -192,23 +195,23 @@ export default function RegisterDetailsPage() {
             aria-describedby={errors.confirmPassword ? "confirmPassword-error" : undefined}
           />
           {errors.confirmPassword ? (
-            <p id="confirmPassword-error" className="text-xs text-destructive">
+            <Typography id="confirmPassword-error" variant="caption" color="error">
               {errors.confirmPassword}
-            </p>
+            </Typography>
           ) : null}
-        </div>
+        </Stack>
 
-        <Button type="submit" className="w-full" disabled={isSubmitting}>
+        <Button type="submit" sx={{ width: "100%" }} disabled={isSubmitting}>
           {isSubmitting ? <Spinner /> : null}
           {isSubmitting ? "Submitting…" : "Continue"}
         </Button>
 
-        <p className="text-center text-sm">
-          <Link href={ROUTES.REGISTER.ORGANIZATION} className="text-primary underline-offset-4 hover:underline">
+        <Typography align="center" variant="body2">
+          <MuiLink component={Link} href={ROUTES.REGISTER.ORGANIZATION} underline="hover">
             ← Back
-          </Link>
-        </p>
-      </form>
+          </MuiLink>
+        </Typography>
+      </Stack>
     </AuthCard>
   );
 }

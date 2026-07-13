@@ -2,6 +2,8 @@
 
 import { useRouter } from "next/navigation";
 import { useEffect, useState } from "react";
+import Stack from "@mui/material/Stack";
+import Typography from "@mui/material/Typography";
 import { toast } from "@/components/ui/toast";
 import { AuthCard } from "@/components/auth-card";
 import { Button } from "@/components/ui/button";
@@ -97,8 +99,8 @@ export default function RegisterMobilePage() {
 
   return (
     <AuthCard title="Add your mobile number" description="Optional to verify now — you can always do this later.">
-      <div className="space-y-4">
-        <div className="space-y-1.5">
+      <Stack spacing={2}>
+        <Stack spacing={0.75}>
           <Label htmlFor="mobileNumber">Mobile Number</Label>
           <Input
             id="mobileNumber"
@@ -114,23 +116,23 @@ export default function RegisterMobilePage() {
             aria-describedby={error ? "mobileNumber-error" : undefined}
           />
           {error ? (
-            <p id="mobileNumber-error" className="text-xs text-destructive">
+            <Typography id="mobileNumber-error" variant="caption" color="error">
               {error}
-            </p>
+            </Typography>
           ) : null}
-        </div>
+        </Stack>
 
-        <div className="flex gap-3">
-          <Button type="button" variant="outline" className="flex-1" onClick={handleSkip} disabled={!isValidMobile || isBusy}>
+        <Stack direction="row" spacing={1.5}>
+          <Button type="button" variant="outline" sx={{ flex: 1 }} onClick={handleSkip} disabled={!isValidMobile || isBusy}>
             {pendingAction === "skip" ? <Spinner /> : null}
             Skip
           </Button>
-          <Button type="button" className="flex-1" onClick={handleSaveAndContinue} disabled={!isValidMobile || isBusy}>
+          <Button type="button" sx={{ flex: 1 }} onClick={handleSaveAndContinue} disabled={!isValidMobile || isBusy}>
             {pendingAction === "continue" ? <Spinner /> : null}
             Save &amp; Continue
           </Button>
-        </div>
-      </div>
+        </Stack>
+      </Stack>
     </AuthCard>
   );
 }

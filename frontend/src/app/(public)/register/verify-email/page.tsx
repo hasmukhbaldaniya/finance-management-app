@@ -2,6 +2,8 @@
 
 import { useRouter } from "next/navigation";
 import { useEffect, useRef, useState, type FormEvent } from "react";
+import Stack from "@mui/material/Stack";
+import Typography from "@mui/material/Typography";
 import { toast } from "@/components/ui/toast";
 import { AuthCard } from "@/components/auth-card";
 import { Button } from "@/components/ui/button";
@@ -88,8 +90,8 @@ export default function RegisterVerifyEmailPage() {
 
   return (
     <AuthCard title="Verify your email" description={`Enter the 6-digit code sent to ${email}.`}>
-      <form onSubmit={handleSubmit} noValidate className="space-y-4">
-        <div className="space-y-1.5">
+      <Stack component="form" onSubmit={handleSubmit} noValidate spacing={2}>
+        <Stack spacing={0.75}>
           <Label htmlFor="otp">OTP</Label>
           <Input
             id="otp"
@@ -103,43 +105,36 @@ export default function RegisterVerifyEmailPage() {
             aria-describedby={error ? "otp-error" : undefined}
           />
           {error ? (
-            <p id="otp-error" className="text-xs text-destructive">
+            <Typography id="otp-error" variant="caption" color="error">
               {error}
-            </p>
+            </Typography>
           ) : null}
-        </div>
+        </Stack>
 
-        <Button type="submit" className="w-full" disabled={isSubmitting}>
+        <Button type="submit" sx={{ width: "100%" }} disabled={isSubmitting}>
           {isSubmitting ? <Spinner /> : null}
           {isSubmitting ? "Verifying…" : "Verify"}
         </Button>
 
-        <div className="text-center text-sm">
+        <Typography align="center" variant="body2">
           {secondsLeft > 0 ? (
-            <span className="text-muted-foreground">Resend OTP in {secondsLeft}s</span>
+            <Typography component="span" variant="body2" color="text.secondary">
+              Resend OTP in {secondsLeft}s
+            </Typography>
           ) : (
-            <button
-              type="button"
-              onClick={handleResend}
-              disabled={isResending}
-              className="inline-flex items-center gap-1.5 text-primary underline-offset-4 hover:underline disabled:opacity-50"
-            >
+            <Button type="button" variant="link" onClick={handleResend} disabled={isResending} sx={{ p: 0, minWidth: 0 }}>
               {isResending ? <Spinner size={14} /> : null}
               {isResending ? "Resending…" : "Resend OTP"}
-            </button>
+            </Button>
           )}
-        </div>
+        </Typography>
 
-        <p className="text-center text-sm">
-          <button
-            type="button"
-            onClick={startOver}
-            className="text-primary underline-offset-4 hover:underline"
-          >
+        <Typography align="center" variant="body2">
+          <Button type="button" variant="link" onClick={startOver} sx={{ p: 0, minWidth: 0 }}>
             Wrong email? Start over
-          </button>
-        </p>
-      </form>
+          </Button>
+        </Typography>
+      </Stack>
     </AuthCard>
   );
 }

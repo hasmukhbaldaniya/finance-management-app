@@ -3,6 +3,9 @@
 import Link from "next/link";
 import { useRouter } from "next/navigation";
 import { useEffect, useRef, useState, type FormEvent } from "react";
+import Stack from "@mui/material/Stack";
+import MuiLink from "@mui/material/Link";
+import Typography from "@mui/material/Typography";
 import { toast } from "@/components/ui/toast";
 import { AuthCard } from "@/components/auth-card";
 import { Button } from "@/components/ui/button";
@@ -88,8 +91,8 @@ export default function ForgotPasswordStep2Page() {
 
   return (
     <AuthCard title="Verify OTP" description={`Enter the 6-digit code sent to ${email}.`}>
-      <form onSubmit={handleSubmit} noValidate className="space-y-4">
-        <div className="space-y-1.5">
+      <Stack component="form" onSubmit={handleSubmit} noValidate spacing={2}>
+        <Stack spacing={0.75}>
           <Label htmlFor="otp">OTP</Label>
           <Input
             id="otp"
@@ -103,42 +106,39 @@ export default function ForgotPasswordStep2Page() {
             aria-describedby={error ? "otp-error" : undefined}
           />
           {error ? (
-            <p id="otp-error" className="text-xs text-destructive">
+            <Typography id="otp-error" variant="caption" color="error">
               {error}
-            </p>
+            </Typography>
           ) : null}
-        </div>
+        </Stack>
 
-        <Button type="submit" className="w-full" disabled={isSubmitting}>
+        <Button type="submit" sx={{ width: "100%" }} disabled={isSubmitting}>
           {isSubmitting ? <Spinner /> : null}
           {isSubmitting ? "Verifying…" : "Verify"}
         </Button>
 
-        <div className="text-center text-sm">
+        <Typography align="center" variant="body2">
           {secondsLeft > 0 ? (
-            <span className="text-muted-foreground">Resend OTP in {secondsLeft}s</span>
+            <Typography component="span" variant="body2" color="text.secondary">
+              Resend OTP in {secondsLeft}s
+            </Typography>
           ) : (
-            <button
-              type="button"
-              onClick={handleResend}
-              disabled={isResending}
-              className="inline-flex items-center gap-1.5 text-primary underline-offset-4 hover:underline disabled:opacity-50"
-            >
+            <Button type="button" variant="link" onClick={handleResend} disabled={isResending} sx={{ p: 0, minWidth: 0 }}>
               {isResending ? <Spinner size={14} /> : null}
               {isResending ? "Resending…" : "Resend OTP"}
-            </button>
+            </Button>
           )}
-        </div>
+        </Typography>
 
-        <div className="flex items-center justify-between text-sm">
-          <Link href={ROUTES.FORGOT_PASSWORD.REQUEST} className="text-primary underline-offset-4 hover:underline">
+        <Stack direction="row" sx={{ alignItems: "center", justifyContent: "space-between" }}>
+          <MuiLink component={Link} href={ROUTES.FORGOT_PASSWORD.REQUEST} underline="hover" variant="body2">
             ← Change email
-          </Link>
-          <Link href={ROUTES.LOGIN} onClick={leaveAndReset} className="text-primary underline-offset-4 hover:underline">
+          </MuiLink>
+          <MuiLink component={Link} href={ROUTES.LOGIN} onClick={leaveAndReset} underline="hover" variant="body2">
             Back to Login
-          </Link>
-        </div>
-      </form>
+          </MuiLink>
+        </Stack>
+      </Stack>
     </AuthCard>
   );
 }

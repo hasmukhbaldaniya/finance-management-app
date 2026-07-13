@@ -2,6 +2,8 @@
 
 import { useRouter } from "next/navigation";
 import { useEffect, useState } from "react";
+import Stack from "@mui/material/Stack";
+import Typography from "@mui/material/Typography";
 import { toast } from "@/components/ui/toast";
 import { AuthCard } from "@/components/auth-card";
 import { Button } from "@/components/ui/button";
@@ -88,8 +90,8 @@ export default function OnboardingMobilePage() {
 
   return (
     <AuthCard title="Add your mobile number" description="Verify your mobile number now, or skip and do this later.">
-      <div className="space-y-4">
-        <div className="space-y-1.5">
+      <Stack spacing={2}>
+        <Stack spacing={0.75}>
           <Label htmlFor="contactNumber">Mobile Number</Label>
           <Input
             id="contactNumber"
@@ -105,23 +107,23 @@ export default function OnboardingMobilePage() {
             aria-describedby={error ? "contactNumber-error" : undefined}
           />
           {error ? (
-            <p id="contactNumber-error" className="text-xs text-destructive">
+            <Typography id="contactNumber-error" variant="caption" color="error">
               {error}
-            </p>
+            </Typography>
           ) : null}
-        </div>
+        </Stack>
 
-        <div className="flex gap-3">
-          <Button type="button" variant="outline" className="flex-1" onClick={handleSkip} disabled={isBusy}>
+        <Stack direction="row" spacing={1.5}>
+          <Button type="button" variant="outline" sx={{ flex: 1 }} onClick={handleSkip} disabled={isBusy}>
             {pendingAction === "skip" ? <Spinner /> : null}
             Skip
           </Button>
-          <Button type="button" className="flex-1" onClick={handleVerify} disabled={!isValidNumber || isBusy}>
+          <Button type="button" sx={{ flex: 1 }} onClick={handleVerify} disabled={!isValidNumber || isBusy}>
             {pendingAction === "continue" ? <Spinner /> : null}
             Verify
           </Button>
-        </div>
-      </div>
+        </Stack>
+      </Stack>
     </AuthCard>
   );
 }
