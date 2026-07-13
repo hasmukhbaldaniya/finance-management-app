@@ -14,14 +14,17 @@ type ExpensePanelProps = {
   onChange: (patch: Partial<LocalExpense>) => void;
   onRemove: () => void;
   onSplit: () => void;
+  onSplitWithColleagues: () => void;
   canRemove: boolean;
 };
 
 // 022's Expense panel — Category dropdown, that category's own dynamic
 // field configuration, and Paid By, all per-expense. Split Expense is
 // disabled until the expense has a Category and Amount, matching the
-// reference screenshot's own greyed-out state on a blank expense.
-export function ExpensePanel({ index, expense, categories, onChange, onRemove, onSplit, canRemove }: ExpensePanelProps) {
+// reference screenshot's own greyed-out state on a blank expense. Split
+// with Colleagues (025) shares the same gate — sharing an expense's cost
+// needs the same Category/Amount as splitting it into portions does.
+export function ExpensePanel({ index, expense, categories, onChange, onRemove, onSplit, onSplitWithColleagues, canRemove }: ExpensePanelProps) {
   const category = categories.find((candidate) => candidate.id === expense.categoryId) ?? null;
   const canSplit = expense.id !== undefined && expense.categoryId !== null && Boolean(expense.amount) && Number(expense.amount) > 0;
 
@@ -42,6 +45,14 @@ export function ExpensePanel({ index, expense, categories, onChange, onRemove, o
             className="rounded-md px-2 py-1 text-xs font-medium text-muted-foreground hover:bg-muted disabled:cursor-not-allowed disabled:opacity-50"
           >
             Split Expense
+          </button>
+          <button
+            type="button"
+            onClick={onSplitWithColleagues}
+            disabled={!canSplit}
+            className="rounded-md px-2 py-1 text-xs font-medium text-muted-foreground hover:bg-muted disabled:cursor-not-allowed disabled:opacity-50"
+          >
+            Split with Colleagues
           </button>
           {canRemove ? (
             <button

@@ -16,6 +16,7 @@ import { healthRouter } from "./health.routes";
 import { organizationRouter } from "./organization.routes";
 import { projectRouter } from "./project.routes";
 import { roleRouter } from "./role.routes";
+import { splitRequestRouter } from "./split-request.routes";
 import { tripRouter } from "./trip.routes";
 
 export const apiRouter = Router();
@@ -38,3 +39,4 @@ apiRouter.use("/countries", countryRouter);
 apiRouter.use("/cities", cityRouter);
 apiRouter.use("/trips", tripRouter);
 apiRouter.use("/claims", claimRouter);
+apiRouter.use("/split-requests", splitRequestRouter);

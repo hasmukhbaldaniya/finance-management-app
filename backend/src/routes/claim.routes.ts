@@ -21,6 +21,7 @@ import {
   splitExpense,
   updateClaim,
 } from "../controllers/claim.controller";
+import { createSplitRequest } from "../controllers/split-request.controller";
 import { requireAuth } from "../middleware/require-auth";
 
 export const claimRouter = Router();
@@ -38,6 +39,11 @@ claimRouter.put("/:id/expenses", saveExpenses);
 claimRouter.post("/:id/expenses/:expenseId/split", splitExpense);
 claimRouter.get("/:id/expenses/:expenseId/duplicate-check", checkExpenseDuplicate);
 claimRouter.post("/:id/split", splitClaim);
+
+// 025's "Split Claim" — sharing one expense's cost with colleagues, distinct
+// from splitExpense/splitClaim above (which move an employee's own expenses
+// to a new claim they still own).
+claimRouter.post("/:id/expenses/:expenseId/split-requests", createSplitRequest);
 
 // 023's AI-Powered flow — upload, the background processing pipeline, and
 // merge/unmerge invoice pages.

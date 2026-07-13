@@ -1,7 +1,9 @@
 import type { CategoryField } from "./category.type";
 
 export type ClaimType = "standalone" | "trip_linked";
-export type ClaimCreationMethod = "manual" | "ai";
+// "split" — created by accepting a colleague's Split Claim request (025),
+// carrying just the accepting employee's own share of someone else's bill.
+export type ClaimCreationMethod = "manual" | "ai" | "split";
 
 // The fuller display-only set mirrors TripStatus's own precedent — this
 // epic's own code only ever writes "draft"/"submitted"; the rest exist so

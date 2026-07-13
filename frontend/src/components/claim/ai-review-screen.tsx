@@ -32,6 +32,7 @@ import { DeleteInvoiceFileDialog } from "@/components/claim/delete-invoice-file-
 import { ExpenseDynamicForm } from "@/components/claim/expense-dynamic-form";
 import { SplitClaimDialog } from "@/components/claim/split-claim-dialog";
 import { SplitExpenseDialog } from "@/components/claim/split-expense-dialog";
+import { SplitWithColleaguesDialog } from "@/components/claim/split-with-colleagues-dialog";
 import { Button } from "@/components/ui/button";
 import { Spinner } from "@/components/ui/spinner";
 import { getInvoiceFileContent } from "@/apis/claim/getInvoiceFileContent.api";
@@ -85,6 +86,7 @@ export function AiReviewScreen({ claimId }: { claimId: number }) {
   const [isUploadingMore, setIsUploadingMore] = useState(false);
   const [fileToDelete, setFileToDelete] = useState<ClaimInvoiceFile | null>(null);
   const [splitExpenseTarget, setSplitExpenseTarget] = useState<LocalExpense | null>(null);
+  const [splitWithColleaguesTarget, setSplitWithColleaguesTarget] = useState<LocalExpense | null>(null);
   const [isSplitClaimOpen, setIsSplitClaimOpen] = useState(false);
   const [zoom, setZoom] = useState(1);
   const addExpenseInputRef = useRef<HTMLInputElement>(null);
@@ -367,7 +369,7 @@ export function AiReviewScreen({ claimId }: { claimId: number }) {
             {isUploadingMore ? <Spinner className="size-3.5" /> : <PlusIcon size={14} />} Add Expense
           </Button>
           <Button type="button" variant="secondary" size="sm" onClick={() => setIsSplitClaimOpen(true)} disabled={expenses.length < 2}>
-            <ArrowsSplitIcon size={14} /> Split Claim
+            <ArrowsSplitIcon size={14} /> Move to New Claim
           </Button>
         </div>
       </div>
@@ -576,9 +578,12 @@ export function AiReviewScreen({ claimId }: { claimId: number }) {
               </button>
             </div>
           ) : null}
-          <div className="flex justify-center border-t border-border p-2">
+          <div className="flex justify-center gap-2 border-t border-border p-2">
             <Button type="button" variant="secondary" size="sm" onClick={() => selectedExpense && setSplitExpenseTarget(selectedExpense)} disabled={!canSplitSelected}>
               <ArrowsSplitIcon size={14} /> Split Expense
+            </Button>
+            <Button type="button" variant="secondary" size="sm" onClick={() => selectedExpense && setSplitWithColleaguesTarget(selectedExpense)} disabled={!canSplitSelected}>
+              Split with Colleagues
             </Button>
           </div>
         </div>
@@ -682,6 +687,12 @@ export function AiReviewScreen({ claimId }: { claimId: number }) {
         onSplit={() => loadReviewData()}
       />
       <SplitClaimDialog claimId={claimId} expenses={expenses} categories={categories} open={isSplitClaimOpen} onOpenChange={setIsSplitClaimOpen} />
+      <SplitWithColleaguesDialog
+        claimId={claimId}
+        expense={splitWithColleaguesTarget}
+        onOpenChange={(open) => !open && setSplitWithColleaguesTarget(null)}
+        onSplit={() => setSplitWithColleaguesTarget(null)}
+      />
     </div>
   );
 }

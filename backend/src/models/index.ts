@@ -45,3 +45,5 @@ export { Claim, type ClaimType, type ClaimCreationMethod, type ClaimStatus } fro
 export { Expense, type ExpensePaidBy } from "./expense.model";
 export { ClaimInvoiceFile, type ClaimInvoiceFileType } from "./claim-invoice-file.model";
 export { AiExtractionLog, type AiExtractionLogStatus, type AiExtractionRedFlagEvaluation } from "./ai-extraction-log.model";
+export { ExpenseSplitRequest, type ExpenseSplitType } from "./expense-split-request.model";
+export { ExpenseSplitRequestMember, type ExpenseSplitRequestMemberStatus } from "./expense-split-request-member.model";

@@ -2,7 +2,10 @@ import { DataTypes, Model, type CreationOptional, type InferAttributes, type Inf
 import { sequelize } from "../config/database";
 
 export type ClaimType = "standalone" | "trip_linked";
-export type ClaimCreationMethod = "manual" | "ai";
+// "split" — created by accepting a colleague's Split Claim request (025),
+// carrying just the accepting employee's own share of someone else's bill.
+// Purely informational like the other two values, doesn't change behavior.
+export type ClaimCreationMethod = "manual" | "ai" | "split";
 // This epic's own code only ever writes "draft"/"submitted" — the fuller
 // display-only set mirrors Trip.status's own precedent (018), reserved for a
 // future Approval story. See user-stories/022-claim-creation-manual.md's

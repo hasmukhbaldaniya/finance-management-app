@@ -18,6 +18,7 @@ import { ExpensePanel } from "./expense-panel";
 import type { LocalExpense } from "./local-expense.type";
 import { SplitClaimDialog } from "./split-claim-dialog";
 import { SplitExpenseDialog } from "./split-expense-dialog";
+import { SplitWithColleaguesDialog } from "./split-with-colleagues-dialog";
 import { TripSelect, type TripSelectValue } from "./trip-select";
 
 type ClaimManualFormProps = { mode: "create" } | { mode: "edit"; claimId: number };
@@ -46,6 +47,7 @@ export function ClaimManualForm(props: ClaimManualFormProps) {
   const [isSubmittingFinal, setIsSubmittingFinal] = useState(false);
 
   const [splitExpenseTarget, setSplitExpenseTarget] = useState<LocalExpense | null>(null);
+  const [splitWithColleaguesTarget, setSplitWithColleaguesTarget] = useState<LocalExpense | null>(null);
   const [isSplitClaimOpen, setIsSplitClaimOpen] = useState(false);
 
   useEffect(() => {
@@ -210,7 +212,7 @@ export function ClaimManualForm(props: ClaimManualFormProps) {
         <h1 className="text-2xl font-semibold tracking-tight">{isEdit ? "Edit Claim" : "Add Manually"}</h1>
         {claimId !== null ? (
           <Button type="button" variant="outline" size="sm" onClick={() => setIsSplitClaimOpen(true)} disabled={expenses.length < 2}>
-            Split Claim
+            Move to New Claim
           </Button>
         ) : null}
       </div>
@@ -254,6 +256,7 @@ export function ClaimManualForm(props: ClaimManualFormProps) {
             onChange={(patch) => updateExpense(index, patch)}
             onRemove={() => removeExpense(index)}
             onSplit={() => setSplitExpenseTarget(expense)}
+            onSplitWithColleagues={() => setSplitWithColleaguesTarget(expense)}
             canRemove={expenses.length > 1}
           />
         ))}
@@ -282,6 +285,12 @@ export function ClaimManualForm(props: ClaimManualFormProps) {
         categories={categories}
         onOpenChange={(open) => !open && setSplitExpenseTarget(null)}
         onSplit={() => claimId !== null && refetchClaim(claimId)}
+      />
+      <SplitWithColleaguesDialog
+        claimId={claimId ?? 0}
+        expense={splitWithColleaguesTarget}
+        onOpenChange={(open) => !open && setSplitWithColleaguesTarget(null)}
+        onSplit={() => setSplitWithColleaguesTarget(null)}
       />
       {claimId !== null ? (
         <SplitClaimDialog claimId={claimId} expenses={expenses} categories={categories} open={isSplitClaimOpen} onOpenChange={setIsSplitClaimOpen} />
