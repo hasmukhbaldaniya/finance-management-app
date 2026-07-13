@@ -43,3 +43,4 @@ Product requirements for Finance Management, written as user stories before any 
 | 023 | [Claim Creation: AI-Powered (Automated Extraction)](./023-claim-creation-ai-powered.md) | Draft |
 | 024 | [My Claim Listing](./024-my-claim-listing.md) | Draft |
 | 025 | [Split Claim: Sharing an Expense With Colleagues](./025-claim-split-request.md) | Draft |
+| 027 | [shadcn/ui Migration (Reverting Off MUI)](./027-shadcn-migration.md) | Draft |
