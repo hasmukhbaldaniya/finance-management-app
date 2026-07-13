@@ -10,7 +10,7 @@
 // (`oklch(0.577 0.245 27.325)`) is Tailwind v4's own `red-600` value,
 // confirmed exact, not approximated.
 
-export type StatusToneKey = "pending" | "accepted" | "rejected";
+export type StatusToneKey = "pending" | "accepted" | "rejected" | "info";
 
 export type StatusTone = {
   background: string;
@@ -18,15 +18,18 @@ export type StatusTone = {
 };
 
 // Every existing badge/chip in the app (claim-status-badge.tsx,
-// split-request-status-badge.tsx, amount-chip.tsx) uses one of these three
-// background/text pairs today, as ad hoc literal Tailwind classes
-// (`bg-green-100 text-green-800`, etc.) repeated per component. Once
+// split-request-status-badge.tsx, trip-status-badge.tsx, amount-chip.tsx)
+// uses one of these background/text pairs today, as ad hoc literal Tailwind
+// classes (`bg-green-100 text-green-800`, etc.) repeated per component. Once
 // Phase 2/3 migrates those components, they read from here instead —
-// add a new tone here, not a new literal color in a component.
+// add a new tone here, not a new literal color in a component. `info` was
+// added for Claim's "Submitted" status (`bg-blue-100 text-blue-800`), the
+// one status tone the original three didn't cover.
 export const statusTones: Record<StatusToneKey, StatusTone> = {
   pending: { background: "#fef3c7", text: "#92400e" }, // amber-100 / amber-800
   accepted: { background: "#dcfce7", text: "#166534" }, // green-100 / green-800
   rejected: { background: "#fee2e2", text: "#b91c1c" }, // red-100 / red-700
+  info: { background: "#dbeafe", text: "#1e40af" }, // blue-100 / blue-800
 };
 
 // The amount-chip's own green icon-badge style — kept distinct from

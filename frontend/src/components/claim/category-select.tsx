@@ -1,6 +1,9 @@
 "use client";
 
 import { useState } from "react";
+import Box from "@mui/material/Box";
+import Typography from "@mui/material/Typography";
+import InputAdornment from "@mui/material/InputAdornment";
 import { CaretDownIcon, MagnifyingGlassIcon } from "@phosphor-icons/react";
 import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
@@ -25,27 +28,37 @@ export function CategorySelect({ categories, value, onChange }: CategorySelectPr
     <DropdownMenu>
       <DropdownMenuTrigger
         render={
-          <Button type="button" variant="outline" className="w-full justify-between font-normal">
-            <span className="truncate text-left">{selected ? selected.name : "Select category"}</span>
-            <CaretDownIcon size={16} className="shrink-0" />
+          <Button type="button" variant="outline" sx={{ width: "100%", justifyContent: "space-between", fontWeight: 400 }}>
+            <Box component="span" sx={{ minWidth: 0, flex: 1, overflow: "hidden", textOverflow: "ellipsis", whiteSpace: "nowrap", textAlign: "left" }}>
+              {selected ? selected.name : "Select category"}
+            </Box>
+            <Box component="span" sx={{ flexShrink: 0, display: "flex" }}>
+              <CaretDownIcon size={16} />
+            </Box>
           </Button>
         }
       />
       <DropdownMenuContent matchTriggerWidth sx={{ p: 1 }}>
-        <div className="relative mb-2">
-          <MagnifyingGlassIcon size={14} className="absolute top-1/2 left-2 -translate-y-1/2 text-muted-foreground" />
+        <Box sx={{ position: "relative", mb: 1 }}>
           <Input
             autoFocus
             value={search}
             onChange={(event) => setSearch(event.target.value)}
             onKeyDown={(event) => event.stopPropagation()}
             placeholder="Search category..."
-            className="h-8 pl-7 text-sm"
+            sx={{ height: 32, fontSize: "0.875rem" }}
+            startAdornment={
+              <InputAdornment position="start">
+                <MagnifyingGlassIcon size={14} />
+              </InputAdornment>
+            }
           />
-        </div>
-        <div className="max-h-60 overflow-y-auto">
+        </Box>
+        <Box sx={{ maxHeight: 240, overflowY: "auto" }}>
           {visible.length === 0 ? (
-            <p className="px-2 py-3 text-sm text-muted-foreground">No matches.</p>
+            <Typography variant="body2" color="text.secondary" sx={{ px: 1, py: 1.5 }}>
+              No matches.
+            </Typography>
           ) : (
             visible.map((category) => (
               <DropdownMenuItem key={category.id} onClick={() => onChange(category.id)}>
@@ -53,7 +66,7 @@ export function CategorySelect({ categories, value, onChange }: CategorySelectPr
               </DropdownMenuItem>
             ))
           )}
-        </div>
+        </Box>
       </DropdownMenuContent>
     </DropdownMenu>
   );

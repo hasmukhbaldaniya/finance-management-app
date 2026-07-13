@@ -1,5 +1,7 @@
 "use client";
 
+import Stack from "@mui/material/Stack";
+import Typography from "@mui/material/Typography";
 import { DatePicker } from "@/components/date-picker";
 import { SelectField } from "@/components/select-field";
 import { Label } from "@/components/ui/label";
@@ -20,15 +22,17 @@ type ClaimFiltersProps = {
 // Trip Listing's own resolution) and Status.
 export function ClaimFilters({ filters, onChange }: ClaimFiltersProps) {
   return (
-    <aside className="w-full shrink-0 space-y-6 border-r border-border p-4 md:w-64">
-      <h2 className="text-sm font-semibold">Filter</h2>
+    <Stack component="aside" spacing={3} sx={{ width: { xs: "100%", md: 256 }, flexShrink: 0, borderRight: 1, borderColor: "divider", p: 2 }}>
+      <Typography variant="subtitle2" sx={{ fontWeight: 600 }}>
+        Filter
+      </Typography>
 
-      <div className="space-y-2">
+      <Stack spacing={1}>
         <Label htmlFor="filter-created-date">Created Date</Label>
-        <DatePicker id="filter-created-date" value={filters.createdDate} onChange={(value) => onChange({ ...filters, createdDate: value })} className="h-8" />
-      </div>
+        <DatePicker id="filter-created-date" value={filters.createdDate} onChange={(value) => onChange({ ...filters, createdDate: value })} sx={{ height: 32 }} />
+      </Stack>
 
-      <div className="space-y-2">
+      <Stack spacing={1}>
         <Label htmlFor="filter-status">Status</Label>
         <SelectField
           id="filter-status"
@@ -37,7 +41,7 @@ export function ClaimFilters({ filters, onChange }: ClaimFiltersProps) {
           placeholder="All"
           options={[{ value: "", label: "All" }, ...CLAIM_STATUS_OPTIONS.map((option) => ({ value: option.value, label: option.label }))]}
         />
-      </div>
-    </aside>
+      </Stack>
+    </Stack>
   );
 }

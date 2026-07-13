@@ -1,12 +1,7 @@
+import Chip from "@mui/material/Chip";
 import { CheckCircleIcon, ClockIcon, XCircleIcon } from "@phosphor-icons/react";
-import { cn } from "@/lib/utils";
+import { statusTones } from "@/theme/colors";
 import type { SplitRequestMemberStatus } from "@/types/split-request.type";
-
-const STATUS_STYLE: Record<SplitRequestMemberStatus, string> = {
-  pending: "bg-amber-100 text-amber-800",
-  accepted: "bg-green-100 text-green-700",
-  rejected: "bg-red-100 text-red-700",
-};
 
 const STATUS_ICON: Record<SplitRequestMemberStatus, typeof ClockIcon> = {
   pending: ClockIcon,
@@ -22,10 +17,14 @@ const STATUS_LABEL: Record<SplitRequestMemberStatus, string> = {
 
 export function SplitRequestStatusBadge({ status }: { status: SplitRequestMemberStatus }) {
   const Icon = STATUS_ICON[status];
+  const tone = statusTones[status];
+
   return (
-    <span className={cn("inline-flex items-center gap-1.5 rounded-full px-3 py-1 text-xs font-medium", STATUS_STYLE[status])}>
-      <Icon size={14} />
-      {STATUS_LABEL[status]}
-    </span>
+    <Chip
+      size="small"
+      icon={<Icon size={14} />}
+      label={STATUS_LABEL[status]}
+      sx={{ fontWeight: 500, bgcolor: tone.background, color: tone.text, "& .MuiChip-icon": { color: "inherit" } }}
+    />
   );
 }
