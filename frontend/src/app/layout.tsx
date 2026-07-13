@@ -3,7 +3,6 @@ import { Geist_Mono, Montserrat } from "next/font/google";
 import Box from "@mui/material/Box";
 import { Toaster } from "@/components/ui/toast";
 import { ThemeRegistry } from "@/theme/theme-registry";
-import "./globals.css";
 
 const montserrat = Montserrat({
   variable: "--font-sans",

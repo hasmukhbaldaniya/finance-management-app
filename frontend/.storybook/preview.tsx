@@ -5,7 +5,6 @@ import { CssBaseline, ThemeProvider } from "@mui/material";
 import { LocalizationProvider } from "@mui/x-date-pickers/LocalizationProvider";
 import { AdapterDateFns } from "@mui/x-date-pickers/AdapterDateFns";
 import { theme } from "../src/theme/theme";
-import "../src/app/globals.css";
 
 // Storybook has no Next.js App Router to thread an emotion cache through,
 // so it uses a plain `@emotion/cache` instance instead of
