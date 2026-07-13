@@ -12,6 +12,7 @@ type DatePickerProps = {
   className?: string;
   sx?: SxProps<Theme>;
   disabled?: boolean;
+  hasError?: boolean;
 };
 
 // Local midnight, not UTC — matches this component's own long-standing
@@ -37,7 +38,7 @@ function formatDateOnly(date: Date): string {
 // sectioned date field has no single placeholder string slot (each
 // date/month/year section shows its own token when empty), so a
 // floating label is the closest equivalent "hint when empty" mechanism.
-export function DatePicker({ value, onChange, placeholder = "Select date", id, className, sx, disabled }: DatePickerProps) {
+export function DatePicker({ value, onChange, placeholder = "Select date", id, className, sx, disabled, hasError }: DatePickerProps) {
   return (
     <MuiDatePicker
       value={parseDateOnly(value)}
@@ -52,6 +53,7 @@ export function DatePicker({ value, onChange, placeholder = "Select date", id, c
           fullWidth: true,
           size: "small",
           label: placeholder,
+          error: hasError,
         },
       }}
     />

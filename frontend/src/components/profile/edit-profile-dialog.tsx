@@ -1,6 +1,9 @@
 "use client";
 
 import { useEffect, useState, type FormEvent } from "react";
+import Box from "@mui/material/Box";
+import Stack from "@mui/material/Stack";
+import Typography from "@mui/material/Typography";
 import { toast } from "@/components/ui/toast";
 import { DatePicker } from "@/components/date-picker";
 import { SelectField } from "@/components/select-field";
@@ -202,9 +205,11 @@ export function EditProfileDialog({ open, onOpenChange, profile, onSaved }: Edit
             <DialogTitle>Verify your new mobile number</DialogTitle>
           </DialogHeader>
 
-          <div className="space-y-4">
-            <p className="text-sm text-muted-foreground">Enter the 6-digit code sent to {pendingContactNumber}.</p>
-            <div className="space-y-1.5">
+          <Stack spacing={2}>
+            <Typography variant="body2" color="text.secondary">
+              Enter the 6-digit code sent to {pendingContactNumber}.
+            </Typography>
+            <Stack spacing={0.75}>
               <Label htmlFor="mobile-otp">OTP</Label>
               <Input
                 id="mobile-otp"
@@ -216,18 +221,34 @@ export function EditProfileDialog({ open, onOpenChange, profile, onSaved }: Edit
                 aria-invalid={Boolean(otpError)}
                 autoFocus
               />
-              {otpError ? <p className="text-xs text-destructive">{otpError}</p> : null}
-            </div>
-            <button
+              {otpError ? (
+                <Typography variant="caption" color="error">
+                  {otpError}
+                </Typography>
+              ) : null}
+            </Stack>
+            <Box
+              component="button"
               type="button"
               onClick={handleResendOtp}
               disabled={isResending}
-              className="inline-flex items-center gap-1.5 text-sm text-primary underline-offset-4 hover:underline disabled:opacity-50"
+              sx={{
+                display: "inline-flex",
+                alignItems: "center",
+                gap: 0.75,
+                fontSize: "0.875rem",
+                color: "primary.main",
+                background: "none",
+                border: "none",
+                cursor: "pointer",
+                opacity: isResending ? 0.5 : 1,
+                "&:hover": { textDecoration: "underline" },
+              }}
             >
               {isResending ? <Spinner size={14} /> : null}
               Resend OTP
-            </button>
-          </div>
+            </Box>
+          </Stack>
 
           <DialogFooter>
             <Button type="button" variant="outline" onClick={() => onOpenChange(false)}>
@@ -245,13 +266,13 @@ export function EditProfileDialog({ open, onOpenChange, profile, onSaved }: Edit
 
   return (
     <Dialog open={open} onOpenChange={onOpenChange}>
-      <DialogContent className="max-h-[85vh] overflow-y-auto">
+      <DialogContent sx={{ maxHeight: "85vh", overflowY: "auto" }}>
         <DialogHeader>
           <DialogTitle>Edit Profile</DialogTitle>
         </DialogHeader>
 
-        <form onSubmit={handleSubmit} noValidate className="space-y-4">
-          <div className="space-y-1.5">
+        <Stack component="form" onSubmit={handleSubmit} noValidate spacing={2}>
+          <Stack spacing={0.75}>
             <Label htmlFor="edit-title">Title</Label>
             <SelectField
               id="edit-title"
@@ -261,32 +282,44 @@ export function EditProfileDialog({ open, onOpenChange, profile, onSaved }: Edit
               placeholder="Select"
               options={TITLES.map((option) => ({ value: option, label: option }))}
             />
-            {errors.title ? <p className="text-xs text-destructive">{errors.title}</p> : null}
-          </div>
+            {errors.title ? (
+              <Typography variant="caption" color="error">
+                {errors.title}
+              </Typography>
+            ) : null}
+          </Stack>
 
-          <div className="space-y-1.5">
+          <Stack spacing={0.75}>
             <Label htmlFor="edit-firstName">First Name</Label>
             <Input id="edit-firstName" value={firstName} onChange={(e) => setFirstName(e.target.value)} aria-invalid={Boolean(errors.firstName)} />
-            {errors.firstName ? <p className="text-xs text-destructive">{errors.firstName}</p> : null}
-          </div>
+            {errors.firstName ? (
+              <Typography variant="caption" color="error">
+                {errors.firstName}
+              </Typography>
+            ) : null}
+          </Stack>
 
-          <div className="space-y-1.5">
+          <Stack spacing={0.75}>
             <Label htmlFor="edit-lastName">Last Name</Label>
             <Input id="edit-lastName" value={lastName} onChange={(e) => setLastName(e.target.value)} aria-invalid={Boolean(errors.lastName)} />
-            {errors.lastName ? <p className="text-xs text-destructive">{errors.lastName}</p> : null}
-          </div>
+            {errors.lastName ? (
+              <Typography variant="caption" color="error">
+                {errors.lastName}
+              </Typography>
+            ) : null}
+          </Stack>
 
-          <div className="space-y-1.5">
+          <Stack spacing={0.75}>
             <Label htmlFor="edit-email">Email</Label>
             <Input id="edit-email" type="email" value={profile.email} disabled readOnly />
-          </div>
+          </Stack>
 
-          <div className="grid grid-cols-[6rem_1fr] gap-2">
-            <div className="space-y-1.5">
+          <Box sx={{ display: "grid", gridTemplateColumns: "6rem 1fr", gap: 1 }}>
+            <Stack spacing={0.75}>
               <Label htmlFor="edit-countryCode">Code</Label>
               <Input id="edit-countryCode" value={countryCode} onChange={(e) => setCountryCode(e.target.value)} />
-            </div>
-            <div className="space-y-1.5">
+            </Stack>
+            <Stack spacing={0.75}>
               <Label htmlFor="edit-contactNumber">Contact Number</Label>
               <Input
                 id="edit-contactNumber"
@@ -294,18 +327,28 @@ export function EditProfileDialog({ open, onOpenChange, profile, onSaved }: Edit
                 onChange={(e) => setContactNumber(e.target.value)}
                 aria-invalid={Boolean(errors.contactNumber)}
               />
-            </div>
-          </div>
-          {errors.contactNumber ? <p className="text-xs text-destructive">{errors.contactNumber}</p> : null}
-          <p className="text-xs text-muted-foreground">Changing this sends an OTP to the new number before it takes effect.</p>
+            </Stack>
+          </Box>
+          {errors.contactNumber ? (
+            <Typography variant="caption" color="error">
+              {errors.contactNumber}
+            </Typography>
+          ) : null}
+          <Typography variant="caption" color="text.secondary">
+            Changing this sends an OTP to the new number before it takes effect.
+          </Typography>
 
-          <div className="space-y-1.5">
+          <Stack spacing={0.75}>
             <Label htmlFor="edit-dob">Date of Birth</Label>
-            <DatePicker id="edit-dob" value={dob} onChange={setDob} placeholder="Select date of birth" className={errors.dob ? "border-destructive" : undefined} />
-            {errors.dob ? <p className="text-xs text-destructive">{errors.dob}</p> : null}
-          </div>
+            <DatePicker id="edit-dob" value={dob} onChange={setDob} placeholder="Select date of birth" hasError={Boolean(errors.dob)} />
+            {errors.dob ? (
+              <Typography variant="caption" color="error">
+                {errors.dob}
+              </Typography>
+            ) : null}
+          </Stack>
 
-          <div className="space-y-1.5">
+          <Stack spacing={0.75}>
             <Label htmlFor="edit-gender">Gender</Label>
             <SelectField
               id="edit-gender"
@@ -315,10 +358,14 @@ export function EditProfileDialog({ open, onOpenChange, profile, onSaved }: Edit
               placeholder="Select"
               options={GENDERS.map((option) => ({ value: option, label: option }))}
             />
-            {errors.gender ? <p className="text-xs text-destructive">{errors.gender}</p> : null}
-          </div>
+            {errors.gender ? (
+              <Typography variant="caption" color="error">
+                {errors.gender}
+              </Typography>
+            ) : null}
+          </Stack>
 
-          <div className="space-y-1.5">
+          <Stack spacing={0.75}>
             <Label htmlFor="edit-employeeCode">Employee ID (optional)</Label>
             <Input
               id="edit-employeeCode"
@@ -326,8 +373,12 @@ export function EditProfileDialog({ open, onOpenChange, profile, onSaved }: Edit
               onChange={(e) => setEmployeeCode(e.target.value)}
               aria-invalid={Boolean(errors.employeeCode)}
             />
-            {errors.employeeCode ? <p className="text-xs text-destructive">{errors.employeeCode}</p> : null}
-          </div>
+            {errors.employeeCode ? (
+              <Typography variant="caption" color="error">
+                {errors.employeeCode}
+              </Typography>
+            ) : null}
+          </Stack>
 
           <DialogFooter>
             <Button type="button" variant="outline" onClick={() => onOpenChange(false)}>
@@ -338,7 +389,7 @@ export function EditProfileDialog({ open, onOpenChange, profile, onSaved }: Edit
               Save
             </Button>
           </DialogFooter>
-        </form>
+        </Stack>
       </DialogContent>
     </Dialog>
   );

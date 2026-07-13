@@ -1,6 +1,8 @@
 "use client";
 
 import { useEffect, useState, type FormEvent } from "react";
+import Stack from "@mui/material/Stack";
+import Typography from "@mui/material/Typography";
 import { toast } from "@/components/ui/toast";
 import { Button } from "@/components/ui/button";
 import { Dialog, DialogContent, DialogFooter, DialogHeader, DialogTitle } from "@/components/ui/dialog";
@@ -84,8 +86,8 @@ export function ChangePasswordDialog({ open, onOpenChange }: ChangePasswordDialo
           <DialogTitle>Change Password</DialogTitle>
         </DialogHeader>
 
-        <form onSubmit={handleSubmit} noValidate className="space-y-4">
-          <div className="space-y-1.5">
+        <Stack component="form" onSubmit={handleSubmit} noValidate spacing={2}>
+          <Stack spacing={0.75}>
             <Label htmlFor="currentPassword">Current Password</Label>
             <PasswordInput
               id="currentPassword"
@@ -95,10 +97,14 @@ export function ChangePasswordDialog({ open, onOpenChange }: ChangePasswordDialo
               aria-invalid={Boolean(errors.currentPassword)}
               autoFocus
             />
-            {errors.currentPassword ? <p className="text-xs text-destructive">{errors.currentPassword}</p> : null}
-          </div>
+            {errors.currentPassword ? (
+              <Typography variant="caption" color="error">
+                {errors.currentPassword}
+              </Typography>
+            ) : null}
+          </Stack>
 
-          <div className="space-y-1.5">
+          <Stack spacing={0.75}>
             <Label htmlFor="newPassword">New Password</Label>
             <PasswordInput
               id="newPassword"
@@ -107,10 +113,14 @@ export function ChangePasswordDialog({ open, onOpenChange }: ChangePasswordDialo
               onChange={(event) => setNewPassword(event.target.value)}
               aria-invalid={Boolean(errors.newPassword)}
             />
-            {errors.newPassword ? <p className="text-xs text-destructive">{errors.newPassword}</p> : null}
-          </div>
+            {errors.newPassword ? (
+              <Typography variant="caption" color="error">
+                {errors.newPassword}
+              </Typography>
+            ) : null}
+          </Stack>
 
-          <div className="space-y-1.5">
+          <Stack spacing={0.75}>
             <Label htmlFor="confirmNewPassword">Confirm New Password</Label>
             <PasswordInput
               id="confirmNewPassword"
@@ -119,8 +129,12 @@ export function ChangePasswordDialog({ open, onOpenChange }: ChangePasswordDialo
               onChange={(event) => setConfirmNewPassword(event.target.value)}
               aria-invalid={Boolean(errors.confirmNewPassword)}
             />
-            {errors.confirmNewPassword ? <p className="text-xs text-destructive">{errors.confirmNewPassword}</p> : null}
-          </div>
+            {errors.confirmNewPassword ? (
+              <Typography variant="caption" color="error">
+                {errors.confirmNewPassword}
+              </Typography>
+            ) : null}
+          </Stack>
 
           <DialogFooter>
             <Button type="button" variant="outline" onClick={() => onOpenChange(false)}>
@@ -131,7 +145,7 @@ export function ChangePasswordDialog({ open, onOpenChange }: ChangePasswordDialo
               Save
             </Button>
           </DialogFooter>
-        </form>
+        </Stack>
       </DialogContent>
     </Dialog>
   );
