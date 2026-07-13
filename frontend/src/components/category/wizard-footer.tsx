@@ -1,6 +1,7 @@
 "use client";
 
 import { useRouter } from "next/navigation";
+import Stack from "@mui/material/Stack";
 import { Button } from "@/components/ui/button";
 import { Spinner } from "@/components/ui/spinner";
 import { ROUTES } from "@/utils/constants/route.constant";
@@ -22,7 +23,7 @@ export function WizardFooter({ showSaveAsDraft, primaryLabel, isSavingDraft, isS
   const isBusy = isSavingDraft || isSavingPrimary;
 
   return (
-    <div className="flex items-center justify-end gap-3 border-t border-border pt-6">
+    <Stack direction="row" spacing={1.5} sx={{ alignItems: "center", justifyContent: "flex-end", borderTop: 1, borderColor: "divider", pt: 3 }}>
       <Button type="button" variant="outline" disabled={isBusy} onClick={() => router.push(ROUTES.COMPANY_SETTINGS.CATEGORIES)}>
         Cancel
       </Button>
@@ -36,6 +37,6 @@ export function WizardFooter({ showSaveAsDraft, primaryLabel, isSavingDraft, isS
         {isSavingPrimary ? <Spinner size={16} /> : null}
         {primaryLabel}
       </Button>
-    </div>
+    </Stack>
   );
 }

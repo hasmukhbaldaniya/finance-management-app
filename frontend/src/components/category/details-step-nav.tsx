@@ -1,7 +1,8 @@
 "use client";
 
 import { useEffect, useState } from "react";
-import { cn } from "@/lib/utils";
+import Box from "@mui/material/Box";
+import Chip from "@mui/material/Chip";
 import { CATEGORY_STEP_SEGMENTS, CATEGORY_WIZARD_STEPS, CATEGORY_WIZARD_STEP_LABELS } from "@/utils/constants/category.constant";
 import type { CategoryWizardStep } from "@/types/category.type";
 
@@ -36,30 +37,46 @@ export function DetailsStepNav({ modifiedSteps }: DetailsStepNavProps) {
   }
 
   return (
-    <nav aria-label="Category detail sections" className="sticky top-4 hidden w-64 shrink-0 self-start md:block">
-      <ol className="space-y-1">
+    <Box component="nav" aria-label="Category detail sections" sx={{ position: "sticky", top: 16, width: 256, flexShrink: 0, alignSelf: "flex-start", display: { xs: "none", md: "block" } }}>
+      <Box component="ol" sx={{ display: "flex", flexDirection: "column", gap: 0.5, listStyle: "none", p: 0, m: 0 }}>
         {CATEGORY_WIZARD_STEPS.map((step) => {
           const id = CATEGORY_STEP_SEGMENTS[step];
           const isActive = id === activeId;
           const isModified = modifiedSteps.includes(step);
           return (
-            <li key={step}>
-              <button
+            <Box component="li" key={step}>
+              <Box
+                component="button"
                 type="button"
                 onClick={() => handleClick(id)}
                 aria-current={isActive ? "step" : undefined}
-                className={cn(
-                  "flex w-full items-center justify-between gap-2 rounded-lg px-3 py-2 text-left text-sm transition-colors",
-                  isActive ? "bg-muted font-medium text-foreground" : "text-muted-foreground hover:bg-muted/50 hover:text-foreground"
-                )}
+                sx={{
+                  display: "flex",
+                  width: "100%",
+                  alignItems: "center",
+                  justifyContent: "space-between",
+                  gap: 1,
+                  borderRadius: 2,
+                  px: 1.5,
+                  py: 1,
+                  textAlign: "left",
+                  fontSize: "0.875rem",
+                  background: "none",
+                  border: "none",
+                  cursor: "pointer",
+                  color: isActive ? "text.primary" : "text.secondary",
+                  fontWeight: isActive ? 500 : 400,
+                  bgcolor: isActive ? "action.selected" : "transparent",
+                  "&:hover": { bgcolor: "action.hover", color: "text.primary" },
+                }}
               >
                 {CATEGORY_WIZARD_STEP_LABELS[step].title}
-                {isModified ? <span className="rounded-full bg-amber-100 px-2 py-0.5 text-xs font-medium text-amber-800">Modified</span> : null}
-              </button>
-            </li>
+                {isModified ? <Chip label="Modified" size="small" color="warning" /> : null}
+              </Box>
+            </Box>
           );
         })}
-      </ol>
-    </nav>
+      </Box>
+    </Box>
   );
 }
