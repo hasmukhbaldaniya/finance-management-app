@@ -1,7 +1,15 @@
 "use client";
 
-import { CaretDownIcon, CaretUpIcon, FunnelIcon, MagnifyingGlassIcon, XIcon } from "@phosphor-icons/react";
 import { useEffect, useState } from "react";
+import Box from "@mui/material/Box";
+import Stack from "@mui/material/Stack";
+import Typography from "@mui/material/Typography";
+import TableSortLabel from "@mui/material/TableSortLabel";
+import Chip from "@mui/material/Chip";
+import Avatar from "@mui/material/Avatar";
+import IconButton from "@mui/material/IconButton";
+import InputAdornment from "@mui/material/InputAdornment";
+import { FunnelIcon, MagnifyingGlassIcon, XIcon } from "@phosphor-icons/react";
 import { toast } from "@/components/ui/toast";
 import { SelectField } from "@/components/select-field";
 import { Button } from "@/components/ui/button";
@@ -17,7 +25,6 @@ import type {
   SortDirection,
 } from "@/types/associated-organization.type";
 import { ApiError, GENERIC_ERROR_MESSAGE } from "@/utils/apiManager/apiManager";
-import { cn } from "@/lib/utils";
 
 const PAGE_SIZE = 20;
 const SEARCH_DEBOUNCE_MS = 300;
@@ -46,27 +53,14 @@ function formatInvitedAt(value: string | null): string {
 
 function ContactAvatar({ name }: { name: string }) {
   return (
-    <span className="inline-flex size-6 shrink-0 items-center justify-center rounded-full bg-muted text-xs font-semibold uppercase text-muted-foreground">
-      {name.charAt(0)}
-    </span>
+    <Avatar sx={{ width: 24, height: 24, fontSize: "0.75rem", fontWeight: 600, bgcolor: "action.selected", color: "text.secondary" }}>
+      {name.charAt(0).toUpperCase()}
+    </Avatar>
   );
 }
 
 function StatusPill({ isActive, onClick }: { isActive: boolean; onClick: () => void }) {
-  return (
-    <button
-      type="button"
-      onClick={onClick}
-      className={cn(
-        "rounded-full px-2.5 py-0.5 text-xs font-medium transition-colors",
-        isActive
-          ? "bg-green-100 text-green-700 hover:bg-green-200 dark:bg-green-900/40 dark:text-green-400"
-          : "bg-muted text-muted-foreground hover:bg-muted/70"
-      )}
-    >
-      {isActive ? "Active" : "Disabled"}
-    </button>
-  );
+  return <Chip label={isActive ? "Active" : "Disabled"} color={isActive ? "success" : "default"} size="small" onClick={onClick} sx={{ cursor: "pointer" }} />;
 }
 
 export default function AssociatedOrganizationsNetworkPage() {
@@ -197,59 +191,57 @@ export default function AssociatedOrganizationsNetworkPage() {
     setIsFilterRowOpen(false);
   }
 
-  function renderSortIcon(column: AssociatedOrganizationSortBy) {
-    if (sortBy !== column) return null;
-    return sortDir === "asc" ? <CaretUpIcon className="inline size-3" /> : <CaretDownIcon className="inline size-3" />;
-  }
-
   const sentinelRef = useInfiniteScroll(handleLoadMore, hasMore, isLoadingMore);
 
   return (
-    <div className="mx-auto flex min-h-0 w-full max-w-6xl flex-1 flex-col overflow-hidden px-4 py-10">
-      <div className="flex items-center justify-between">
-        <h1 className="text-2xl font-semibold tracking-tight">Associated Organizations</h1>
-        <Button
-          type="button"
-          variant="ghost"
-          size="icon"
+    <Box sx={{ mx: "auto", display: "flex", minHeight: 0, width: "100%", maxWidth: 1152, flex: 1, flexDirection: "column", overflow: "hidden", px: 2, py: 5 }}>
+      <Stack direction="row" sx={{ alignItems: "center", justifyContent: "space-between" }}>
+        <Typography variant="h5" sx={{ fontWeight: 600 }}>
+          Associated Organizations
+        </Typography>
+        <IconButton
           onClick={() => (isFilterRowOpen ? handleCloseFilters() : setIsFilterRowOpen(true))}
           aria-label={isFilterRowOpen ? "Close filters" : "Show filters"}
-          className={cn(
-            "rounded-full",
-            isFilterRowOpen ? "bg-destructive/10 text-destructive hover:bg-destructive/20" : "bg-muted"
-          )}
+          size="small"
+          sx={{
+            bgcolor: isFilterRowOpen ? "error.main" : "action.selected",
+            color: isFilterRowOpen ? "error.contrastText" : "text.primary",
+            "&:hover": { bgcolor: isFilterRowOpen ? "error.dark" : "action.selected" },
+          }}
         >
-          {isFilterRowOpen ? <XIcon className="size-4" /> : <FunnelIcon className="size-4" />}
-        </Button>
-      </div>
+          {isFilterRowOpen ? <XIcon size={16} /> : <FunnelIcon size={16} />}
+        </IconButton>
+      </Stack>
 
       {loadError ? (
-        <div className="mt-6 flex flex-col items-center gap-4 text-center">
-          <p className="text-sm text-muted-foreground">{loadError}</p>
+        <Stack sx={{ mt: 3, alignItems: "center", gap: 2, textAlign: "center" }}>
+          <Typography variant="body2" color="text.secondary">
+            {loadError}
+          </Typography>
           <Button onClick={() => window.location.reload()}>Retry</Button>
-        </div>
+        </Stack>
       ) : isLoading ? (
-        <div className="mt-6 flex items-center justify-center gap-2 text-sm text-muted-foreground">
+        <Stack direction="row" sx={{ mt: 3, alignItems: "center", justifyContent: "center", gap: 1 }}>
           <Spinner />
-          Loading…
-        </div>
+          <Typography variant="body2" color="text.secondary">
+            Loading…
+          </Typography>
+        </Stack>
       ) : rows.length === 0 ? (
-        <p className="mt-6 text-sm text-muted-foreground">No associated organizations found.</p>
+        <Typography variant="body2" color="text.secondary" sx={{ mt: 3 }}>
+          No associated organizations found.
+        </Typography>
       ) : (
-        <div className="mt-6 flex min-h-0 flex-1 flex-col overflow-hidden rounded-lg border border-border">
-          <div className="min-h-0 flex-1 overflow-y-auto">
+        <Box sx={{ mt: 3, display: "flex", minHeight: 0, flex: 1, flexDirection: "column", overflow: "hidden", borderRadius: 2, border: 1, borderColor: "divider" }}>
+          <Box sx={{ minHeight: 0, flex: 1, overflowY: "auto" }}>
             <Table>
               <TableHeader>
                 <TableRow>
                   {SORTABLE_COLUMNS.map((column) => (
                     <TableHead key={column.key}>
-                      <button
-                        type="button"
-                        onClick={() => handleSort(column.key)}
-                        className="flex items-center gap-1 font-medium"
-                      >
-                        {column.label} {renderSortIcon(column.key)}
-                      </button>
+                      <TableSortLabel active={sortBy === column.key} direction={sortBy === column.key ? sortDir : "asc"} onClick={() => handleSort(column.key)}>
+                        {column.label}
+                      </TableSortLabel>
                     </TableHead>
                   ))}
                   <TableHead>{STATIC_COLUMN_LABELS.contactEmail}</TableHead>
@@ -262,55 +254,62 @@ export default function AssociatedOrganizationsNetworkPage() {
                 {isFilterRowOpen ? (
                   <TableRow>
                     <TableHead>
-                      <div className="relative">
-                        <MagnifyingGlassIcon className="absolute left-2 top-1/2 size-3.5 -translate-y-1/2 text-muted-foreground" />
-                        <Input
-                          value={organizationNameInput}
-                          onChange={(event) => setOrganizationNameInput(event.target.value)}
-                          placeholder="Search"
-                          className="h-8 pl-7 text-xs font-normal"
-                        />
-                      </div>
+                      <Input
+                        value={organizationNameInput}
+                        onChange={(event) => setOrganizationNameInput(event.target.value)}
+                        placeholder="Search"
+                        size="small"
+                        startAdornment={
+                          <InputAdornment position="start">
+                            <MagnifyingGlassIcon size={14} />
+                          </InputAdornment>
+                        }
+                      />
                     </TableHead>
                     <TableHead>
-                      <div className="relative">
-                        <MagnifyingGlassIcon className="absolute left-2 top-1/2 size-3.5 -translate-y-1/2 text-muted-foreground" />
-                        <Input
-                          value={contactNameInput}
-                          onChange={(event) => setContactNameInput(event.target.value)}
-                          placeholder="Search"
-                          className="h-8 pl-7 text-xs font-normal"
-                        />
-                      </div>
+                      <Input
+                        value={contactNameInput}
+                        onChange={(event) => setContactNameInput(event.target.value)}
+                        placeholder="Search"
+                        size="small"
+                        startAdornment={
+                          <InputAdornment position="start">
+                            <MagnifyingGlassIcon size={14} />
+                          </InputAdornment>
+                        }
+                      />
                     </TableHead>
                     <TableHead>
-                      <div className="relative">
-                        <MagnifyingGlassIcon className="absolute left-2 top-1/2 size-3.5 -translate-y-1/2 text-muted-foreground" />
-                        <Input
-                          value={contactEmailInput}
-                          onChange={(event) => setContactEmailInput(event.target.value)}
-                          placeholder="Search"
-                          className="h-8 pl-7 text-xs font-normal"
-                        />
-                      </div>
+                      <Input
+                        value={contactEmailInput}
+                        onChange={(event) => setContactEmailInput(event.target.value)}
+                        placeholder="Search"
+                        size="small"
+                        startAdornment={
+                          <InputAdornment position="start">
+                            <MagnifyingGlassIcon size={14} />
+                          </InputAdornment>
+                        }
+                      />
                     </TableHead>
                     <TableHead>
-                      <div className="relative">
-                        <MagnifyingGlassIcon className="absolute left-2 top-1/2 size-3.5 -translate-y-1/2 text-muted-foreground" />
-                        <Input
-                          value={contactPhoneInput}
-                          onChange={(event) => setContactPhoneInput(event.target.value)}
-                          placeholder="Search"
-                          className="h-8 pl-7 text-xs font-normal"
-                        />
-                      </div>
+                      <Input
+                        value={contactPhoneInput}
+                        onChange={(event) => setContactPhoneInput(event.target.value)}
+                        placeholder="Search"
+                        size="small"
+                        startAdornment={
+                          <InputAdornment position="start">
+                            <MagnifyingGlassIcon size={14} />
+                          </InputAdornment>
+                        }
+                      />
                     </TableHead>
                     <TableHead>
                       <SelectField
                         value={registrationsFilter}
                         onValueChange={(next) => setRegistrationsFilter(next as RegistrationsLabel | "")}
                         options={[{ value: "", label: "All" }, ...REGISTRATIONS_OPTIONS.map((option) => ({ value: option, label: option }))]}
-                        className="h-8 text-xs font-normal"
                       />
                     </TableHead>
                     <TableHead />
@@ -319,7 +318,6 @@ export default function AssociatedOrganizationsNetworkPage() {
                         value={statusFilter}
                         onValueChange={(next) => setStatusFilter(next as "Active" | "Disabled" | "")}
                         options={[{ value: "", label: "All" }, ...STATUS_OPTIONS.map((option) => ({ value: option, label: option }))]}
-                        className="h-8 text-xs font-normal"
                       />
                     </TableHead>
                   </TableRow>
@@ -330,10 +328,10 @@ export default function AssociatedOrganizationsNetworkPage() {
                   <TableRow key={row.id}>
                     <TableCell>{row.organizationName ?? "Pending"}</TableCell>
                     <TableCell>
-                      <div className="flex items-center gap-2">
+                      <Stack direction="row" spacing={1} sx={{ alignItems: "center" }}>
                         <ContactAvatar name={row.contactName} />
-                        {row.contactName}
-                      </div>
+                        <Typography variant="body2">{row.contactName}</Typography>
+                      </Stack>
                     </TableCell>
                     <TableCell>{row.contactEmail}</TableCell>
                     <TableCell>{row.contactPhone}</TableCell>
@@ -347,15 +345,15 @@ export default function AssociatedOrganizationsNetworkPage() {
               </TableBody>
             </Table>
 
-            {hasMore ? <div ref={sentinelRef} aria-hidden className="h-px" /> : null}
-          </div>
+            {hasMore ? <Box ref={sentinelRef} aria-hidden sx={{ height: "1px" }} /> : null}
+          </Box>
           {isLoadingMore ? (
-            <div className="flex justify-center border-t border-border p-3">
+            <Box sx={{ display: "flex", justifyContent: "center", borderTop: 1, borderColor: "divider", p: 1.5 }}>
               <Spinner />
-            </div>
+            </Box>
           ) : null}
-        </div>
+        </Box>
       )}
-    </div>
+    </Box>
   );
 }
