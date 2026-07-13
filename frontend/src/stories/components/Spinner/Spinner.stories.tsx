@@ -1,4 +1,5 @@
 import type { Meta, StoryObj } from "@storybook/react-vite";
+import Stack from "@mui/material/Stack";
 import { Spinner } from "@/components/ui/spinner";
 
 const meta = {
@@ -17,11 +18,11 @@ export const Default: Story = {};
 
 export const Sizes: Story = {
   render: () => (
-    <div className="flex items-center gap-6">
+    <Stack direction="row" spacing={3} sx={{ alignItems: "center" }}>
       <Spinner size={12} />
       <Spinner size={16} />
       <Spinner size={24} />
       <Spinner size={32} />
-    </div>
+    </Stack>
   ),
 };

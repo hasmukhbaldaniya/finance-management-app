@@ -1,4 +1,5 @@
 import type { Meta, StoryObj } from "@storybook/react-vite";
+import Stack from "@mui/material/Stack";
 import { Button } from "@/components/ui/button";
 
 const meta = {
@@ -54,12 +55,12 @@ export const Disabled: Story = {
 
 export const AllVariants: Story = {
   render: (args) => (
-    <div className="flex flex-wrap items-center gap-3">
+    <Stack direction="row" spacing={1.5} sx={{ alignItems: "center", flexWrap: "wrap" }}>
       {(["default", "outline", "secondary", "ghost", "destructive", "link"] as const).map((variant) => (
         <Button key={variant} {...args} variant={variant}>
           {variant}
         </Button>
       ))}
-    </div>
+    </Stack>
   ),
 };

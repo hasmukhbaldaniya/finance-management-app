@@ -1,5 +1,6 @@
 import { useState } from "react";
 import type { Meta, StoryObj } from "@storybook/react-vite";
+import Box from "@mui/material/Box";
 import { SelectField } from "@/components/select-field";
 
 const OPTIONS = [
@@ -18,9 +19,9 @@ const meta = {
   },
   decorators: [
     (Story) => (
-      <div className="w-64">
+      <Box sx={{ width: 256 }}>
         <Story />
-      </div>
+      </Box>
     ),
   ],
 } satisfies Meta<typeof SelectField>;

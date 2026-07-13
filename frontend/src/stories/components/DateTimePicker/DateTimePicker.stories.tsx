@@ -1,5 +1,6 @@
 import { useState } from "react";
 import type { Meta, StoryObj } from "@storybook/react-vite";
+import Box from "@mui/material/Box";
 import { DateTimePicker } from "@/components/date-time-picker";
 
 const meta = {
@@ -11,9 +12,9 @@ const meta = {
   },
   decorators: [
     (Story) => (
-      <div className="w-72">
+      <Box sx={{ width: 288 }}>
         <Story />
-      </div>
+      </Box>
     ),
   ],
 } satisfies Meta<typeof DateTimePicker>;

@@ -1,4 +1,6 @@
 import type { Meta, StoryObj } from "@storybook/react-vite";
+import Box from "@mui/material/Box";
+import Typography from "@mui/material/Typography";
 import { Button } from "@/components/ui/button";
 import { DropdownMenu, DropdownMenuContent, DropdownMenuItem, DropdownMenuSeparator, DropdownMenuTrigger } from "@/components/ui/dropdown-menu";
 
@@ -37,10 +39,14 @@ export const WithIdentityAndDestructiveItem: Story = {
     <DropdownMenu>
       <DropdownMenuTrigger render={<Button variant="outline">Jane Doe</Button>} />
       <DropdownMenuContent align="end">
-        <div className="px-1.5 py-1">
-          <p className="text-sm font-semibold text-foreground">Jane Doe</p>
-          <p className="text-xs text-muted-foreground">Acme Corp</p>
-        </div>
+        <Box sx={{ px: 1.5, py: 1 }}>
+          <Typography variant="body2" sx={{ fontWeight: 600 }}>
+            Jane Doe
+          </Typography>
+          <Typography variant="caption" color="text.secondary">
+            Acme Corp
+          </Typography>
+        </Box>
         <DropdownMenuSeparator />
         <DropdownMenuItem>View Profile</DropdownMenuItem>
         <DropdownMenuItem variant="destructive">Logout</DropdownMenuItem>

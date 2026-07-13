@@ -2,6 +2,9 @@
 
 import { useRouter } from "next/navigation";
 import { useEffect, useState, type ReactNode } from "react";
+import Box from "@mui/material/Box";
+import Stack from "@mui/material/Stack";
+import Typography from "@mui/material/Typography";
 import { getMe } from "@/apis/auth";
 import { Header } from "@/components/header";
 import { Button } from "@/components/ui/button";
@@ -54,36 +57,39 @@ export function SessionProvider({ children }: { children: ReactNode }) {
 
   if (isLoading) {
     return (
-      <div className="flex min-h-svh flex-1 items-center justify-center gap-2 text-sm text-muted-foreground">
+      <Stack direction="row" spacing={1} sx={{ minHeight: "100svh", flex: 1, alignItems: "center", justifyContent: "center", fontSize: "0.875rem", color: "text.secondary" }}>
         <Spinner />
         Loading…
-      </div>
+      </Stack>
     );
   }
 
   if (loadError || !user) {
     return (
-      <div className="flex min-h-svh flex-1 flex-col items-center justify-center gap-4 text-center">
-        <p className="text-sm text-muted-foreground">{loadError ?? GENERIC_ERROR_MESSAGE}</p>
+      <Stack spacing={2} sx={{ minHeight: "100svh", flex: 1, alignItems: "center", justifyContent: "center", textAlign: "center" }}>
+        <Typography variant="body2" color="text.secondary">
+          {loadError ?? GENERIC_ERROR_MESSAGE}
+        </Typography>
         <Button onClick={() => window.location.reload()}>Retry</Button>
-      </div>
+      </Stack>
     );
   }
 
   return (
     <SessionContext.Provider value={{ user, organization, isOwner, isSalesIqAvailable }}>
       {/*
-        `fixed inset-0` (not h-svh/min-h-svh) is deliberate: pinning directly to
-        the viewport makes this shell immune to any parent (html/body) sizing
-        mismatch between percentage and viewport units — the kind of 1px
-        rounding difference that silently triggers a persistent, always-visible
-        browser scrollbar even though nothing is actually meant to overflow.
-        Every private page's own scrolling (if any) happens *inside* this box.
+        `position: fixed, inset: 0` (not min-height: 100svh) is deliberate:
+        pinning directly to the viewport makes this shell immune to any
+        parent (html/body) sizing mismatch between percentage and viewport
+        units — the kind of 1px rounding difference that silently triggers a
+        persistent, always-visible browser scrollbar even though nothing is
+        actually meant to overflow. Every private page's own scrolling (if
+        any) happens *inside* this box.
       */}
-      <div className="fixed inset-0 flex flex-col overflow-hidden bg-zinc-50 dark:bg-black">
+      <Box sx={{ position: "fixed", inset: 0, display: "flex", flexDirection: "column", overflow: "hidden", bgcolor: "grey.50" }}>
         <Header user={user} organization={organization} isOwner={isOwner} />
-        <div className="flex flex-1 flex-col overflow-y-auto">{children}</div>
-      </div>
+        <Box sx={{ flex: 1, display: "flex", flexDirection: "column", overflowY: "auto" }}>{children}</Box>
+      </Box>
       <ZohoSalesIqWidget
         visitorName={user.name}
         visitorEmail={user.email}

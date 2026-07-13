@@ -1,4 +1,5 @@
 import type { Meta, StoryObj } from "@storybook/react-vite";
+import Stack from "@mui/material/Stack";
 import { toast, Toaster } from "@/components/ui/toast";
 import { Button } from "@/components/ui/button";
 
@@ -8,7 +9,7 @@ import { Button } from "@/components/ui/button";
 const ToasterDemo = () => (
   <>
     <Toaster />
-    <div className="flex flex-wrap gap-3">
+    <Stack direction="row" spacing={1.5} sx={{ flexWrap: "wrap" }}>
       <Button variant="outline" onClick={() => toast.success("Password reset successful.")}>
         Show success
       </Button>
@@ -21,7 +22,7 @@ const ToasterDemo = () => (
       <Button variant="outline" onClick={() => toast.info("A new OTP has been sent to your email.")}>
         Show info
       </Button>
-    </div>
+    </Stack>
   </>
 );
 

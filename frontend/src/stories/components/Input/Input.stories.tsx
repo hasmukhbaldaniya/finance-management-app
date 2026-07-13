@@ -1,4 +1,5 @@
 import type { Meta, StoryObj } from "@storybook/react-vite";
+import Box from "@mui/material/Box";
 import { Input } from "@/components/ui/input";
 
 const meta = {
@@ -10,9 +11,9 @@ const meta = {
   },
   decorators: [
     (Story) => (
-      <div className="w-64">
+      <Box sx={{ width: 256 }}>
         <Story />
-      </div>
+      </Box>
     ),
   ],
 } satisfies Meta<typeof Input>;
