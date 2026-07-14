@@ -13,6 +13,7 @@ import { CategorySelect } from "./category-select";
 import { ExpenseDynamicForm } from "./expense-dynamic-form";
 import { isExpenseComplete } from "./expense-completeness";
 import type { LocalExpense } from "./local-expense.type";
+import { colleagueNamesLabel, type SplitMember } from "./split-percentage-table";
 
 type ExpensePanelProps = {
   index: number;
@@ -21,7 +22,7 @@ type ExpensePanelProps = {
   onChange: (patch: Partial<LocalExpense>) => void;
   onRemove: () => void;
   onSplit: () => void;
-  hasPendingSplit?: boolean;
+  pendingSplitMembers?: SplitMember[];
   canRemove: boolean;
 };
 
@@ -33,9 +34,10 @@ type ExpensePanelProps = {
 // to already be saved, since the split itself is only sent to the backend
 // once the whole claim is saved (see claim-manual-form.tsx's
 // `pendingExpenseSplits`).
-export function ExpensePanel({ index, expense, categories, onChange, onRemove, onSplit, hasPendingSplit, canRemove }: ExpensePanelProps) {
+export function ExpensePanel({ index, expense, categories, onChange, onRemove, onSplit, pendingSplitMembers, canRemove }: ExpensePanelProps) {
   const category = categories.find((candidate) => candidate.id === expense.categoryId) ?? null;
   const canSplit = isExpenseComplete(expense, category);
+  const hasPendingSplit = Boolean(pendingSplitMembers && pendingSplitMembers.length > 0);
 
   return (
     <Stack spacing={2} sx={{ borderRadius: 2, border: 1, borderColor: "divider", bgcolor: "background.paper", p: 2.5 }}>
@@ -112,11 +114,18 @@ export function ExpensePanel({ index, expense, categories, onChange, onRemove, o
         </Stack>
       </Stack>
 
-      <Stack direction="row" spacing={1} sx={{ alignItems: "center", justifyContent: "flex-end", borderTop: 1, borderColor: "divider", pt: 2 }}>
+      <Stack direction="row" spacing={1} sx={{ alignItems: "center", justifyContent: "space-between", borderTop: 1, borderColor: "divider", pt: 2 }}>
         {hasPendingSplit ? (
-          <Chip size="small" label="Split Pending" sx={{ fontWeight: 500, bgcolor: statusTones.pending.background, color: statusTones.pending.text }} />
-        ) : null}
-        <Button type="button" variant="outline" size="sm" onClick={onSplit} disabled={!canSplit}>
+          <Stack direction="row" spacing={1} sx={{ alignItems: "center", minWidth: 0 }}>
+            <Chip size="small" label="Split Pending" sx={{ fontWeight: 500, bgcolor: statusTones.pending.background, color: statusTones.pending.text, flexShrink: 0 }} />
+            <Typography variant="caption" color="text.secondary" noWrap>
+              Split with: {colleagueNamesLabel(pendingSplitMembers!)}
+            </Typography>
+          </Stack>
+        ) : (
+          <Box />
+        )}
+        <Button type="button" variant="outline" size="sm" onClick={onSplit} disabled={!canSplit} sx={{ flexShrink: 0 }}>
           <ArrowsSplitIcon size={14} /> {hasPendingSplit ? "Edit Split" : "Split Expense"}
         </Button>
       </Stack>

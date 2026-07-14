@@ -17,6 +17,16 @@ export type SplitMember = {
   isRequester: boolean;
 };
 
+// Displayed next to a staged split's "Edit Split"/"Edit Claim Split" trigger
+// so who it's with is visible without reopening the dialog — the requester
+// is left out since they're implied ("Split with: <colleagues>").
+export function colleagueNamesLabel(members: SplitMember[]): string {
+  return members
+    .filter((member) => !member.isRequester)
+    .map((member) => member.name)
+    .join(", ");
+}
+
 // Reconstructs a minimal EmployeeListItem[] from a previously staged split's
 // members, so reopening the dialog can prefill SplitAmongSelect's chips —
 // only `id`/`firstName`/`lastName` are ever read from these for display, the

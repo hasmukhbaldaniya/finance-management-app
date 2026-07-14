@@ -23,7 +23,7 @@ import { isExpenseComplete } from "./expense-completeness";
 import type { LocalExpense } from "./local-expense.type";
 import { SplitClaimDialog } from "./split-claim-dialog";
 import { SplitExpenseDialog } from "./split-expense-dialog";
-import type { SplitMember } from "./split-percentage-table";
+import { colleagueNamesLabel, type SplitMember } from "./split-percentage-table";
 import { TripSelect, type TripSelectValue } from "./trip-select";
 
 type ClaimManualFormProps = { mode: "create" } | { mode: "edit"; claimId: number };
@@ -153,19 +153,14 @@ export function ClaimManualForm(props: ClaimManualFormProps) {
   // split-request API until the claim itself is saved. Keyed by whatever
   // this array's index was after the just-completed save/refetch, matching
   // pendingExpenseSplits's own indexing.
+  //
+  // A staged Split Claim always wins over any staged individual Split
+  // Expense — both apply to the exact same set of expenses, so submitting
+  // both would double-split. The two are also kept mutually exclusive at
+  // staging time (see the dialogs' onConfirm below); this is just a second,
+  // defensive guard against the two ever coexisting here.
   async function submitPendingSplits(id: number, freshExpenses: LocalExpense[]): Promise<void> {
     const tasks: Promise<unknown>[] = [];
-    Object.entries(pendingExpenseSplits).forEach(([indexKey, members]) => {
-      const expense = freshExpenses[Number(indexKey)];
-      if (expense?.id) {
-        tasks.push(
-          createSplitRequest(id, expense.id, {
-            splitType: "percentage",
-            members: members.map((member) => ({ employeeId: member.employeeId, percentage: member.percentage })),
-          })
-        );
-      }
-    });
     if (pendingClaimSplit) {
       freshExpenses.forEach((expense) => {
         if (expense.id) {
@@ -173,6 +168,18 @@ export function ClaimManualForm(props: ClaimManualFormProps) {
             createSplitRequest(id, expense.id, {
               splitType: "percentage",
               members: pendingClaimSplit.map((member) => ({ employeeId: member.employeeId, percentage: member.percentage })),
+            })
+          );
+        }
+      });
+    } else {
+      Object.entries(pendingExpenseSplits).forEach(([indexKey, members]) => {
+        const expense = freshExpenses[Number(indexKey)];
+        if (expense?.id) {
+          tasks.push(
+            createSplitRequest(id, expense.id, {
+              splitType: "percentage",
+              members: members.map((member) => ({ employeeId: member.employeeId, percentage: member.percentage })),
             })
           );
         }
@@ -273,13 +280,20 @@ export function ClaimManualForm(props: ClaimManualFormProps) {
 
   return (
     <Stack spacing={4} sx={{ mx: "auto", maxWidth: 896, px: 3, py: 4 }}>
-      <Stack direction="row" spacing={1.5} sx={{ alignItems: "center", justifyContent: "space-between" }}>
+      <Stack direction="row" spacing={1.5} sx={{ alignItems: "center", justifyContent: "space-between", flexWrap: "wrap" }}>
         <Typography variant="h5" sx={{ fontWeight: 600, letterSpacing: "-0.01em" }}>
           {isEdit ? "Edit Claim" : "Add Manually"}
         </Typography>
-        <Button type="button" variant="outline" size="sm" onClick={() => setIsSplitClaimOpen(true)} disabled={!canSplitClaim}>
-          {pendingClaimSplit ? "Edit Claim Split" : "Split Claim"}
-        </Button>
+        <Stack direction="row" spacing={1} sx={{ alignItems: "center" }}>
+          {pendingClaimSplit ? (
+            <Typography variant="caption" color="text.secondary">
+              Split with: {colleagueNamesLabel(pendingClaimSplit)}
+            </Typography>
+          ) : null}
+          <Button type="button" variant="outline" size="sm" onClick={() => setIsSplitClaimOpen(true)} disabled={!canSplitClaim}>
+            {pendingClaimSplit ? "Edit Claim Split" : "Split Claim"}
+          </Button>
+        </Stack>
       </Stack>
 
       <Stack spacing={1.5}>
@@ -321,7 +335,7 @@ export function ClaimManualForm(props: ClaimManualFormProps) {
             onChange={(patch) => updateExpense(index, patch)}
             onRemove={() => removeExpense(index)}
             onSplit={() => setSplitExpenseIndex(index)}
-            hasPendingSplit={Boolean(pendingExpenseSplits[index])}
+            pendingSplitMembers={pendingExpenseSplits[index]}
             canRemove={expenses.length > 1}
           />
         ))}
@@ -350,7 +364,15 @@ export function ClaimManualForm(props: ClaimManualFormProps) {
         initialMembers={splitExpenseIndex !== null ? pendingExpenseSplits[splitExpenseIndex] : undefined}
         onOpenChange={(open) => !open && setSplitExpenseIndex(null)}
         onConfirm={(members) => {
-          if (splitExpenseIndex !== null) setPendingExpenseSplits((previous) => ({ ...previous, [splitExpenseIndex]: members }));
+          if (splitExpenseIndex === null) return;
+          setPendingExpenseSplits((previous) => ({ ...previous, [splitExpenseIndex]: members }));
+          // A whole-claim split already covers this same expense — an
+          // individual split for it would double it up, so staging one
+          // cancels the claim-level split entirely.
+          if (pendingClaimSplit) {
+            setPendingClaimSplit(null);
+            toast.warning("Split Claim was cleared — it can't apply together with an individual Split Expense.");
+          }
         }}
       />
       <SplitClaimDialog
@@ -359,7 +381,15 @@ export function ClaimManualForm(props: ClaimManualFormProps) {
         initialMembers={pendingClaimSplit ?? undefined}
         open={isSplitClaimOpen}
         onOpenChange={setIsSplitClaimOpen}
-        onConfirm={setPendingClaimSplit}
+        onConfirm={(members) => {
+          setPendingClaimSplit(members);
+          // Split Claim applies to every expense, so it overrides any
+          // individually-staged splits rather than stacking with them.
+          if (Object.keys(pendingExpenseSplits).length > 0) {
+            setPendingExpenseSplits({});
+            toast.warning("Your individual Split Expense selections were cleared — Split Claim now applies to every expense instead.");
+          }
+        }}
       />
     </Stack>
   );
