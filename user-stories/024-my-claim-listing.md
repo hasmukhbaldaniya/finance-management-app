@@ -38,7 +38,7 @@ Covers the "My Claim" screen both claim-creation flows (`022` manual, `023` AI-p
 ### Flow
 
 1. Loads the employee's own claims, most-recently-created first, infinite-scroll paginated — same `useInfiniteScroll` pattern as every other listing in this codebase.
-2. **Delete** is available only on Draft claims (icon shown only on those rows), with the same confirmation-dialog posture `019`'s own Delete Draft Trip story established — enforced server-side too, not just hidden client-side.
+2. **Delete** is available only on Draft claims (icon shown only on those rows), with the same confirmation-dialog posture `019`'s own Delete Draft Trip story established — enforced server-side too, not just hidden client-side. Confirming **soft-deletes** the claim (a `deletedAt` timestamp is set, `Claim` is `paranoid: true`) rather than physically removing the row — from the employee's own perspective this is indistinguishable from a hard delete, since every listing/detail query already excludes a soft-deleted claim automatically. The claim's own child rows (its `Expense`s, any uploaded invoice files, both on disk and in the database) are still genuinely removed, not soft-deleted, since the database's own cascade-delete from those tables only fires on a real row removal, which the claim's own soft-delete no longer triggers — so the same cleanup those rows always got now happens explicitly rather than for free via the database.
 3. Clicking a claim row is expected to open some kind of Claim Details view, the same gap `019` had before `020` filled it for Trips — **not specified in this story**, flagged in [Out of Scope](#out-of-scope).
 
 ### Validation Rules
@@ -50,7 +50,7 @@ Covers the "My Claim" screen both claim-creation flows (`022` manual, `023` AI-p
 ### Acceptance Criteria
 
 - **Given** claims in both Draft and submitted states, **when** the list renders, **then** only Draft rows show a delete icon.
-- **Given** a Draft claim, **when** its delete icon is clicked and confirmed, **then** it's removed from the list and database.
+- **Given** a Draft claim, **when** its delete icon is clicked and confirmed, **then** it's soft-deleted (its `Expense`/invoice-file rows are hard-deleted, the claim row itself just gets `deletedAt` set) and disappears from the list.
 - **Given** a Status filter of "Draft," **when** applied, **then** only Draft claims show.
 - **Given** zero claims exist, **when** the page loads, **then** an empty state with a "Create Claim" call-to-action shows.
 
@@ -106,7 +106,7 @@ Same as the main list.
 
 ## Data Model
 
-No new tables — reads/deletes the `Claim`/`Expense` tables `022`/`023` define. The Split Request tab's filter relies on `Expense.splitFromExpenseId`/an equivalent claim-level "split origin" marker set when `022`'s Split Claim action creates the new claim (see that story's own Data Model — this doc doesn't add a new column, just reads the one `022` already needs for its own "which expenses came from where" bookkeeping).
+No new tables — reads/deletes the `Claim`/`Expense` tables `022`/`023` define. `Claim` gained a `deletedAt` column (added alongside Claim Management's soft-delete work, `paranoid: true`) — this listing's own `GET /api/claims` needed no changes for it, since a soft-deleted claim is already excluded by Sequelize's default query behavior. The Split Request tab's filter relies on `Expense.splitFromExpenseId`/an equivalent claim-level "split origin" marker set when `022`'s Split Claim action creates the new claim (see that story's own Data Model — this doc doesn't add a new column, just reads the one `022` already needs for its own "which expenses came from where" bookkeeping).
 
 ## Test Cases
 

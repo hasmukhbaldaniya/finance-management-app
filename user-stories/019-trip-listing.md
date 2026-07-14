@@ -104,8 +104,8 @@ Not applicable — this story has no form fields beyond filter/search inputs, wh
 
 1. Clicking a Draft trip's delete icon opens the confirmation dialog above, naming that specific trip.
 2. "No" closes the dialog with no effect.
-3. "Yes, Delete" permanently deletes the trip and removes its row from the list.
-4. Deleting is only ever possible while status is `"Draft"` — enforced server-side on the delete endpoint itself, not just by hiding the icon client-side (same posture as Category's own draft-only delete rule).
+3. "Yes, Delete" **soft-deletes** the trip (a `deletedAt` timestamp is set, the row itself isn't physically removed) and it disappears from the list — from the employee's own perspective this looks identical to a hard delete: the row is simply gone and can't be reopened. Every listing/detail query already excludes a soft-deleted trip automatically, so nothing about "which trips show up" needed any special-casing for this.
+4. Deleting is only ever possible while status is `"Draft"` — enforced server-side on the delete endpoint itself, not just by hiding the icon client-side (same posture as Category's own draft-only delete rule). Since no code path in this app currently produces a `"Draft"`-status trip, this delete action isn't reachable through the current UI either — see this story's own Overview for that still-unresolved gap.
 
 ### Validation Rules
 
@@ -117,7 +117,7 @@ Not applicable — this story has no form fields beyond filter/search inputs, wh
 
 - **Given** a Draft trip, **when** its delete icon is clicked, **then** the confirmation dialog opens naming that trip.
 - **Given** the dialog is open, **when** "No" is clicked, **then** it closes and the trip is untouched.
-- **Given** the dialog is open, **when** "Yes, Delete" is clicked, **then** the trip is removed from the database and disappears from the list.
+- **Given** the dialog is open, **when** "Yes, Delete" is clicked, **then** the trip is soft-deleted (not physically removed — see Data Model) and disappears from the list.
 - **Given** an attempt to call the delete endpoint directly on a non-Draft trip (bypassing the UI), **when** the request is made, **then** it's rejected server-side.
 
 ### Error / Toast Messages
@@ -144,8 +144,9 @@ Error responses follow the existing convention (`{ error: string }`): 400 (wrong
 No new tables. **Extends `Trip` (defined in `018-trip-creation.md`)** with:
 
 - `approvedAmount` (decimal, nullable) — populated by a future Claims/Approval story, not by anything in `018` or this story; `null`/unset for any trip that has never reached `Approved for Reimbursement`.
+- `deletedAt` (timestamp, nullable) — added alongside Claim Management so `deleteTrip` above soft-deletes instead of physically removing the row (`Trip` is `paranoid: true`). Every existing query against `Trip` already excludes a row with `deletedAt` set, with no changes needed anywhere else in this story.
 
-**The realistic value domain of `Trip.status` is now known to include at least**: `"draft"`, `"new"`, `"pending_for_approval"`, `"approved_for_reimbursement"` — observed from this story's own reference screenshot, though only display concerns are covered here. What produces `"pending_for_approval"` or `"approved_for_reimbursement"` (submitting a claim, an approver acting on it) is entirely out of scope for both this story and `018` — see [Out of Scope](#out-of-scope). Whether `"draft"` is a real, reachable state requires resolving `018`'s Save-as-Draft gap first (see [Overview](#overview)).
+**`"pending_for_approval"` is no longer out of scope — Claim Management (`022`–`027`) is what produces it.** Linking a claim to a trip and saving at least one expense against it flips that trip's `status` from `"new"` to `"pending_for_approval"` automatically (a one-way transition; see `022`'s own doc for `recomputeTripFromLinkedClaims`), and `Trip.totalAmount` stops being a fixed `0.00` and becomes a live sum of every claim linked to that trip. This story's own listing/filter behavior needed no changes for either — both were already treated as live database values here, just previously always `0`/`"new"` in practice since nothing produced anything else yet. `"approved_for_reimbursement"` (an approver acting on a submitted claim) is still out of scope for both this story and `018`. Whether `"draft"` is a real, reachable Trip state still requires resolving `018`'s Save-as-Draft gap first (see [Overview](#overview)) — unrelated to the `pending_for_approval` transition above.
 
 ## Validation Rules Summary
 
