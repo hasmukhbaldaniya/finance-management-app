@@ -152,12 +152,12 @@ export function ClaimManualForm(props: ClaimManualFormProps) {
     return refetchClaim(id);
   }
 
+  // Always re-persists, even if this expense already has a real id — the
+  // backend's own split-request gate checks the persisted Expense row's
+  // amount/category (split-request.controller.ts), not the live fieldValues
+  // this form edits in memory, so an already-saved expense edited since its
+  // last save is just as stale server-side as a never-saved one.
   async function handleOpenSplitExpense(index: number): Promise<void> {
-    const target = expenses[index];
-    if (target.id && target.id > 0) {
-      setSplitExpenseTarget(target);
-      return;
-    }
     setIsPersistingForSplit(true);
     try {
       const freshExpenses = await persistDraftSilently();
@@ -170,10 +170,6 @@ export function ClaimManualForm(props: ClaimManualFormProps) {
   }
 
   async function handleOpenSplitClaim(): Promise<void> {
-    if (claimId !== null && expenses.every((expense) => expense.id && expense.id > 0)) {
-      setIsSplitClaimOpen(true);
-      return;
-    }
     setIsPersistingForSplit(true);
     try {
       const freshExpenses = await persistDraftSilently();

@@ -93,6 +93,7 @@ export function AiReviewScreen({ claimId }: { claimId: number }) {
   const [fileToDelete, setFileToDelete] = useState<ClaimInvoiceFile | null>(null);
   const [splitExpenseTarget, setSplitExpenseTarget] = useState<LocalExpense | null>(null);
   const [isSplitClaimOpen, setIsSplitClaimOpen] = useState(false);
+  const [isPersistingForSplit, setIsPersistingForSplit] = useState(false);
   const [zoom, setZoom] = useState(1);
   const addExpenseInputRef = useRef<HTMLInputElement>(null);
 
@@ -336,6 +337,52 @@ export function AiReviewScreen({ claimId }: { claimId: number }) {
     }
   }
 
+  // The backend's own split-request gate checks the persisted Expense row's
+  // amount/category (split-request.controller.ts), not the live fieldValues
+  // this screen edits in memory — so even an expense that already has a real
+  // id can be stale if its fields were edited since the last save. Always
+  // silently re-save as a draft immediately before opening either split
+  // dialog, the same "ensure persisted" pattern claim-manual-form.tsx uses.
+  async function persistDraftSilently(): Promise<LocalExpense[] | null> {
+    await saveExpenses(claimId, {
+      isDraftSave: true,
+      expenses: expenses.map((expense) => ({
+        id: expense.id && expense.id > 0 ? expense.id : undefined,
+        categoryId: expense.categoryId ?? 0,
+        paidBy: expense.paidBy ?? "self",
+        fieldValues: expense.fieldValues,
+      })),
+    });
+    return loadReviewData();
+  }
+
+  async function handleOpenSplitExpense(): Promise<void> {
+    if (!selectedExpense) return;
+    const targetId = selectedExpense.id;
+    setIsPersistingForSplit(true);
+    try {
+      const freshExpenses = await persistDraftSilently();
+      const freshTarget = freshExpenses?.find((expense) => expense.id === targetId);
+      if (freshTarget) setSplitExpenseTarget(freshTarget);
+    } catch (error) {
+      toast.error(error instanceof ApiError ? error.message : GENERIC_ERROR_MESSAGE);
+    } finally {
+      setIsPersistingForSplit(false);
+    }
+  }
+
+  async function handleOpenSplitClaim(): Promise<void> {
+    setIsPersistingForSplit(true);
+    try {
+      const freshExpenses = await persistDraftSilently();
+      if (freshExpenses) setIsSplitClaimOpen(true);
+    } catch (error) {
+      toast.error(error instanceof ApiError ? error.message : GENERIC_ERROR_MESSAGE);
+    } finally {
+      setIsPersistingForSplit(false);
+    }
+  }
+
   if (isProcessing) {
     return <AiProcessingPipeline status={processingStatus} />;
   }
@@ -381,8 +428,8 @@ export function AiReviewScreen({ claimId }: { claimId: number }) {
           >
             {isUploadingMore ? <Spinner size={14} /> : <PlusIcon size={14} />} Add Expense
           </Button>
-          <Button type="button" variant="secondary" size="sm" onClick={() => setIsSplitClaimOpen(true)} disabled={!canSplitClaim}>
-            <ArrowsSplitIcon size={14} /> Split Claim
+          <Button type="button" variant="secondary" size="sm" onClick={handleOpenSplitClaim} disabled={!canSplitClaim || isPersistingForSplit}>
+            {isPersistingForSplit ? <Spinner size={14} /> : <ArrowsSplitIcon size={14} />} Split Claim
           </Button>
         </Stack>
       </Stack>
@@ -691,8 +738,8 @@ export function AiReviewScreen({ claimId }: { claimId: number }) {
             </Stack>
           ) : null}
           <Stack direction="row" spacing={1} sx={{ justifyContent: "center", borderTop: 1, borderColor: "divider", p: 1 }}>
-            <Button type="button" variant="secondary" size="sm" onClick={() => selectedExpense && setSplitExpenseTarget(selectedExpense)} disabled={!canSplitSelected}>
-              <ArrowsSplitIcon size={14} /> Split Expense
+            <Button type="button" variant="secondary" size="sm" onClick={handleOpenSplitExpense} disabled={!canSplitSelected || isPersistingForSplit}>
+              {isPersistingForSplit ? <Spinner size={14} /> : <ArrowsSplitIcon size={14} />} Split Expense
             </Button>
           </Stack>
         </Stack>
