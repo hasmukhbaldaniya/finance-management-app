@@ -39,10 +39,19 @@ function Dialog({ open, onOpenChange, children }: DialogContextValue & { childre
   return <DialogContext.Provider value={{ open, onOpenChange }}>{children}</DialogContext.Provider>;
 }
 
+// Fixed min-width (not just a maxWidth cap) so a dialog's own validation
+// messages appearing/disappearing can't ever shrink it back down and cause
+// a visible width "blink" as the user types/submits.
+const MIN_DIALOG_WIDTH = 500;
+
 function DialogContent({ className, sx, children }: { className?: string; sx?: SxProps<Theme>; children: ReactNode }) {
   const { open, onOpenChange } = useDialogContext();
   return (
-    <MuiDialog open={open} onClose={() => onOpenChange?.(false)} slotProps={{ paper: { className, sx } }}>
+    <MuiDialog
+      open={open}
+      onClose={() => onOpenChange?.(false)}
+      slotProps={{ paper: { className, sx: [{ minWidth: MIN_DIALOG_WIDTH }, ...(Array.isArray(sx) ? sx : [sx])] } }}
+    >
       <Box sx={{ position: "relative", display: "flex", flexDirection: "column", gap: 2, p: 2 }}>
         <IconButton aria-label="Close" onClick={() => onOpenChange?.(false)} size="small" sx={{ position: "absolute", top: 8, right: 8 }}>
           <XIcon />
