@@ -80,7 +80,7 @@ function Toaster() {
         if (reason === "clickaway" || !current) return;
         dismissToast(current.id);
       }}
-      anchorOrigin={{ vertical: "bottom", horizontal: "right" }}
+      anchorOrigin={{ vertical: "top", horizontal: "right" }}
     >
       {current ? (
         <Alert onClose={() => dismissToast(current.id)} severity={current.severity} variant="filled" sx={{ width: "100%" }}>
