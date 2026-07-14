@@ -801,12 +801,14 @@ export function AiReviewScreen({ claimId }: { claimId: number }) {
       <SplitExpenseDialog
         claimId={claimId}
         expense={splitExpenseTarget}
+        categories={categories}
         onOpenChange={(open) => !open && setSplitExpenseTarget(null)}
         onSplit={() => loadReviewData()}
       />
       <SplitClaimDialog
         claimId={claimId}
         expenses={expenses}
+        categories={categories}
         open={isSplitClaimOpen}
         onOpenChange={setIsSplitClaimOpen}
         onSplit={() => loadReviewData()}

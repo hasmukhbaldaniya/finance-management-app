@@ -14,8 +14,10 @@ import { Spinner } from "@/components/ui/spinner";
 import { useSession } from "@/contexts/SessionContext";
 import { ApiError, GENERIC_ERROR_MESSAGE } from "@/utils/apiManager/apiManager";
 import type { EmployeeListItem } from "@/types/employee.type";
+import type { ClaimableCategory } from "@/types/claim.type";
 import { SplitAmongSelect } from "./split-among-select";
 import { SplitPercentageTable, distributeEvenly, type SplitMember } from "./split-percentage-table";
+import { getClientComputedAmount } from "./expense-completeness";
 import type { LocalExpense } from "./local-expense.type";
 
 const MAX_COLLEAGUES = 9;
@@ -24,6 +26,7 @@ const SUM_TOLERANCE = 0.01;
 type SplitClaimDialogProps = {
   claimId: number;
   expenses: LocalExpense[];
+  categories: ClaimableCategory[];
   open: boolean;
   onOpenChange: (open: boolean) => void;
   onSplit: () => void;
@@ -35,13 +38,19 @@ type SplitClaimDialogProps = {
 // percentages are applied independently to every expense on the claim, one
 // Split Request per original expense, each keeping its own Category —
 // really "run Split Expense once per expense," not one lump-sum split.
-export function SplitClaimDialog({ claimId, expenses, open, onOpenChange, onSplit }: SplitClaimDialogProps) {
+export function SplitClaimDialog({ claimId, expenses, categories, open, onOpenChange, onSplit }: SplitClaimDialogProps) {
   const { user } = useSession();
   const [colleagues, setColleagues] = useState<EmployeeListItem[]>([]);
   const [members, setMembers] = useState<SplitMember[]>([]);
   const [isSubmitting, setIsSubmitting] = useState(false);
 
-  const totalAmount = expenses.reduce((total, expense) => total + Number(expense.amount ?? 0), 0);
+  // Reads each expense's live, in-progress field value (not the
+  // server-denormalized `expense.amount`, which is stale until the next
+  // save) so the total reflects whatever's currently typed into the forms.
+  const totalAmount = expenses.reduce((total, expense) => {
+    const category = categories.find((candidate) => candidate.id === expense.categoryId) ?? null;
+    return total + (getClientComputedAmount(expense, category) ?? 0);
+  }, 0);
 
   useEffect(() => {
     if (!open) return;

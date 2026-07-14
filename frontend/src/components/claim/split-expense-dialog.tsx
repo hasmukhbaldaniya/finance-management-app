@@ -11,8 +11,10 @@ import { Spinner } from "@/components/ui/spinner";
 import { useSession } from "@/contexts/SessionContext";
 import { ApiError, GENERIC_ERROR_MESSAGE } from "@/utils/apiManager/apiManager";
 import type { EmployeeListItem } from "@/types/employee.type";
+import type { ClaimableCategory } from "@/types/claim.type";
 import { SplitAmongSelect } from "./split-among-select";
 import { SplitPercentageTable, distributeEvenly, type SplitMember } from "./split-percentage-table";
+import { getClientComputedAmount } from "./expense-completeness";
 import type { LocalExpense } from "./local-expense.type";
 
 const MAX_COLLEAGUES = 9;
@@ -21,6 +23,7 @@ const SUM_TOLERANCE = 0.01;
 type SplitExpenseDialogProps = {
   claimId: number;
   expense: LocalExpense | null;
+  categories: ClaimableCategory[];
   onOpenChange: (open: boolean) => void;
   onSplit: () => void;
 };
@@ -30,13 +33,17 @@ type SplitExpenseDialogProps = {
 // percentage split, scoped to just this one expense. Still routes through
 // 025's Split Request inbox/Accept-Reject flow unchanged; only the trigger
 // and the picker/table UI are new.
-export function SplitExpenseDialog({ claimId, expense, onOpenChange, onSplit }: SplitExpenseDialogProps) {
+export function SplitExpenseDialog({ claimId, expense, categories, onOpenChange, onSplit }: SplitExpenseDialogProps) {
   const { user } = useSession();
   const [colleagues, setColleagues] = useState<EmployeeListItem[]>([]);
   const [members, setMembers] = useState<SplitMember[]>([]);
   const [isSubmitting, setIsSubmitting] = useState(false);
 
-  const originalAmount = Number(expense?.amount ?? 0);
+  // Reads the live, in-progress field value (not the server-denormalized
+  // `expense.amount`, which is stale until the next save) so the dialog
+  // reflects whatever the user just typed, saved or not.
+  const category = expense ? categories.find((candidate) => candidate.id === expense.categoryId) ?? null : null;
+  const originalAmount = expense ? getClientComputedAmount(expense, category) ?? 0 : 0;
 
   useEffect(() => {
     if (!expense) {
@@ -46,7 +53,7 @@ export function SplitExpenseDialog({ claimId, expense, onOpenChange, onSplit }: 
     }
     // Reset to just the requester at 100% whenever a different expense is opened.
     setColleagues([]);
-    setMembers(distributeEvenly([{ employeeId: user.id, name: user.name, isRequester: true }], Number(expense.amount ?? 0)));
+    setMembers(distributeEvenly([{ employeeId: user.id, name: user.name, isRequester: true }], originalAmount));
     // eslint-disable-next-line react-hooks/exhaustive-deps
   }, [expense?.id]);
 

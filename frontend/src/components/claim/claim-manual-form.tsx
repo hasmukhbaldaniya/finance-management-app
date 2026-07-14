@@ -342,6 +342,7 @@ export function ClaimManualForm(props: ClaimManualFormProps) {
       <SplitExpenseDialog
         claimId={claimId ?? 0}
         expense={splitExpenseTarget}
+        categories={categories}
         onOpenChange={(open) => !open && setSplitExpenseTarget(null)}
         onSplit={() => claimId !== null && refetchClaim(claimId)}
       />
@@ -349,6 +350,7 @@ export function ClaimManualForm(props: ClaimManualFormProps) {
         <SplitClaimDialog
           claimId={claimId}
           expenses={expenses}
+          categories={categories}
           open={isSplitClaimOpen}
           onOpenChange={setIsSplitClaimOpen}
           onSplit={() => refetchClaim(claimId)}
