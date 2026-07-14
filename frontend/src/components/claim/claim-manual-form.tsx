@@ -51,6 +51,7 @@ export function ClaimManualForm(props: ClaimManualFormProps) {
 
   const [splitExpenseTarget, setSplitExpenseTarget] = useState<LocalExpense | null>(null);
   const [isSplitClaimOpen, setIsSplitClaimOpen] = useState(false);
+  const [isPersistingForSplit, setIsPersistingForSplit] = useState(false);
 
   useEffect(() => {
     getClaimableCategories()
@@ -115,19 +116,73 @@ export function ClaimManualForm(props: ClaimManualFormProps) {
     setExpenses((previous) => previous.filter((_, expenseIndex) => expenseIndex !== index));
   }
 
-  async function refetchClaim(id: number): Promise<void> {
+  async function refetchClaim(id: number): Promise<LocalExpense[]> {
     const { claim } = await getClaimDetail(id);
-    setExpenses(
-      claim.expenses.map((expense) => ({
+    const freshExpenses = claim.expenses.map((expense) => ({
+      id: expense.id,
+      categoryId: expense.categoryId,
+      paidBy: expense.paidBy,
+      fieldValues: expense.fieldValues,
+      amount: expense.amount,
+      isRedFlagged: expense.isRedFlagged,
+      redFlagReason: expense.redFlagReason,
+    }));
+    setExpenses(freshExpenses);
+    return freshExpenses;
+  }
+
+  // Splitting (either scope) requires a real, persisted claimId + expenseId
+  // server-side — but the trigger buttons are enabled purely from client-side
+  // field completeness (see expense-completeness.ts), so a never-yet-saved
+  // expense/claim needs a silent "Save as Draft" first. Reuses the exact same
+  // persist + saveExpenses + refetch sequence handleSave(true) already runs,
+  // just without its own toast/redirect side effects.
+  async function persistDraftSilently(): Promise<LocalExpense[] | null> {
+    const id = await persistClaimShell(true);
+    if (id === null) return null;
+    await saveExpenses(id, {
+      isDraftSave: true,
+      expenses: expenses.map((expense) => ({
         id: expense.id,
-        categoryId: expense.categoryId,
-        paidBy: expense.paidBy,
+        categoryId: expense.categoryId ?? 0,
+        paidBy: expense.paidBy ?? "self",
         fieldValues: expense.fieldValues,
-        amount: expense.amount,
-        isRedFlagged: expense.isRedFlagged,
-        redFlagReason: expense.redFlagReason,
-      }))
-    );
+      })),
+    });
+    return refetchClaim(id);
+  }
+
+  async function handleOpenSplitExpense(index: number): Promise<void> {
+    const target = expenses[index];
+    if (target.id && target.id > 0) {
+      setSplitExpenseTarget(target);
+      return;
+    }
+    setIsPersistingForSplit(true);
+    try {
+      const freshExpenses = await persistDraftSilently();
+      if (freshExpenses?.[index]) setSplitExpenseTarget(freshExpenses[index]);
+    } catch (error) {
+      toast.error(error instanceof ApiError ? error.message : GENERIC_ERROR_MESSAGE);
+    } finally {
+      setIsPersistingForSplit(false);
+    }
+  }
+
+  async function handleOpenSplitClaim(): Promise<void> {
+    if (claimId !== null && expenses.every((expense) => expense.id && expense.id > 0)) {
+      setIsSplitClaimOpen(true);
+      return;
+    }
+    setIsPersistingForSplit(true);
+    try {
+      const freshExpenses = await persistDraftSilently();
+      if (freshExpenses) setIsSplitClaimOpen(true);
+    } catch (error) {
+      toast.error(error instanceof ApiError ? error.message : GENERIC_ERROR_MESSAGE);
+    } finally {
+      setIsPersistingForSplit(false);
+    }
   }
 
   async function persistClaimShell(isDraftSave: boolean): Promise<number | null> {
@@ -217,11 +272,9 @@ export function ClaimManualForm(props: ClaimManualFormProps) {
         <Typography variant="h5" sx={{ fontWeight: 600, letterSpacing: "-0.01em" }}>
           {isEdit ? "Edit Claim" : "Add Manually"}
         </Typography>
-        {claimId !== null ? (
-          <Button type="button" variant="outline" size="sm" onClick={() => setIsSplitClaimOpen(true)} disabled={!canSplitClaim}>
-            Split Claim
-          </Button>
-        ) : null}
+        <Button type="button" variant="outline" size="sm" onClick={handleOpenSplitClaim} disabled={!canSplitClaim || isPersistingForSplit}>
+          {isPersistingForSplit ? <Spinner size={14} /> : null} Split Claim
+        </Button>
       </Stack>
 
       <Stack spacing={1.5}>
@@ -262,7 +315,8 @@ export function ClaimManualForm(props: ClaimManualFormProps) {
             categories={categories}
             onChange={(patch) => updateExpense(index, patch)}
             onRemove={() => removeExpense(index)}
-            onSplit={() => setSplitExpenseTarget(expense)}
+            onSplit={() => handleOpenSplitExpense(index)}
+            isSplitting={isPersistingForSplit}
             canRemove={expenses.length > 1}
           />
         ))}

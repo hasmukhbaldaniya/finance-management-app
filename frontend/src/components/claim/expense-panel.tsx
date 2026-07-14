@@ -20,17 +20,20 @@ type ExpensePanelProps = {
   onChange: (patch: Partial<LocalExpense>) => void;
   onRemove: () => void;
   onSplit: () => void;
+  isSplitting?: boolean;
   canRemove: boolean;
 };
 
 // 022's Expense panel — Category dropdown, that category's own dynamic
 // field configuration, and Paid By, all per-expense. Split Expense (027's
 // redesign — a cross-employee percentage split, see split-expense-dialog.tsx)
-// is disabled until every one of this expense's own required fields is
-// filled, not just Category + Amount.
-export function ExpensePanel({ index, expense, categories, onChange, onRemove, onSplit, canRemove }: ExpensePanelProps) {
+// is enabled once every one of this expense's own required fields is
+// filled client-side — it doesn't need to already be saved; `onSplit`
+// silently persists it first if it isn't (see claim-manual-form.tsx's
+// `handleOpenSplitExpense`).
+export function ExpensePanel({ index, expense, categories, onChange, onRemove, onSplit, isSplitting, canRemove }: ExpensePanelProps) {
   const category = categories.find((candidate) => candidate.id === expense.categoryId) ?? null;
-  const canSplit = isExpenseComplete(expense, category);
+  const canSplit = isExpenseComplete(expense, category) && !isSplitting;
 
   return (
     <Stack spacing={2} sx={{ borderRadius: 2, border: 1, borderColor: "divider", bgcolor: "background.paper", p: 2.5 }}>
