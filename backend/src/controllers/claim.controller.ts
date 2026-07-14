@@ -6,7 +6,7 @@ import { getActiveOrganizationId } from "../utils/auth";
 import { DEFAULT_PAGE_SIZE, MAX_CLAIM_NAME_LENGTH, MAX_EXPENSE_COUNT, MAX_PAGE_SIZE, MIN_CLAIM_NAME_LENGTH, MIN_EXPENSE_COUNT } from "../utils/constants/claim.constant";
 import { findDuplicateExpense } from "../utils/duplicate-expense-check";
 import { validateExpenseFieldValues } from "../utils/expense-fields";
-import { recomputeTripTotalAmount } from "../utils/trip-total";
+import { recomputeTripFromLinkedClaims } from "../utils/trip-total";
 
 const NOT_AUTHENTICATED_MESSAGE = "Not authenticated.";
 const CLAIM_NOT_FOUND_MESSAGE = "Claim not found.";
@@ -301,7 +301,7 @@ export async function saveExpenses(req: AuthenticatedRequest, res: Response): Pr
   claim.hasBeenSaved = true;
   await claim.save();
 
-  if (claim.tripId) await recomputeTripTotalAmount(claim.tripId);
+  if (claim.tripId) await recomputeTripFromLinkedClaims(claim.tripId);
 
   // Duplicate check runs at both review (023's own Review step) and here at
   // final save (022's Overview) — highlighted, never blocking.
@@ -472,8 +472,8 @@ export async function splitClaim(req: AuthenticatedRequest, res: Response): Prom
   // The original and the new claim can be linked to different trips (or
   // neither) — each one's own totalAmount just changed, so both need
   // recomputing, not just whichever trip this request happened to mention.
-  if (claim.tripId) await recomputeTripTotalAmount(claim.tripId);
-  if (newClaim.tripId && newClaim.tripId !== claim.tripId) await recomputeTripTotalAmount(newClaim.tripId);
+  if (claim.tripId) await recomputeTripFromLinkedClaims(claim.tripId);
+  if (newClaim.tripId && newClaim.tripId !== claim.tripId) await recomputeTripFromLinkedClaims(newClaim.tripId);
 
   res.status(200).json({ originalClaimId: claim.id, newClaimId: newClaim.id, message: "Claim split successfully." });
 }
@@ -496,7 +496,7 @@ export async function deleteClaim(req: AuthenticatedRequest, res: Response): Pro
 
   const tripId = claim.tripId;
   await claim.destroy();
-  if (tripId) await recomputeTripTotalAmount(tripId);
+  if (tripId) await recomputeTripFromLinkedClaims(tripId);
   res.status(200).json({ message: "Claim deleted." });
 }
 

@@ -25,7 +25,6 @@ export function TripExpenseList({ expenses }: TripExpenseListProps) {
         <TableHeader>
           <TableRow>
             <TableHead>Category</TableHead>
-            <TableHead>Claim</TableHead>
             <TableHead>Expense Date</TableHead>
             <TableHead>Amount</TableHead>
           </TableRow>
@@ -34,7 +33,6 @@ export function TripExpenseList({ expenses }: TripExpenseListProps) {
           {expenses.map((expense) => (
             <TableRow key={expense.id}>
               <TableCell>{expense.categoryName}</TableCell>
-              <TableCell>{expense.claimName ?? "Untitled Claim"}</TableCell>
               <TableCell>{expense.expenseDate ? formatTripOverviewDate(expense.expenseDate) : "—"}</TableCell>
               <TableCell>₹{formatInr(expense.amount)}</TableCell>
             </TableRow>
