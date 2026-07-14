@@ -42,7 +42,7 @@ function Dialog({ open, onOpenChange, children }: DialogContextValue & { childre
 // Fixed min-width (not just a maxWidth cap) so a dialog's own validation
 // messages appearing/disappearing can't ever shrink it back down and cause
 // a visible width "blink" as the user types/submits.
-const MIN_DIALOG_WIDTH = 500;
+const MIN_DIALOG_WIDTH = 600;
 
 function DialogContent({ className, sx, children }: { className?: string; sx?: SxProps<Theme>; children: ReactNode }) {
   const { open, onOpenChange } = useDialogContext();
