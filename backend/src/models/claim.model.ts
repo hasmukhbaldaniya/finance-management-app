@@ -33,6 +33,11 @@ export class Claim extends Model<InferAttributes<Claim>, InferCreationAttributes
   declare hasBeenSaved: CreationOptional<boolean>;
   declare createdAt: CreationOptional<Date>;
   declare updatedAt: CreationOptional<Date>;
+  // Backs `paranoid: true` below — deleteClaim's `claim.destroy()` sets
+  // this instead of removing the row. Every default Sequelize query
+  // (findAll/findOne/findByPk/etc.) automatically excludes a row with this
+  // set; pass `{ paranoid: false }` to a query to see through it.
+  declare deletedAt: CreationOptional<Date | null>;
 }
 
 Claim.init(
@@ -50,10 +55,12 @@ Claim.init(
     hasBeenSaved: { type: DataTypes.BOOLEAN, allowNull: false, defaultValue: false },
     createdAt: DataTypes.DATE,
     updatedAt: DataTypes.DATE,
+    deletedAt: { type: DataTypes.DATE, allowNull: true },
   },
   {
     sequelize,
     tableName: "claims",
     modelName: "Claim",
+    paranoid: true,
   }
 );

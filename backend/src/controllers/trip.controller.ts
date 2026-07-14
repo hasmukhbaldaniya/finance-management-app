@@ -285,6 +285,11 @@ export async function deleteTrip(req: AuthenticatedRequest, res: Response): Prom
     return;
   }
 
+  // Trip is `paranoid: true` (soft delete, see trip.model.ts) — this only
+  // sets deletedAt, so every default Sequelize query excludes it from here
+  // on. No child cleanup needed: trips.claims' own FK is ON DELETE SET
+  // NULL, not CASCADE, and this branch only ever runs for a "draft" trip,
+  // which no code path in this app currently links any claim to anyway.
   await trip.destroy();
   res.status(200).json({ message: "Trip deleted." });
 }

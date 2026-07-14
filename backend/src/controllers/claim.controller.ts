@@ -1,11 +1,12 @@
 import type { Response } from "express";
 import { Op, type WhereOptions } from "sequelize";
 import type { AuthenticatedRequest } from "../middleware/require-auth";
-import { Category, CategoryField, Claim, Expense, Trip, type ClaimType } from "../models";
+import { Category, CategoryField, Claim, ClaimInvoiceFile, Expense, Trip, type ClaimType } from "../models";
 import { getActiveOrganizationId } from "../utils/auth";
 import { DEFAULT_PAGE_SIZE, MAX_CLAIM_NAME_LENGTH, MAX_EXPENSE_COUNT, MAX_PAGE_SIZE, MIN_CLAIM_NAME_LENGTH, MIN_EXPENSE_COUNT } from "../utils/constants/claim.constant";
 import { findDuplicateExpense } from "../utils/duplicate-expense-check";
 import { validateExpenseFieldValues } from "../utils/expense-fields";
+import { deleteInvoiceFile } from "../utils/invoice-file-storage";
 import { recomputeTripFromLinkedClaims } from "../utils/trip-total";
 
 const NOT_AUTHENTICATED_MESSAGE = "Not authenticated.";
@@ -493,6 +494,22 @@ export async function deleteClaim(req: AuthenticatedRequest, res: Response): Pro
     res.status(409).json({ error: "Only draft claims can be deleted." });
     return;
   }
+
+  // Claim is `paranoid: true` (soft delete, see claim.model.ts) — its own
+  // `destroy()` below only sets deletedAt, so the DB's own ON DELETE CASCADE
+  // from expenses/claim_invoice_files never fires anymore. Expense and
+  // ClaimInvoiceFile stay hard-delete models, so their rows (and, for
+  // invoice files, the actual file on disk) are removed explicitly here —
+  // same real cleanup this claim's data always got, just no longer free
+  // from the database's own FK cascade. Deleting these ClaimInvoiceFile rows
+  // still cascades to ai_extraction_logs at the DB level, and deleting these
+  // Expense rows still cascades to expense_split_requests, exactly as before.
+  const invoiceFiles = await ClaimInvoiceFile.findAll({ where: { claimId: claim.id } });
+  for (const invoiceFile of invoiceFiles) {
+    await deleteInvoiceFile(invoiceFile.storedPath);
+  }
+  await Expense.destroy({ where: { claimId: claim.id } });
+  await ClaimInvoiceFile.destroy({ where: { claimId: claim.id } });
 
   const tripId = claim.tripId;
   await claim.destroy();

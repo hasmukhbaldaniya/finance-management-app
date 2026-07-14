@@ -23,6 +23,11 @@ export class Trip extends Model<InferAttributes<Trip>, InferCreationAttributes<T
   declare approvedAmount: string | null;
   declare createdAt: CreationOptional<Date>;
   declare updatedAt: CreationOptional<Date>;
+  // Backs `paranoid: true` below — deleteTrip's `trip.destroy()` sets this
+  // instead of removing the row. Every default Sequelize query
+  // (findAll/findOne/findByPk/etc.) automatically excludes a row with this
+  // set; pass `{ paranoid: false }` to a query to see through it.
+  declare deletedAt: CreationOptional<Date | null>;
 }
 
 Trip.init(
@@ -40,10 +45,12 @@ Trip.init(
     approvedAmount: { type: DataTypes.DECIMAL(12, 2), allowNull: true },
     createdAt: DataTypes.DATE,
     updatedAt: DataTypes.DATE,
+    deletedAt: { type: DataTypes.DATE, allowNull: true },
   },
   {
     sequelize,
     tableName: "trips",
     modelName: "Trip",
+    paranoid: true,
   }
 );
