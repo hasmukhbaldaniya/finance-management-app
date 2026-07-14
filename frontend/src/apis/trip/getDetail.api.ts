@@ -1,6 +1,6 @@
 import { apiCall } from "@/utils/apiManager/apiManager";
-import type { TripDetail } from "@/types/trip.type";
+import type { TripDetail, TripExpenseRow } from "@/types/trip.type";
 
-export function getTripDetail(id: number): Promise<{ trip: TripDetail }> {
-  return apiCall<{ trip: TripDetail }>(`/trips/${id}`, { method: "GET" });
+export function getTripDetail(id: number): Promise<{ trip: TripDetail; expenses: TripExpenseRow[] }> {
+  return apiCall<{ trip: TripDetail; expenses: TripExpenseRow[] }>(`/trips/${id}`, { method: "GET" });
 }

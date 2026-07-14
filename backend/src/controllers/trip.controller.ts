@@ -1,7 +1,7 @@
 import type { Response } from "express";
 import { Op, type WhereOptions } from "sequelize";
 import type { AuthenticatedRequest } from "../middleware/require-auth";
-import { City, Country, Trip, type TripStatus } from "../models";
+import { Category, City, Claim, Country, Expense, Trip, type TripStatus } from "../models";
 import { getActiveOrganizationId } from "../utils/auth";
 import { DEFAULT_PAGE_SIZE, MAX_PAGE_SIZE, MAX_TRIP_NAME_LENGTH, MIN_TRIP_NAME_LENGTH, TRIP_STATUSES } from "../utils/constants/trip.constant";
 
@@ -233,6 +233,16 @@ export async function getTripDetail(req: AuthenticatedRequest, res: Response): P
     };
   }
 
+  // Flattened across every Claim linked to this trip (draft and submitted
+  // alike — see recomputeTripTotalAmount's own doc comment for why), one row
+  // per Expense rather than grouped by claim, per this page's own design.
+  const claims = await Claim.findAll({ where: { tripId: trip.id } });
+  const claimNameById = new Map(claims.map((claim) => [claim.id, claim.name]));
+  const expenses = claims.length > 0 ? await Expense.findAll({ where: { claimId: claims.map((claim) => claim.id) }, order: [["expenseDate", "DESC"]] }) : [];
+  const categoryIds = Array.from(new Set(expenses.map((expense) => expense.categoryId).filter((id): id is number => id !== null)));
+  const categories = categoryIds.length > 0 ? await Category.findAll({ where: { id: categoryIds } }) : [];
+  const categoryNameById = new Map(categories.map((category) => [category.id, category.name]));
+
   res.status(200).json({
     trip: {
       id: trip.id,
@@ -246,6 +256,14 @@ export async function getTripDetail(req: AuthenticatedRequest, res: Response): P
       totalAmount: trip.totalAmount,
       approvedAmount: trip.approvedAmount,
     },
+    expenses: expenses.map((expense) => ({
+      id: expense.id,
+      claimId: expense.claimId,
+      claimName: claimNameById.get(expense.claimId) ?? null,
+      categoryName: expense.categoryId ? (categoryNameById.get(expense.categoryId) ?? "Uncategorized") : "Uncategorized",
+      amount: expense.amount,
+      expenseDate: expense.expenseDate,
+    })),
   });
 }
 

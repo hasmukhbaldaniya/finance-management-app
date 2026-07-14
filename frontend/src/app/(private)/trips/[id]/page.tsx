@@ -10,17 +10,19 @@ import MuiLink from "@mui/material/Link";
 import { BriefcaseIcon, ChatCircleDotsIcon } from "@phosphor-icons/react";
 import { getTripDetail } from "@/apis/trip";
 import { EmptyExpenseList } from "@/components/trip/empty-expense-list";
+import { TripExpenseList } from "@/components/trip/trip-expense-list";
 import { TripOverviewCard } from "@/components/trip/trip-overview-card";
 import { Spinner } from "@/components/ui/spinner";
 import { ApiError, GENERIC_ERROR_MESSAGE } from "@/utils/apiManager/apiManager";
 import { ROUTES } from "@/utils/constants/route.constant";
-import type { TripDetail } from "@/types/trip.type";
+import type { TripDetail, TripExpenseRow } from "@/types/trip.type";
 
 export default function TripDetailsPage() {
   const params = useParams<{ id: string }>();
   const tripId = Number(params.id);
 
   const [trip, setTrip] = useState<TripDetail | null>(null);
+  const [expenses, setExpenses] = useState<TripExpenseRow[]>([]);
   const [isLoading, setIsLoading] = useState(true);
   const [loadError, setLoadError] = useState<string | null>(null);
 
@@ -31,7 +33,9 @@ export default function TripDetailsPage() {
 
     getTripDetail(tripId)
       .then((response) => {
-        if (isMounted) setTrip(response.trip);
+        if (!isMounted) return;
+        setTrip(response.trip);
+        setExpenses(response.expenses);
       })
       .catch((error: unknown) => {
         if (isMounted) setLoadError(error instanceof ApiError ? error.message : GENERIC_ERROR_MESSAGE);
@@ -78,9 +82,7 @@ export default function TripDetailsPage() {
       </Typography>
 
       <Box sx={{ display: "grid", gridTemplateColumns: { xs: "1fr", lg: "2fr 1fr" }, gap: 3 }}>
-        <Box>
-          <EmptyExpenseList />
-        </Box>
+        <Box>{expenses.length > 0 ? <TripExpenseList expenses={expenses} /> : <EmptyExpenseList />}</Box>
         <Box>
           <TripOverviewCard trip={trip} />
         </Box>

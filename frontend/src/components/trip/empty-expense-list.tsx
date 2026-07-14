@@ -4,9 +4,9 @@ import Typography from "@mui/material/Typography";
 import { ChatCircleDotsIcon } from "@phosphor-icons/react";
 import { chipColors } from "@/theme/colors";
 
-// The expense list is always empty in this story — logging an expense
-// against a trip is a future Claims/Expenses story's concern (020's own Out
-// of Scope). This component has nothing to check; it renders unconditionally.
+// The zero-expenses state for the Trip Details page's Expenses panel — its
+// sibling, TripExpenseList, covers the case where at least one Claim is
+// actually linked to this trip (see trip.controller.ts's getTripDetail).
 export function EmptyExpenseList() {
   return (
     <Stack
