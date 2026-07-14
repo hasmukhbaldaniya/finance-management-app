@@ -3,17 +3,14 @@
 import { useEffect, useState } from "react";
 import Stack from "@mui/material/Stack";
 import { toast } from "@/components/ui/toast";
-import { createSplitRequest } from "@/apis/split-request";
 import { Button } from "@/components/ui/button";
 import { Dialog, DialogContent, DialogDescription, DialogFooter, DialogHeader, DialogTitle } from "@/components/ui/dialog";
 import { Label } from "@/components/ui/label";
-import { Spinner } from "@/components/ui/spinner";
 import { useSession } from "@/contexts/SessionContext";
-import { ApiError, GENERIC_ERROR_MESSAGE } from "@/utils/apiManager/apiManager";
 import type { EmployeeListItem } from "@/types/employee.type";
 import type { ClaimableCategory } from "@/types/claim.type";
 import { SplitAmongSelect } from "./split-among-select";
-import { SplitPercentageTable, distributeEvenly, type SplitMember } from "./split-percentage-table";
+import { SplitPercentageTable, distributeEvenly, membersToColleagues, type SplitMember } from "./split-percentage-table";
 import { getClientComputedAmount } from "./expense-completeness";
 import type { LocalExpense } from "./local-expense.type";
 
@@ -21,23 +18,23 @@ const MAX_COLLEAGUES = 9;
 const SUM_TOLERANCE = 0.01;
 
 type SplitExpenseDialogProps = {
-  claimId: number;
   expense: LocalExpense | null;
   categories: ClaimableCategory[];
+  initialMembers?: SplitMember[];
   onOpenChange: (open: boolean) => void;
-  onSplit: () => void;
+  onConfirm: (members: SplitMember[]) => void;
 };
 
 // 027's redesign — replaces both the old Category/Amount-portions "Split
 // Expense" and 025's own "Split with Colleagues": a single cross-employee
-// percentage split, scoped to just this one expense. Still routes through
-// 025's Split Request inbox/Accept-Reject flow unchanged; only the trigger
-// and the picker/table UI are new.
-export function SplitExpenseDialog({ claimId, expense, categories, onOpenChange, onSplit }: SplitExpenseDialogProps) {
+// percentage split, scoped to just this one expense. "Yes, Submit" only
+// stages the chosen split via `onConfirm` — the actual Split Request (and its
+// colleague email) is created only once the parent's Save Claim succeeds, see
+// claim-manual-form.tsx's/ai-review-screen.tsx's own `pendingExpenseSplits`.
+export function SplitExpenseDialog({ expense, categories, initialMembers, onOpenChange, onConfirm }: SplitExpenseDialogProps) {
   const { user } = useSession();
   const [colleagues, setColleagues] = useState<EmployeeListItem[]>([]);
   const [members, setMembers] = useState<SplitMember[]>([]);
-  const [isSubmitting, setIsSubmitting] = useState(false);
 
   // Reads the live, in-progress field value (not the server-denormalized
   // `expense.amount`, which is stale until the next save) so the dialog
@@ -49,6 +46,14 @@ export function SplitExpenseDialog({ claimId, expense, categories, onOpenChange,
     if (!expense) {
       setColleagues([]);
       setMembers([]);
+      return;
+    }
+    if (initialMembers && initialMembers.length > 0) {
+      // Percentages are the staged intent; amounts are recomputed against
+      // the current total in case fields were edited since staging.
+      const recomputed = initialMembers.map((member) => ({ ...member, amount: Number(((member.percentage / 100) * originalAmount).toFixed(2)) }));
+      setMembers(recomputed);
+      setColleagues(membersToColleagues(recomputed));
       return;
     }
     // Reset to just the requester at 100% whenever a different expense is opened.
@@ -71,25 +76,14 @@ export function SplitExpenseDialog({ claimId, expense, categories, onOpenChange,
   const percentageSum = members.reduce((total, member) => total + member.percentage, 0);
   const canSubmit = colleagues.length > 0 && Math.abs(percentageSum - 100) <= SUM_TOLERANCE;
 
-  async function handleConfirm(): Promise<void> {
+  function handleConfirm(): void {
     if (!canSubmit) {
       toast.error("Splits must add up to 100%.");
       return;
     }
-    setIsSubmitting(true);
-    try {
-      await createSplitRequest(claimId, expense!.id!, {
-        splitType: "percentage",
-        members: members.map((member) => ({ employeeId: member.employeeId, percentage: member.percentage })),
-      });
-      toast.success("Split request sent.");
-      onSplit();
-      onOpenChange(false);
-    } catch (error) {
-      toast.error(error instanceof ApiError ? error.message : GENERIC_ERROR_MESSAGE);
-    } finally {
-      setIsSubmitting(false);
-    }
+    onConfirm(members);
+    toast.success("Split saved — it'll be sent to your colleagues when you save this claim.");
+    onOpenChange(false);
   }
 
   return (
@@ -119,8 +113,7 @@ export function SplitExpenseDialog({ claimId, expense, categories, onOpenChange,
           <Button type="button" variant="outline" onClick={() => onOpenChange(false)}>
             Cancel
           </Button>
-          <Button type="button" onClick={handleConfirm} disabled={isSubmitting || !canSubmit}>
-            {isSubmitting ? <Spinner /> : null}
+          <Button type="button" onClick={handleConfirm} disabled={!canSubmit}>
             Yes, Submit
           </Button>
         </DialogFooter>

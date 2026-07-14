@@ -7,6 +7,7 @@ import InputAdornment from "@mui/material/InputAdornment";
 import { Input } from "@/components/ui/input";
 import { Table, TableBody, TableCell, TableHead, TableHeader, TableRow } from "@/components/ui/table";
 import { formatInr } from "@/utils/helpers/format.helper";
+import type { EmployeeListItem } from "@/types/employee.type";
 
 export type SplitMember = {
   employeeId: number;
@@ -15,6 +16,31 @@ export type SplitMember = {
   amount: number;
   isRequester: boolean;
 };
+
+// Reconstructs a minimal EmployeeListItem[] from a previously staged split's
+// members, so reopening the dialog can prefill SplitAmongSelect's chips —
+// only `id`/`firstName`/`lastName` are ever read from these for display, the
+// rest are placeholders since a staged split only ever stores id + name.
+export function membersToColleagues(members: SplitMember[]): EmployeeListItem[] {
+  return members
+    .filter((member) => !member.isRequester)
+    .map((member) => {
+      const [firstName, ...rest] = member.name.split(" ");
+      return {
+        id: member.employeeId,
+        firstName: firstName ?? member.name,
+        lastName: rest.join(" "),
+        email: "",
+        role: null,
+        department: null,
+        grade: null,
+        countryCode: null,
+        contactNumber: null,
+        invitationStatus: "registered",
+        status: "active",
+      };
+    });
+}
 
 // 027's even auto-redistribution — recomputed every time the member *set*
 // changes (add/remove), never on a plain percentage/amount edit. The

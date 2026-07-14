@@ -6,17 +6,14 @@ import Stack from "@mui/material/Stack";
 import Typography from "@mui/material/Typography";
 import { InfoIcon } from "@phosphor-icons/react";
 import { toast } from "@/components/ui/toast";
-import { createSplitRequest } from "@/apis/split-request";
 import { Button } from "@/components/ui/button";
 import { Dialog, DialogContent, DialogDescription, DialogFooter, DialogHeader, DialogTitle } from "@/components/ui/dialog";
 import { Label } from "@/components/ui/label";
-import { Spinner } from "@/components/ui/spinner";
 import { useSession } from "@/contexts/SessionContext";
-import { ApiError, GENERIC_ERROR_MESSAGE } from "@/utils/apiManager/apiManager";
 import type { EmployeeListItem } from "@/types/employee.type";
 import type { ClaimableCategory } from "@/types/claim.type";
 import { SplitAmongSelect } from "./split-among-select";
-import { SplitPercentageTable, distributeEvenly, type SplitMember } from "./split-percentage-table";
+import { SplitPercentageTable, distributeEvenly, membersToColleagues, type SplitMember } from "./split-percentage-table";
 import { getClientComputedAmount } from "./expense-completeness";
 import type { LocalExpense } from "./local-expense.type";
 
@@ -24,12 +21,12 @@ const MAX_COLLEAGUES = 9;
 const SUM_TOLERANCE = 0.01;
 
 type SplitClaimDialogProps = {
-  claimId: number;
   expenses: LocalExpense[];
   categories: ClaimableCategory[];
+  initialMembers?: SplitMember[];
   open: boolean;
   onOpenChange: (open: boolean) => void;
-  onSplit: () => void;
+  onConfirm: (members: SplitMember[]) => void;
 };
 
 // 027's redesign — replaces 022's own "Move to New Claim" (which used to
@@ -38,11 +35,13 @@ type SplitClaimDialogProps = {
 // percentages are applied independently to every expense on the claim, one
 // Split Request per original expense, each keeping its own Category —
 // really "run Split Expense once per expense," not one lump-sum split.
-export function SplitClaimDialog({ claimId, expenses, categories, open, onOpenChange, onSplit }: SplitClaimDialogProps) {
+// "Yes, Submit" only stages the chosen split via `onConfirm` — the actual
+// Split Requests (and their colleague emails) are created only once the
+// parent's Save Claim succeeds.
+export function SplitClaimDialog({ expenses, categories, initialMembers, open, onOpenChange, onConfirm }: SplitClaimDialogProps) {
   const { user } = useSession();
   const [colleagues, setColleagues] = useState<EmployeeListItem[]>([]);
   const [members, setMembers] = useState<SplitMember[]>([]);
-  const [isSubmitting, setIsSubmitting] = useState(false);
 
   // Reads each expense's live, in-progress field value (not the
   // server-denormalized `expense.amount`, which is stale until the next
@@ -54,6 +53,14 @@ export function SplitClaimDialog({ claimId, expenses, categories, open, onOpenCh
 
   useEffect(() => {
     if (!open) return;
+    if (initialMembers && initialMembers.length > 0) {
+      // Percentages are the staged intent; amounts are recomputed against
+      // the current total in case fields were edited since staging.
+      const recomputed = initialMembers.map((member) => ({ ...member, amount: Number(((member.percentage / 100) * totalAmount).toFixed(2)) }));
+      setMembers(recomputed);
+      setColleagues(membersToColleagues(recomputed));
+      return;
+    }
     // Reset to just the requester at 100% every time the dialog opens.
     setColleagues([]);
     setMembers(distributeEvenly([{ employeeId: user.id, name: user.name, isRequester: true }], totalAmount));
@@ -72,25 +79,14 @@ export function SplitClaimDialog({ claimId, expenses, categories, open, onOpenCh
   const percentageSum = members.reduce((total, member) => total + member.percentage, 0);
   const canSubmit = colleagues.length > 0 && expenses.length > 0 && Math.abs(percentageSum - 100) <= SUM_TOLERANCE;
 
-  async function handleConfirm(): Promise<void> {
+  function handleConfirm(): void {
     if (!canSubmit) {
       toast.error("Splits must add up to 100%.");
       return;
     }
-    setIsSubmitting(true);
-    try {
-      const payloadMembers = members.map((member) => ({ employeeId: member.employeeId, percentage: member.percentage }));
-      await Promise.all(
-        expenses.map((expense) => createSplitRequest(claimId, expense.id!, { splitType: "percentage", members: payloadMembers }))
-      );
-      toast.success(`Split requests sent for ${expenses.length} expense${expenses.length === 1 ? "" : "s"}.`);
-      onSplit();
-      onOpenChange(false);
-    } catch (error) {
-      toast.error(error instanceof ApiError ? error.message : GENERIC_ERROR_MESSAGE);
-    } finally {
-      setIsSubmitting(false);
-    }
+    onConfirm(members);
+    toast.success(`Split saved for ${expenses.length} expense${expenses.length === 1 ? "" : "s"} — it'll be sent when you save this claim.`);
+    onOpenChange(false);
   }
 
   return (
@@ -129,8 +125,7 @@ export function SplitClaimDialog({ claimId, expenses, categories, open, onOpenCh
           <Button type="button" variant="outline" onClick={() => onOpenChange(false)}>
             Cancel
           </Button>
-          <Button type="button" onClick={handleConfirm} disabled={isSubmitting || !canSubmit}>
-            {isSubmitting ? <Spinner /> : null}
+          <Button type="button" onClick={handleConfirm} disabled={!canSubmit}>
             Yes, Submit
           </Button>
         </DialogFooter>

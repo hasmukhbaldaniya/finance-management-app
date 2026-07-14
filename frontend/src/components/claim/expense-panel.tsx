@@ -4,8 +4,9 @@ import Box from "@mui/material/Box";
 import Stack from "@mui/material/Stack";
 import Typography from "@mui/material/Typography";
 import Chip from "@mui/material/Chip";
-import { WarningCircleIcon, XIcon } from "@phosphor-icons/react";
+import { ArrowsSplitIcon, WarningCircleIcon, XIcon } from "@phosphor-icons/react";
 import { statusTones } from "@/theme/colors";
+import { Button } from "@/components/ui/button";
 import { Label } from "@/components/ui/label";
 import type { ClaimableCategory } from "@/types/claim.type";
 import { CategorySelect } from "./category-select";
@@ -20,20 +21,21 @@ type ExpensePanelProps = {
   onChange: (patch: Partial<LocalExpense>) => void;
   onRemove: () => void;
   onSplit: () => void;
-  isSplitting?: boolean;
+  hasPendingSplit?: boolean;
   canRemove: boolean;
 };
 
 // 022's Expense panel — Category dropdown, that category's own dynamic
 // field configuration, and Paid By, all per-expense. Split Expense (027's
 // redesign — a cross-employee percentage split, see split-expense-dialog.tsx)
-// is enabled once every one of this expense's own required fields is
-// filled client-side — it doesn't need to already be saved; `onSplit`
-// silently persists it first if it isn't (see claim-manual-form.tsx's
-// `handleOpenSplitExpense`).
-export function ExpensePanel({ index, expense, categories, onChange, onRemove, onSplit, isSplitting, canRemove }: ExpensePanelProps) {
+// sits at the bottom, below this expense's own fields, and is enabled once
+// every one of its required fields is filled client-side — it doesn't need
+// to already be saved, since the split itself is only sent to the backend
+// once the whole claim is saved (see claim-manual-form.tsx's
+// `pendingExpenseSplits`).
+export function ExpensePanel({ index, expense, categories, onChange, onRemove, onSplit, hasPendingSplit, canRemove }: ExpensePanelProps) {
   const category = categories.find((candidate) => candidate.id === expense.categoryId) ?? null;
-  const canSplit = isExpenseComplete(expense, category) && !isSplitting;
+  const canSplit = isExpenseComplete(expense, category);
 
   return (
     <Stack spacing={2} sx={{ borderRadius: 2, border: 1, borderColor: "divider", bgcolor: "background.paper", p: 2.5 }}>
@@ -51,27 +53,6 @@ export function ExpensePanel({ index, expense, categories, onChange, onRemove, o
               sx={{ fontWeight: 500, bgcolor: statusTones.rejected.background, color: statusTones.rejected.text, "& .MuiChip-icon": { color: "inherit" } }}
             />
           ) : null}
-          <Box
-            component="button"
-            type="button"
-            onClick={onSplit}
-            disabled={!canSplit}
-            sx={{
-              borderRadius: 1.5,
-              px: 1,
-              py: 0.5,
-              fontSize: "0.75rem",
-              fontWeight: 500,
-              color: "text.secondary",
-              background: "none",
-              border: "none",
-              cursor: canSplit ? "pointer" : "not-allowed",
-              opacity: canSplit ? 1 : 0.5,
-              "&:hover": canSplit ? { bgcolor: "action.hover" } : undefined,
-            }}
-          >
-            Split Expense
-          </Box>
           {canRemove ? (
             <Box
               component="button"
@@ -129,6 +110,15 @@ export function ExpensePanel({ index, expense, categories, onChange, onRemove, o
             </Box>
           ))}
         </Stack>
+      </Stack>
+
+      <Stack direction="row" spacing={1} sx={{ alignItems: "center", justifyContent: "flex-end", borderTop: 1, borderColor: "divider", pt: 2 }}>
+        {hasPendingSplit ? (
+          <Chip size="small" label="Split Pending" sx={{ fontWeight: 500, bgcolor: statusTones.pending.background, color: statusTones.pending.text }} />
+        ) : null}
+        <Button type="button" variant="outline" size="sm" onClick={onSplit} disabled={!canSplit}>
+          <ArrowsSplitIcon size={14} /> {hasPendingSplit ? "Edit Split" : "Split Expense"}
+        </Button>
       </Stack>
     </Stack>
   );

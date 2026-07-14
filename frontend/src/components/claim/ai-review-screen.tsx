@@ -42,12 +42,14 @@ import { isExpenseComplete } from "@/components/claim/expense-completeness";
 import { Button } from "@/components/ui/button";
 import { Spinner } from "@/components/ui/spinner";
 import { getInvoiceFileContent } from "@/apis/claim/getInvoiceFileContent.api";
+import { createSplitRequest } from "@/apis/split-request";
 import { formatClaimName, formatInr } from "@/utils/helpers/format.helper";
 import { ApiError, GENERIC_ERROR_MESSAGE } from "@/utils/apiManager/apiManager";
 import { MAX_INVOICE_FILE_COUNT } from "@/utils/constants/claim.constant";
 import { ROUTES } from "@/utils/constants/route.constant";
 import type { ClaimableCategory, ClaimInvoiceFile, DuplicateMatch, Expense } from "@/types/claim.type";
 import type { LocalExpense } from "@/components/claim/local-expense.type";
+import type { SplitMember } from "@/components/claim/split-percentage-table";
 
 const POLL_INTERVAL_MS = 1500;
 const MIN_ZOOM = 0.5;
@@ -93,7 +95,13 @@ export function AiReviewScreen({ claimId }: { claimId: number }) {
   const [fileToDelete, setFileToDelete] = useState<ClaimInvoiceFile | null>(null);
   const [splitExpenseTarget, setSplitExpenseTarget] = useState<LocalExpense | null>(null);
   const [isSplitClaimOpen, setIsSplitClaimOpen] = useState(false);
-  const [isPersistingForSplit, setIsPersistingForSplit] = useState(false);
+  // Splits chosen via "Yes, Submit" in either dialog are staged here, not
+  // sent to the backend yet — the actual split-request rows (and their
+  // colleague emails) are only created once Save Claim succeeds. Keyed by
+  // expenseId (unlike the manual form's index-keying) since every expense in
+  // this screen already has a real, stable id from the moment it's created.
+  const [pendingExpenseSplits, setPendingExpenseSplits] = useState<Record<number, SplitMember[]>>({});
+  const [pendingClaimSplit, setPendingClaimSplit] = useState<SplitMember[] | null>(null);
   const [zoom, setZoom] = useState(1);
   const addExpenseInputRef = useRef<HTMLInputElement>(null);
 
@@ -235,6 +243,12 @@ export function AiReviewScreen({ claimId }: { claimId: number }) {
   function removeManualExpense(expenseId: number): void {
     setExpenses((previous) => previous.filter((expense) => expense.id !== expenseId));
     if (selectedExpenseId === expenseId) setSelectedExpenseId(null);
+    setPendingExpenseSplits((previous) => {
+      if (!(expenseId in previous)) return previous;
+      const next = { ...previous };
+      delete next[expenseId];
+      return next;
+    });
   }
 
   const selectedExpense = expenses.find((expense) => expense.id === selectedExpenseId) ?? null;
@@ -307,6 +321,43 @@ export function AiReviewScreen({ claimId }: { claimId: number }) {
     }
   }
 
+  // Split requests are created (and their colleague emails sent) only once
+  // Save Claim actually succeeds — never at "Yes, Submit" time — so the
+  // dialogs open instantly with no persist step; nothing here calls the
+  // split-request API until the claim itself is saved.
+  async function submitPendingSplits(): Promise<void> {
+    const tasks: Promise<unknown>[] = [];
+    Object.entries(pendingExpenseSplits).forEach(([expenseIdKey, members]) => {
+      const expenseId = Number(expenseIdKey);
+      if (expenses.some((expense) => expense.id === expenseId)) {
+        tasks.push(
+          createSplitRequest(claimId, expenseId, {
+            splitType: "percentage",
+            members: members.map((member) => ({ employeeId: member.employeeId, percentage: member.percentage })),
+          })
+        );
+      }
+    });
+    if (pendingClaimSplit) {
+      expenses.forEach((expense) => {
+        if (expense.id) {
+          tasks.push(
+            createSplitRequest(claimId, expense.id, {
+              splitType: "percentage",
+              members: pendingClaimSplit.map((member) => ({ employeeId: member.employeeId, percentage: member.percentage })),
+            })
+          );
+        }
+      });
+    }
+    if (tasks.length === 0) return;
+    const results = await Promise.allSettled(tasks);
+    const failed = results.filter((result) => result.status === "rejected").length;
+    if (failed > 0) {
+      toast.warning(`${failed} split request${failed === 1 ? "" : "s"} couldn't be sent — reopen this claim's Review screen to retry.`);
+    }
+  }
+
   async function handleSave(isDraftSave: boolean): Promise<void> {
     const setSubmitting = isDraftSave ? setIsSubmittingDraft : setIsSubmittingFinal;
     setSubmitting(true);
@@ -327,6 +378,9 @@ export function AiReviewScreen({ claimId }: { claimId: number }) {
         toast.success("Claim saved as draft.");
         await loadReviewData();
       } else {
+        if (Object.keys(pendingExpenseSplits).length > 0 || pendingClaimSplit) {
+          await submitPendingSplits();
+        }
         toast.success("Claim saved.");
         router.push(ROUTES.CLAIMS);
       }
@@ -334,52 +388,6 @@ export function AiReviewScreen({ claimId }: { claimId: number }) {
       toast.error(error instanceof ApiError ? error.message : GENERIC_ERROR_MESSAGE);
     } finally {
       setSubmitting(false);
-    }
-  }
-
-  // The backend's own split-request gate checks the persisted Expense row's
-  // amount/category (split-request.controller.ts), not the live fieldValues
-  // this screen edits in memory — so even an expense that already has a real
-  // id can be stale if its fields were edited since the last save. Always
-  // silently re-save as a draft immediately before opening either split
-  // dialog, the same "ensure persisted" pattern claim-manual-form.tsx uses.
-  async function persistDraftSilently(): Promise<LocalExpense[] | null> {
-    await saveExpenses(claimId, {
-      isDraftSave: true,
-      expenses: expenses.map((expense) => ({
-        id: expense.id && expense.id > 0 ? expense.id : undefined,
-        categoryId: expense.categoryId ?? 0,
-        paidBy: expense.paidBy ?? "self",
-        fieldValues: expense.fieldValues,
-      })),
-    });
-    return loadReviewData();
-  }
-
-  async function handleOpenSplitExpense(): Promise<void> {
-    if (!selectedExpense) return;
-    const targetId = selectedExpense.id;
-    setIsPersistingForSplit(true);
-    try {
-      const freshExpenses = await persistDraftSilently();
-      const freshTarget = freshExpenses?.find((expense) => expense.id === targetId);
-      if (freshTarget) setSplitExpenseTarget(freshTarget);
-    } catch (error) {
-      toast.error(error instanceof ApiError ? error.message : GENERIC_ERROR_MESSAGE);
-    } finally {
-      setIsPersistingForSplit(false);
-    }
-  }
-
-  async function handleOpenSplitClaim(): Promise<void> {
-    setIsPersistingForSplit(true);
-    try {
-      const freshExpenses = await persistDraftSilently();
-      if (freshExpenses) setIsSplitClaimOpen(true);
-    } catch (error) {
-      toast.error(error instanceof ApiError ? error.message : GENERIC_ERROR_MESSAGE);
-    } finally {
-      setIsPersistingForSplit(false);
     }
   }
 
@@ -428,8 +436,8 @@ export function AiReviewScreen({ claimId }: { claimId: number }) {
           >
             {isUploadingMore ? <Spinner size={14} /> : <PlusIcon size={14} />} Add Expense
           </Button>
-          <Button type="button" variant="secondary" size="sm" onClick={handleOpenSplitClaim} disabled={!canSplitClaim || isPersistingForSplit}>
-            {isPersistingForSplit ? <Spinner size={14} /> : <ArrowsSplitIcon size={14} />} Split Claim
+          <Button type="button" variant="secondary" size="sm" onClick={() => setIsSplitClaimOpen(true)} disabled={!canSplitClaim}>
+            <ArrowsSplitIcon size={14} /> {pendingClaimSplit ? "Edit Claim Split" : "Split Claim"}
           </Button>
         </Stack>
       </Stack>
@@ -737,11 +745,6 @@ export function AiReviewScreen({ claimId }: { claimId: number }) {
               </Box>
             </Stack>
           ) : null}
-          <Stack direction="row" spacing={1} sx={{ justifyContent: "center", borderTop: 1, borderColor: "divider", p: 1 }}>
-            <Button type="button" variant="secondary" size="sm" onClick={handleOpenSplitExpense} disabled={!canSplitSelected || isPersistingForSplit}>
-              {isPersistingForSplit ? <Spinner size={14} /> : <ArrowsSplitIcon size={14} />} Split Expense
-            </Button>
-          </Stack>
         </Stack>
 
         {/* Expense Form column */}
@@ -810,6 +813,18 @@ export function AiReviewScreen({ claimId }: { claimId: number }) {
                     ))}
                   </Stack>
                 </Stack>
+
+                <Stack direction="row" sx={{ justifyContent: "flex-end", borderTop: 1, borderColor: "divider", pt: 2 }}>
+                  <Button
+                    type="button"
+                    variant="secondary"
+                    size="sm"
+                    onClick={() => setSplitExpenseTarget(selectedExpense)}
+                    disabled={!canSplitSelected}
+                  >
+                    <ArrowsSplitIcon size={14} /> {pendingExpenseSplits[selectedExpense.id!] ? "Edit Split" : "Split Expense"}
+                  </Button>
+                </Stack>
               </>
             ) : (
               <Typography variant="body2" color="text.secondary">
@@ -846,19 +861,21 @@ export function AiReviewScreen({ claimId }: { claimId: number }) {
         onDeleted={() => loadReviewData()}
       />
       <SplitExpenseDialog
-        claimId={claimId}
         expense={splitExpenseTarget}
         categories={categories}
+        initialMembers={splitExpenseTarget ? pendingExpenseSplits[splitExpenseTarget.id!] : undefined}
         onOpenChange={(open) => !open && setSplitExpenseTarget(null)}
-        onSplit={() => loadReviewData()}
+        onConfirm={(members) => {
+          if (splitExpenseTarget?.id) setPendingExpenseSplits((previous) => ({ ...previous, [splitExpenseTarget.id!]: members }));
+        }}
       />
       <SplitClaimDialog
-        claimId={claimId}
         expenses={expenses}
         categories={categories}
+        initialMembers={pendingClaimSplit ?? undefined}
         open={isSplitClaimOpen}
         onOpenChange={setIsSplitClaimOpen}
-        onSplit={() => loadReviewData()}
+        onConfirm={setPendingClaimSplit}
       />
     </Stack>
   );
