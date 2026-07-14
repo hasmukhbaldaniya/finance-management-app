@@ -18,10 +18,10 @@ import { MAX_CLAIM_NAME_LENGTH, MAX_EXPENSE_COUNT, MIN_CLAIM_NAME_LENGTH } from 
 import { ROUTES } from "@/utils/constants/route.constant";
 import type { ClaimableCategory, ClaimType } from "@/types/claim.type";
 import { ExpensePanel } from "./expense-panel";
+import { isExpenseComplete } from "./expense-completeness";
 import type { LocalExpense } from "./local-expense.type";
 import { SplitClaimDialog } from "./split-claim-dialog";
 import { SplitExpenseDialog } from "./split-expense-dialog";
-import { SplitWithColleaguesDialog } from "./split-with-colleagues-dialog";
 import { TripSelect, type TripSelectValue } from "./trip-select";
 
 type ClaimManualFormProps = { mode: "create" } | { mode: "edit"; claimId: number };
@@ -50,7 +50,6 @@ export function ClaimManualForm(props: ClaimManualFormProps) {
   const [isSubmittingFinal, setIsSubmittingFinal] = useState(false);
 
   const [splitExpenseTarget, setSplitExpenseTarget] = useState<LocalExpense | null>(null);
-  const [splitWithColleaguesTarget, setSplitWithColleaguesTarget] = useState<LocalExpense | null>(null);
   const [isSplitClaimOpen, setIsSplitClaimOpen] = useState(false);
 
   useEffect(() => {
@@ -209,6 +208,9 @@ export function ClaimManualForm(props: ClaimManualFormProps) {
     );
   }
 
+  const canSplitClaim =
+    expenses.length > 0 && expenses.every((expense) => isExpenseComplete(expense, categories.find((category) => category.id === expense.categoryId) ?? null));
+
   return (
     <Stack spacing={4} sx={{ mx: "auto", maxWidth: 896, px: 3, py: 4 }}>
       <Stack direction="row" spacing={1.5} sx={{ alignItems: "center", justifyContent: "space-between" }}>
@@ -216,8 +218,8 @@ export function ClaimManualForm(props: ClaimManualFormProps) {
           {isEdit ? "Edit Claim" : "Add Manually"}
         </Typography>
         {claimId !== null ? (
-          <Button type="button" variant="outline" size="sm" onClick={() => setIsSplitClaimOpen(true)} disabled={expenses.length < 2}>
-            Move to New Claim
+          <Button type="button" variant="outline" size="sm" onClick={() => setIsSplitClaimOpen(true)} disabled={!canSplitClaim}>
+            Split Claim
           </Button>
         ) : null}
       </Stack>
@@ -261,7 +263,6 @@ export function ClaimManualForm(props: ClaimManualFormProps) {
             onChange={(patch) => updateExpense(index, patch)}
             onRemove={() => removeExpense(index)}
             onSplit={() => setSplitExpenseTarget(expense)}
-            onSplitWithColleagues={() => setSplitWithColleaguesTarget(expense)}
             canRemove={expenses.length > 1}
           />
         ))}
@@ -287,18 +288,17 @@ export function ClaimManualForm(props: ClaimManualFormProps) {
       <SplitExpenseDialog
         claimId={claimId ?? 0}
         expense={splitExpenseTarget}
-        categories={categories}
         onOpenChange={(open) => !open && setSplitExpenseTarget(null)}
         onSplit={() => claimId !== null && refetchClaim(claimId)}
       />
-      <SplitWithColleaguesDialog
-        claimId={claimId ?? 0}
-        expense={splitWithColleaguesTarget}
-        onOpenChange={(open) => !open && setSplitWithColleaguesTarget(null)}
-        onSplit={() => setSplitWithColleaguesTarget(null)}
-      />
       {claimId !== null ? (
-        <SplitClaimDialog claimId={claimId} expenses={expenses} categories={categories} open={isSplitClaimOpen} onOpenChange={setIsSplitClaimOpen} />
+        <SplitClaimDialog
+          claimId={claimId}
+          expenses={expenses}
+          open={isSplitClaimOpen}
+          onOpenChange={setIsSplitClaimOpen}
+          onSplit={() => refetchClaim(claimId)}
+        />
       ) : null}
     </Stack>
   );

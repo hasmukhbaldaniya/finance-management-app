@@ -1,75 +1,81 @@
 "use client";
 
 import { useEffect, useState } from "react";
-import Box from "@mui/material/Box";
 import Stack from "@mui/material/Stack";
 import { toast } from "@/components/ui/toast";
-import { splitExpense } from "@/apis/claim";
-import { SelectField } from "@/components/select-field";
+import { createSplitRequest } from "@/apis/split-request";
 import { Button } from "@/components/ui/button";
 import { Dialog, DialogContent, DialogDescription, DialogFooter, DialogHeader, DialogTitle } from "@/components/ui/dialog";
-import { Input } from "@/components/ui/input";
 import { Label } from "@/components/ui/label";
 import { Spinner } from "@/components/ui/spinner";
-import { formatInr } from "@/utils/helpers/format.helper";
+import { useSession } from "@/contexts/SessionContext";
 import { ApiError, GENERIC_ERROR_MESSAGE } from "@/utils/apiManager/apiManager";
-import type { ClaimableCategory } from "@/types/claim.type";
-import { CategorySelect } from "./category-select";
+import type { EmployeeListItem } from "@/types/employee.type";
+import { SplitAmongSelect } from "./split-among-select";
+import { SplitPercentageTable, distributeEvenly, type SplitMember } from "./split-percentage-table";
 import type { LocalExpense } from "./local-expense.type";
 
-type Portion = { categoryId: number | null; amount: string; paidBy: "company" | "self" };
+const MAX_COLLEAGUES = 9;
+const SUM_TOLERANCE = 0.01;
 
 type SplitExpenseDialogProps = {
   claimId: number;
   expense: LocalExpense | null;
-  categories: ClaimableCategory[];
   onOpenChange: (open: boolean) => void;
   onSplit: () => void;
 };
 
-// 022's Split an Expense — divides one expense's Amount across 2+
-// Category/Amount portions; portions must sum to the original Amount.
-export function SplitExpenseDialog({ claimId, expense, categories, onOpenChange, onSplit }: SplitExpenseDialogProps) {
-  const [portions, setPortions] = useState<Portion[]>([]);
+// 027's redesign — replaces both the old Category/Amount-portions "Split
+// Expense" and 025's own "Split with Colleagues": a single cross-employee
+// percentage split, scoped to just this one expense. Still routes through
+// 025's Split Request inbox/Accept-Reject flow unchanged; only the trigger
+// and the picker/table UI are new.
+export function SplitExpenseDialog({ claimId, expense, onOpenChange, onSplit }: SplitExpenseDialogProps) {
+  const { user } = useSession();
+  const [colleagues, setColleagues] = useState<EmployeeListItem[]>([]);
+  const [members, setMembers] = useState<SplitMember[]>([]);
   const [isSubmitting, setIsSubmitting] = useState(false);
 
+  const originalAmount = Number(expense?.amount ?? 0);
+
   useEffect(() => {
-    if (expense) {
-      setPortions([
-        { categoryId: null, amount: "", paidBy: "self" },
-        { categoryId: null, amount: "", paidBy: "self" },
-      ]);
+    if (!expense) {
+      setColleagues([]);
+      setMembers([]);
+      return;
     }
-  }, [expense]);
+    // Reset to just the requester at 100% whenever a different expense is opened.
+    setColleagues([]);
+    setMembers(distributeEvenly([{ employeeId: user.id, name: user.name, isRequester: true }], Number(expense.amount ?? 0)));
+    // eslint-disable-next-line react-hooks/exhaustive-deps
+  }, [expense?.id]);
+
+  function handleColleaguesChange(nextColleagues: EmployeeListItem[]): void {
+    setColleagues(nextColleagues);
+    const memberSeeds = [
+      { employeeId: user.id, name: user.name, isRequester: true },
+      ...nextColleagues.map((employee) => ({ employeeId: employee.id, name: `${employee.firstName} ${employee.lastName}`.trim(), isRequester: false })),
+    ];
+    setMembers(distributeEvenly(memberSeeds, originalAmount));
+  }
 
   if (!expense) return null;
 
-  const originalAmount = Number(expense.amount ?? 0);
-  const allocated = portions.reduce((total, portion) => total + (Number(portion.amount) || 0), 0);
-  const remaining = originalAmount - allocated;
-
-  function updatePortion(index: number, patch: Partial<Portion>): void {
-    setPortions((previous) => previous.map((portion, portionIndex) => (portionIndex === index ? { ...portion, ...patch } : portion)));
-  }
+  const percentageSum = members.reduce((total, member) => total + member.percentage, 0);
+  const canSubmit = colleagues.length > 0 && Math.abs(percentageSum - 100) <= SUM_TOLERANCE;
 
   async function handleConfirm(): Promise<void> {
-    if (portions.length < 2 || portions.some((portion) => !portion.categoryId || !portion.amount)) {
-      toast.error("Fill in a category and amount for every portion.");
+    if (!canSubmit) {
+      toast.error("Splits must add up to 100%.");
       return;
     }
-    if (Math.abs(remaining) > 0.01) {
-      toast.error("Split amounts must add up to the original expense amount.");
-      return;
-    }
-
     setIsSubmitting(true);
     try {
-      await splitExpense(
-        claimId,
-        expense!.id!,
-        portions.map((portion) => ({ categoryId: portion.categoryId!, amount: Number(portion.amount), paidBy: portion.paidBy }))
-      );
-      toast.success("Expense split.");
+      await createSplitRequest(claimId, expense!.id!, {
+        splitType: "percentage",
+        members: members.map((member) => ({ employeeId: member.employeeId, percentage: member.percentage })),
+      });
+      toast.success("Split request sent.");
       onSplit();
       onOpenChange(false);
     } catch (error) {
@@ -81,48 +87,34 @@ export function SplitExpenseDialog({ claimId, expense, categories, onOpenChange,
 
   return (
     <Dialog open={expense !== null} onOpenChange={onOpenChange}>
-      <DialogContent sx={{ width: "100%", maxWidth: 512 }}>
+      <DialogContent sx={{ width: "100%", maxWidth: 600 }}>
         <DialogHeader>
           <DialogTitle>Split Expense</DialogTitle>
-          <DialogDescription>Original amount: ₹{formatInr(originalAmount)}. Remaining to allocate: ₹{formatInr(remaining)}.</DialogDescription>
+          <DialogDescription>Distribute the total bill amount among your colleagues. Ensure the sum matches the receipt total.</DialogDescription>
         </DialogHeader>
 
         <Stack spacing={2}>
-          {portions.map((portion, index) => (
-            <Box key={index} sx={{ display: "grid", gridTemplateColumns: "1fr 1fr", gap: 1, borderRadius: 1.5, border: 1, borderColor: "divider", p: 1.5 }}>
-              <Stack spacing={0.5} sx={{ gridColumn: "span 2" }}>
-                <Label>Category</Label>
-                <CategorySelect categories={categories} value={portion.categoryId} onChange={(categoryId) => updatePortion(index, { categoryId })} />
-              </Stack>
-              <Stack spacing={0.5}>
-                <Label>Amount</Label>
-                <Input type="number" value={portion.amount} onChange={(event) => updatePortion(index, { amount: event.target.value })} />
-              </Stack>
-              <Stack spacing={0.5}>
-                <Label>Paid By</Label>
-                <SelectField
-                  value={portion.paidBy}
-                  onValueChange={(value) => updatePortion(index, { paidBy: value as "company" | "self" })}
-                  options={[
-                    { value: "self", label: "Self Paid" },
-                    { value: "company", label: "Company Paid" },
-                  ]}
-                />
-              </Stack>
-            </Box>
-          ))}
-          <Button type="button" variant="outline" size="sm" onClick={() => setPortions((previous) => [...previous, { categoryId: null, amount: "", paidBy: "self" }])} sx={{ alignSelf: "flex-start" }}>
-            Add Portion
-          </Button>
+          <Stack spacing={1}>
+            <Label>Split Among</Label>
+            <SplitAmongSelect
+              requesterId={user.id}
+              requesterName={user.name}
+              selectedColleagues={colleagues}
+              onChange={handleColleaguesChange}
+              maxColleagues={MAX_COLLEAGUES}
+            />
+          </Stack>
+
+          <SplitPercentageTable members={members} totalAmount={originalAmount} onChange={setMembers} />
         </Stack>
 
         <DialogFooter>
           <Button type="button" variant="outline" onClick={() => onOpenChange(false)}>
             Cancel
           </Button>
-          <Button type="button" onClick={handleConfirm} disabled={isSubmitting}>
+          <Button type="button" onClick={handleConfirm} disabled={isSubmitting || !canSubmit}>
             {isSubmitting ? <Spinner /> : null}
-            Confirm Split
+            Yes, Submit
           </Button>
         </DialogFooter>
       </DialogContent>

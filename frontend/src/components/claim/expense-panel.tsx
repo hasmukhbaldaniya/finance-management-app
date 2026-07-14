@@ -10,6 +10,7 @@ import { Label } from "@/components/ui/label";
 import type { ClaimableCategory } from "@/types/claim.type";
 import { CategorySelect } from "./category-select";
 import { ExpenseDynamicForm } from "./expense-dynamic-form";
+import { isExpenseComplete } from "./expense-completeness";
 import type { LocalExpense } from "./local-expense.type";
 
 type ExpensePanelProps = {
@@ -19,19 +20,17 @@ type ExpensePanelProps = {
   onChange: (patch: Partial<LocalExpense>) => void;
   onRemove: () => void;
   onSplit: () => void;
-  onSplitWithColleagues: () => void;
   canRemove: boolean;
 };
 
 // 022's Expense panel — Category dropdown, that category's own dynamic
-// field configuration, and Paid By, all per-expense. Split Expense is
-// disabled until the expense has a Category and Amount, matching the
-// reference screenshot's own greyed-out state on a blank expense. Split
-// with Colleagues (025) shares the same gate — sharing an expense's cost
-// needs the same Category/Amount as splitting it into portions does.
-export function ExpensePanel({ index, expense, categories, onChange, onRemove, onSplit, onSplitWithColleagues, canRemove }: ExpensePanelProps) {
+// field configuration, and Paid By, all per-expense. Split Expense (027's
+// redesign — a cross-employee percentage split, see split-expense-dialog.tsx)
+// is disabled until every one of this expense's own required fields is
+// filled, not just Category + Amount.
+export function ExpensePanel({ index, expense, categories, onChange, onRemove, onSplit, canRemove }: ExpensePanelProps) {
   const category = categories.find((candidate) => candidate.id === expense.categoryId) ?? null;
-  const canSplit = expense.id !== undefined && expense.categoryId !== null && Boolean(expense.amount) && Number(expense.amount) > 0;
+  const canSplit = isExpenseComplete(expense, category);
 
   return (
     <Stack spacing={2} sx={{ borderRadius: 2, border: 1, borderColor: "divider", bgcolor: "background.paper", p: 2.5 }}>
@@ -69,27 +68,6 @@ export function ExpensePanel({ index, expense, categories, onChange, onRemove, o
             }}
           >
             Split Expense
-          </Box>
-          <Box
-            component="button"
-            type="button"
-            onClick={onSplitWithColleagues}
-            disabled={!canSplit}
-            sx={{
-              borderRadius: 1.5,
-              px: 1,
-              py: 0.5,
-              fontSize: "0.75rem",
-              fontWeight: 500,
-              color: "text.secondary",
-              background: "none",
-              border: "none",
-              cursor: canSplit ? "pointer" : "not-allowed",
-              opacity: canSplit ? 1 : 0.5,
-              "&:hover": canSplit ? { bgcolor: "action.hover" } : undefined,
-            }}
-          >
-            Split with Colleagues
           </Box>
           {canRemove ? (
             <Box

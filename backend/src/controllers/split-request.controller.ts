@@ -21,9 +21,14 @@ const MAX_COLLEAGUES = 9;
 
 type IncomingMember = { employeeId: number; percentage?: number; amount?: number };
 
-// 025's own Request story — colleague picker's own "Split by
-// Percentage/Amount" toggle. The requester isn't in this list; their own
-// retained share is computed as the remainder.
+// 027's redesign of 025's own Request story — the requester's own row is now
+// sent explicitly as part of `members` (including their own percentage/
+// amount, directly editable in the UI), not implicitly computed as
+// "whatever's left over." The whole set (requester + colleagues) must sum to
+// exactly 100% / exactly the expense's own amount — not "up to 100%," since
+// there's no more "leave an unsplit remainder for yourself" mode.
+const SUM_TOLERANCE = 0.01;
+
 export async function createSplitRequest(req: AuthenticatedRequest, res: Response): Promise<void> {
   const organizationId = await getActiveOrganizationId(req.userId);
   if (!organizationId || !req.userId) {
@@ -58,18 +63,20 @@ export async function createSplitRequest(req: AuthenticatedRequest, res: Respons
         .filter((member: IncomingMember) => Boolean(member.employeeId))
     : [];
 
-  if (incomingMembers.length === 0 || incomingMembers.length > MAX_COLLEAGUES) {
-    res.status(400).json({ error: "Add at least one colleague to split with." });
-    return;
-  }
   const uniqueIds = new Set(incomingMembers.map((member) => member.employeeId));
-  if (uniqueIds.size !== incomingMembers.length || uniqueIds.has(req.userId)) {
+  if (uniqueIds.size !== incomingMembers.length || !uniqueIds.has(req.userId)) {
     res.status(400).json({ error: "Add at least one colleague to split with." });
     return;
   }
 
-  const colleagues = await Employee.findAll({ where: { id: Array.from(uniqueIds), organizationId } });
-  if (colleagues.length !== uniqueIds.size) {
+  const colleagueIds = Array.from(uniqueIds).filter((id) => id !== req.userId);
+  if (colleagueIds.length === 0 || colleagueIds.length > MAX_COLLEAGUES) {
+    res.status(400).json({ error: "Add at least one colleague to split with." });
+    return;
+  }
+
+  const colleagues = await Employee.findAll({ where: { id: colleagueIds, organizationId } });
+  if (colleagues.length !== colleagueIds.length) {
     res.status(400).json({ error: "Select colleagues from your own organization." });
     return;
   }
@@ -79,18 +86,18 @@ export async function createSplitRequest(req: AuthenticatedRequest, res: Respons
 
   if (splitType === "percentage") {
     const sum = incomingMembers.reduce((total, member) => total + (member.percentage ?? 0), 0);
-    if (sum <= 0 || sum > 100) {
+    if (Math.abs(sum - 100) > SUM_TOLERANCE) {
       res.status(400).json({ error: "Splits must add up to 100%." });
       return;
     }
     memberAmounts = incomingMembers.map((member) => ({
       employeeId: member.employeeId,
       percentage: member.percentage ?? 0,
-      amount: Number(((member.percentage ?? 0) / 100) * totalAmount),
+      amount: Number((((member.percentage ?? 0) / 100) * totalAmount).toFixed(2)),
     }));
   } else {
     const sum = incomingMembers.reduce((total, member) => total + (member.amount ?? 0), 0);
-    if (sum <= 0 || sum > totalAmount) {
+    if (Math.abs(sum - totalAmount) > SUM_TOLERANCE) {
       res.status(400).json({ error: "Splits must add up to the full expense amount." });
       return;
     }
@@ -101,21 +108,18 @@ export async function createSplitRequest(req: AuthenticatedRequest, res: Respons
     }));
   }
 
-  const colleagueAmountSum = memberAmounts.reduce((total, member) => total + member.amount, 0);
-  const requesterAmount = Math.max(0, totalAmount - colleagueAmountSum);
-  const requesterPercentage = Number(((requesterAmount / totalAmount) * 100).toFixed(2));
-
   const splitRequest = await ExpenseSplitRequest.create({
     expenseId: expense.id,
     requestedByEmployeeId: req.userId,
     splitType,
   });
 
+  const requesterMember = memberAmounts.find((member) => member.employeeId === req.userId)!;
   await ExpenseSplitRequestMember.create({
     splitRequestId: splitRequest.id,
     employeeId: req.userId,
-    percentage: requesterPercentage.toFixed(2),
-    amount: requesterAmount.toFixed(2),
+    percentage: requesterMember.percentage.toFixed(2),
+    amount: requesterMember.amount.toFixed(2),
     isRequester: true,
     status: "accepted",
     respondedAt: new Date(),
@@ -125,33 +129,35 @@ export async function createSplitRequest(req: AuthenticatedRequest, res: Respons
   const requester = await Employee.findByPk(req.userId);
   const category = await Category.findByPk(expense.categoryId);
   await Promise.all(
-    memberAmounts.map(async (member) => {
-      await ExpenseSplitRequestMember.create({
-        splitRequestId: splitRequest.id,
-        employeeId: member.employeeId,
-        percentage: member.percentage.toFixed(2),
-        amount: member.amount.toFixed(2),
-        isRequester: false,
-        status: "pending",
-        respondedAt: null,
-        resultingExpenseId: null,
-      });
-
-      const colleague = colleagues.find((candidate) => candidate.id === member.employeeId);
-      if (!colleague) return;
-      try {
-        await sendSplitRequestEmail({
-          email: colleague.email,
-          recipientFirstName: colleague.firstName,
-          requesterName: requester ? `${requester.firstName} ${requester.lastName}`.trim() : "A colleague",
-          categoryName: category?.name ?? "expense",
+    memberAmounts
+      .filter((member) => member.employeeId !== req.userId)
+      .map(async (member) => {
+        await ExpenseSplitRequestMember.create({
+          splitRequestId: splitRequest.id,
+          employeeId: member.employeeId,
+          percentage: member.percentage.toFixed(2),
           amount: member.amount.toFixed(2),
-          inboxLink: `${env.corsOrigin}/claims/split-requests`,
+          isRequester: false,
+          status: "pending",
+          respondedAt: null,
+          resultingExpenseId: null,
         });
-      } catch (err) {
-        console.error(`Failed to send split request email to employee ${member.employeeId}:`, err);
-      }
-    })
+
+        const colleague = colleagues.find((candidate) => candidate.id === member.employeeId);
+        if (!colleague) return;
+        try {
+          await sendSplitRequestEmail({
+            email: colleague.email,
+            recipientFirstName: colleague.firstName,
+            requesterName: requester ? `${requester.firstName} ${requester.lastName}`.trim() : "A colleague",
+            categoryName: category?.name ?? "expense",
+            amount: member.amount.toFixed(2),
+            inboxLink: `${env.corsOrigin}/claims/split-requests`,
+          });
+        } catch (err) {
+          console.error(`Failed to send split request email to employee ${member.employeeId}:`, err);
+        }
+      })
   );
 
   res.status(201).json({ id: splitRequest.id });
