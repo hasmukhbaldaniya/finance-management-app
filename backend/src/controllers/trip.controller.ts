@@ -28,12 +28,19 @@ type ValidatedTripInput = {
 
 // Shared between createTrip and updateTrip (021's Edit Trip reuses 018's
 // Create Trip validation verbatim, per that story's own Validation Rules).
-async function parseAndValidateTripInput(body: unknown): Promise<{ error: string } | ValidatedTripInput> {
+// `status` on the error branch defaults to 400 at the call site — only the
+// city-existence check below overrides it to 404, per 018's own API Design
+// table ("400 (validation failures)... 404 (a referenced startCityId/
+// endCityId doesn't exist)").
+async function parseAndValidateTripInput(body: unknown): Promise<{ error: string; status?: number } | ValidatedTripInput> {
   const record = typeof body === "object" && body !== null ? (body as Record<string, unknown>) : {};
 
   const name = typeof record.name === "string" ? record.name.trim() : "";
-  if (name.length < MIN_TRIP_NAME_LENGTH || name.length > MAX_TRIP_NAME_LENGTH) {
+  if (!name) {
     return { error: "Trip Name is required." };
+  }
+  if (name.length < MIN_TRIP_NAME_LENGTH || name.length > MAX_TRIP_NAME_LENGTH) {
+    return { error: `Trip Name must be between ${MIN_TRIP_NAME_LENGTH} and ${MAX_TRIP_NAME_LENGTH} characters.` };
   }
 
   const startAt = asDate(record.startAt);
@@ -59,7 +66,7 @@ async function parseAndValidateTripInput(body: unknown): Promise<{ error: string
 
   const cities = await City.findAll({ where: { id: [startCityId, endCityId] } });
   if (!cities.some((city) => city.id === startCityId) || !cities.some((city) => city.id === endCityId)) {
-    return { error: "Select a valid location." };
+    return { error: "Select a valid location.", status: 404 };
   }
 
   return { name, startAt, endAt, startCityId, endCityId };
@@ -78,7 +85,7 @@ export async function createTrip(req: AuthenticatedRequest, res: Response): Prom
 
   const parsed = await parseAndValidateTripInput(req.body);
   if ("error" in parsed) {
-    res.status(400).json({ error: parsed.error });
+    res.status(parsed.status ?? 400).json({ error: parsed.error });
     return;
   }
 
@@ -119,7 +126,7 @@ export async function updateTrip(req: AuthenticatedRequest, res: Response): Prom
 
   const parsed = await parseAndValidateTripInput(req.body);
   if ("error" in parsed) {
-    res.status(400).json({ error: parsed.error });
+    res.status(parsed.status ?? 400).json({ error: parsed.error });
     return;
   }
 
