@@ -50,7 +50,7 @@ function DropdownMenu({ children }: { children: ReactNode }) {
 }
 
 type DropdownMenuTriggerProps = {
-  render?: ReactElement<{ onClick?: (event: MouseEvent<HTMLElement>) => void }>;
+  render?: ReactElement<{ onClick?: (event: MouseEvent<HTMLElement>) => void; "aria-haspopup"?: string; "aria-expanded"?: boolean }>;
   sx?: SxProps<Theme>;
   children?: ReactNode;
 };
@@ -59,13 +59,17 @@ type DropdownMenuTriggerProps = {
 // sx/children (header.tsx's Profile button), or Base UI's `render`
 // composition prop wrapping an existing element (the searchable pickers'
 // own outlined Button trigger) — cloned with onClick wired in either way.
+// aria-haspopup/aria-expanded are set on both branches so the trigger
+// announces its disclosure-widget role and open/closed state per this
+// codebase's own accessibility rules, matching MuiMenu's own open state.
 function DropdownMenuTrigger({ render, sx, children }: DropdownMenuTriggerProps) {
-  const { openMenu } = useDropdownMenuContext();
+  const { anchorEl, openMenu } = useDropdownMenuContext();
+  const isOpen = Boolean(anchorEl);
   if (render && isValidElement(render)) {
-    return cloneElement(render, { onClick: openMenu });
+    return cloneElement(render, { onClick: openMenu, "aria-haspopup": "menu", "aria-expanded": isOpen });
   }
   return (
-    <Box component="button" type="button" onClick={openMenu} sx={sx}>
+    <Box component="button" type="button" onClick={openMenu} aria-haspopup="menu" aria-expanded={isOpen} sx={sx}>
       {children}
     </Box>
   );

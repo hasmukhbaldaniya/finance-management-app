@@ -6,16 +6,11 @@ import Box from "@mui/material/Box";
 import { getMe } from "@/apis/auth";
 import { Spinner } from "@/components/ui/spinner";
 import { ROUTES } from "@/utils/constants/route.constant";
-import { ForgotPasswordProvider } from "@/contexts/ForgotPasswordContext";
 
-type ForgotPasswordLayoutProps = {
-  children: ReactNode;
-};
-
-// 001's own Access & Permission Rules (TC-28): an already-authenticated
-// visitor to any Forgot Password step is redirected to the Dashboard
-// without the auth screen ever rendering.
-export default function ForgotPasswordLayout({ children }: ForgotPasswordLayoutProps) {
+// 001's own Access & Permission Rules (TC-27): an already-authenticated
+// visitor is redirected to the Dashboard without the Login screen ever
+// rendering — not just left reachable and hoping no one hits it.
+export default function LoginLayout({ children }: { children: ReactNode }) {
   const router = useRouter();
   const [isChecking, setIsChecking] = useState(true);
 
@@ -41,5 +36,5 @@ export default function ForgotPasswordLayout({ children }: ForgotPasswordLayoutP
     );
   }
 
-  return <ForgotPasswordProvider>{children}</ForgotPasswordProvider>;
+  return <>{children}</>;
 }
