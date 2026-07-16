@@ -38,7 +38,7 @@ import { DeleteInvoiceFileDialog } from "@/components/claim/delete-invoice-file-
 import { ExpenseDynamicForm } from "@/components/claim/expense-dynamic-form";
 import { SplitClaimDialog } from "@/components/claim/split-claim-dialog";
 import { SplitExpenseDialog } from "@/components/claim/split-expense-dialog";
-import { isExpenseComplete } from "@/components/claim/expense-completeness";
+import { carryOverFieldValues, isExpenseComplete } from "@/components/claim/expense-completeness";
 import { Button } from "@/components/ui/button";
 import { Spinner } from "@/components/ui/spinner";
 import { getInvoiceFileContent } from "@/apis/claim/getInvoiceFileContent.api";
@@ -221,13 +221,18 @@ export function AiReviewScreen({ claimId }: { claimId: number }) {
     const previousIds = new Set(expenses.map((expense) => expense.id));
     setIsUploadingMore(true);
     try {
-      await uploadInvoiceFiles(claimId, files);
-      await processInvoiceFiles(claimId);
-      await pollUntilComplete({ current: false });
-      const nextExpenses = await loadReviewData();
-      const newExpense = nextExpenses.find((expense) => !previousIds.has(expense.id));
-      if (newExpense) setSelectedExpenseId(newExpense.id!);
-      toast.success(files.length > 1 ? "Invoices processed." : "Invoice processed.");
+      const uploadResult = await uploadInvoiceFiles(claimId, files);
+      uploadResult.failed.forEach((failedFile) => {
+        toast.warning(`${failedFile.originalFileName} couldn't be read — it may be corrupted or password-protected.`);
+      });
+      if (uploadResult.files.length > 0) {
+        await processInvoiceFiles(claimId);
+        await pollUntilComplete({ current: false });
+        const nextExpenses = await loadReviewData();
+        const newExpense = nextExpenses.find((expense) => !previousIds.has(expense.id));
+        if (newExpense) setSelectedExpenseId(newExpense.id!);
+        toast.success(uploadResult.files.length > 1 ? "Invoices processed." : "Invoice processed.");
+      }
     } catch (error) {
       toast.error(error instanceof ApiError ? error.message : GENERIC_ERROR_MESSAGE);
     } finally {
@@ -788,7 +793,11 @@ export function AiReviewScreen({ claimId }: { claimId: number }) {
                   <CategorySelect
                     categories={categories}
                     value={selectedExpense.categoryId}
-                    onChange={(categoryId) => updateExpense(selectedExpense.id!, { categoryId, fieldValues: {} })}
+                    onChange={(categoryId) => {
+                      const nextCategory = categories.find((category) => category.id === categoryId) ?? null;
+                      const fieldValues = carryOverFieldValues(selectedCategory, nextCategory, selectedExpense.fieldValues);
+                      updateExpense(selectedExpense.id!, { categoryId, fieldValues });
+                    }}
                   />
                 </Stack>
 

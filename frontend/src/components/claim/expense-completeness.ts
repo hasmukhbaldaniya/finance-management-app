@@ -48,3 +48,26 @@ export function isExpenseComplete(expense: LocalExpense, category: ClaimableCate
     .filter((field) => field.isRequired)
     .every((field) => isFieldValueFilled(expense.fieldValues[String(field.id)]));
 }
+
+// 023's own Flow point 5 / Acceptance Criteria: switching Category on an
+// AI-reviewed expense maps already-extracted values onto identically-
+// named/typed fields in the new category, rather than wiping the form —
+// any field that doesn't have a same-name/same-type match in the new
+// category simply starts blank, no attempt to force-fit mismatched data.
+export function carryOverFieldValues(
+  previousCategory: ClaimableCategory | null | undefined,
+  nextCategory: ClaimableCategory | null | undefined,
+  previousFieldValues: Record<string, unknown>
+): Record<string, unknown> {
+  if (!previousCategory || !nextCategory) return {};
+
+  const previousFieldByKey = new Map(previousCategory.fields.map((field) => [`${field.fieldName}::${field.fieldType}`, field]));
+  const next: Record<string, unknown> = {};
+  for (const field of nextCategory.fields) {
+    const match = previousFieldByKey.get(`${field.fieldName}::${field.fieldType}`);
+    if (!match) continue;
+    const value = previousFieldValues[String(match.id)];
+    if (isFieldValueFilled(value)) next[String(field.id)] = value;
+  }
+  return next;
+}

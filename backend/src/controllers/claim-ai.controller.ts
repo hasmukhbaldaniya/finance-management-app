@@ -114,26 +114,36 @@ export async function uploadInvoiceFiles(req: AuthenticatedRequest, res: Respons
     return;
   }
 
+  // 023's own Edge Cases: a corrupted/password-protected PDF is "flagged
+  // with an error... doesn't block the rest of the batch" — each file gets
+  // its own try/catch so one bad file can't 500 the whole upload and lose
+  // every other file in it.
   const created: ClaimInvoiceFile[] = [];
+  const failed: { originalFileName: string }[] = [];
   for (const file of files) {
-    const extension = file.originalname.split(".").pop()?.toLowerCase() ?? "";
-    const storedPath = await saveInvoiceFile(claim.id, file.buffer, file.originalname);
-    const pageCount = extension === "pdf" ? await getPdfPageCount(file.buffer) : null;
+    try {
+      const extension = file.originalname.split(".").pop()?.toLowerCase() ?? "";
+      const storedPath = await saveInvoiceFile(claim.id, file.buffer, file.originalname);
+      const pageCount = extension === "pdf" ? await getPdfPageCount(file.buffer) : null;
 
-    created.push(
-      await ClaimInvoiceFile.create({
-        claimId: claim.id,
-        originalFileName: file.originalname,
-        storedPath,
-        fileType: extension as ClaimInvoiceFile["fileType"],
-        fileSizeBytes: file.size,
-        pageCount,
-      })
-    );
+      created.push(
+        await ClaimInvoiceFile.create({
+          claimId: claim.id,
+          originalFileName: file.originalname,
+          storedPath,
+          fileType: extension as ClaimInvoiceFile["fileType"],
+          fileSizeBytes: file.size,
+          pageCount,
+        })
+      );
+    } catch {
+      failed.push({ originalFileName: file.originalname });
+    }
   }
 
   res.status(201).json({
     files: created.map((file) => ({ id: file.id, originalFileName: file.originalFileName, fileType: file.fileType, pageCount: file.pageCount })),
+    failed,
   });
 }
 

@@ -250,6 +250,19 @@ export async function saveExpenses(req: AuthenticatedRequest, res: Response): Pr
     }
 
     const fields = fieldsByCategoryId.get(expense.categoryId) ?? [];
+
+    // 023's own Red Flag mechanism: redFlagAction "block" means a triggered
+    // flag "block[s] the expense from being saved at all" (its own words),
+    // not just highlight it like the default "highlight" action does. Only
+    // enforced on the final save — Draft stays lenient, matching every
+    // other leniency rule in this codebase (013's own Save-as-Draft
+    // posture). isRedFlagged is set once at AI-extraction time and never
+    // re-evaluated on edit, so the only way to clear it today is removing
+    // and re-extracting the expense — a known limitation, not addressed here.
+    if (!isDraftSave && existing?.isRedFlagged && fields.some((field) => field.redFlagAction === "block")) {
+      res.status(400).json({ error: "This expense is flagged and can't be submitted until it's resolved." });
+      return;
+    }
     const validation = await validateExpenseFieldValues(fields, expense.fieldValues, isDraftSave);
     if ("error" in validation) {
       res.status(400).json({ error: validation.error });

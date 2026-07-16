@@ -27,6 +27,11 @@ export type OnboardingTokenPayload = {
   type: "onboarding";
   employeeId: number;
   email: string;
+  // The EmployeeInvite row's own `sentAt` (epoch ms) this token was minted
+  // for — lets requireOnboardingEmployee reject a token once a newer invite
+  // has been sent, so "resend supersedes, doesn't extend" (011's own Flow
+  // point 3 / TC-13) is actually enforced, not just true until expiry.
+  sentAt: number;
 };
 
 export function signAccessToken(userId: number): string {
@@ -53,8 +58,8 @@ export function signRefreshToken(userId: number): string {
 // — unlike registrationToken, it is never exchanged for a fresh one partway
 // through, so its 10-minute expiry is a single flat window for all 4 steps,
 // not 10 minutes per step. See that story's Open Questions for why.
-export function signOnboardingToken(employeeId: number, email: string): string {
-  const payload: OnboardingTokenPayload = { type: "onboarding", employeeId, email };
+export function signOnboardingToken(employeeId: number, email: string, sentAt: Date): string {
+  const payload: OnboardingTokenPayload = { type: "onboarding", employeeId, email, sentAt: sentAt.getTime() };
   return jwt.sign(payload, env.auth.jwtSecret, { expiresIn: env.auth.onboardingTokenExpiresIn } as jwt.SignOptions);
 }
 

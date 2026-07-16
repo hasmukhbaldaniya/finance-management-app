@@ -184,6 +184,13 @@ export default function EmployeeListingPage() {
       await resendEmployeeInvite(employee.id);
       toast.success("Invitation resent.");
     } catch (error) {
+      // A 409 here means this row is stale — the employee already
+      // completed registration since this list last loaded. Reflect that
+      // locally so Resend Invite disappears instead of staying clickable
+      // against an already-registered employee (009's own TC-10).
+      if (error instanceof ApiError && error.status === 409) {
+        setEmployees((previous) => previous.map((e) => (e.id === employee.id ? { ...e, invitationStatus: "registered" } : e)));
+      }
       toast.error(error instanceof ApiError ? error.message : GENERIC_ERROR_MESSAGE);
     } finally {
       setResendingId(null);

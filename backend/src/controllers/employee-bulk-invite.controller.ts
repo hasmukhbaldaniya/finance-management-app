@@ -69,11 +69,19 @@ function takeStagedUpload(uploadId: number, organizationId: number): PendingRow[
 
 // ---- multer (multipart file) setup ----
 
+// 010's own Security section requires both extension and MIME type checked,
+// not extension alone, to reduce spoofing risk.
+const ACCEPTED_MIME_TYPES = new Set([
+  "text/csv",
+  "application/vnd.ms-excel",
+  "application/vnd.openxmlformats-officedocument.spreadsheetml.sheet",
+]);
+
 const multerUpload = multer({
   storage: multer.memoryStorage(),
   limits: { fileSize: MAX_BULK_FILE_SIZE_BYTES },
   fileFilter: (_req, file, callback) => {
-    if (!/\.(csv|xlsx)$/i.test(file.originalname)) {
+    if (!/\.(csv|xlsx)$/i.test(file.originalname) || !ACCEPTED_MIME_TYPES.has(file.mimetype)) {
       callback(new Error("UNSUPPORTED_TYPE"));
       return;
     }

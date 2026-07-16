@@ -207,7 +207,11 @@ export async function listSplitRequests(req: AuthenticatedRequest, res: Response
     return;
   }
 
-  const memberConditions: WhereOptions[] = [{ employeeId: req.userId }, { isRequester: false }];
+  // 025's own Flow/Open Questions resolve this as "disappears once fully
+  // responded" — once the caller has Accepted/Rejected their own row, this
+  // request drops off their inbox rather than lingering with just a
+  // changed badge.
+  const memberConditions: WhereOptions[] = [{ employeeId: req.userId }, { isRequester: false }, { status: "pending" }];
   const myMembers = await ExpenseSplitRequestMember.findAll({ where: { [Op.and]: memberConditions } });
   const requestIds = myMembers.map((member) => member.splitRequestId);
   if (requestIds.length === 0) {
