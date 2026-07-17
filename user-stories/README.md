@@ -43,5 +43,5 @@ Product requirements for Finance Management, written as user stories before any 
 | 023 | [Claim Creation: AI-Powered (Automated Extraction)](./023-claim-creation-ai-powered.md) | Draft |
 | 024 | [My Claim Listing](./024-my-claim-listing.md) | Draft |
 | 025 | [Split Claim: Sharing an Expense With Colleagues](./025-claim-split-request.md) | Draft |
-| 026 | [MUI Migration](./026-mui-migration.md) | Draft |
+| 026 | [MUI Migration](./026-mui-migration.md) | Implemented |
 | 027 | [Split Claim & Split Expense Redesign](./027-split-claim-and-split-expense-redesign.md) | Draft |
