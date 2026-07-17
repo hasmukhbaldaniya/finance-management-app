@@ -101,6 +101,23 @@ function stageApproverCount(stage: IncomingStage): number {
   return stage.approverGroups.reduce((total, group) => total + group.employeeIds.length, 0);
 }
 
+// 013's own Validation Rules Summary: "Policy Name ... must be unique
+// within the category if provided." Checked case-insensitively, within one
+// policy list at a time (Claim/Exception/Project are independent lists per
+// 013's own "flat, policyType-discriminated, not nested" data model — a
+// Claim Policy and an Exception Policy may share a name). Only enforced on
+// the final save, matching checkRuleDuplicates' own draft-leniency posture.
+export function findDuplicatePolicyName(policies: IncomingPolicy[]): string | null {
+  const seen = new Set<string>();
+  for (const policy of policies) {
+    const key = policy.name.trim().toLowerCase();
+    if (!key) continue;
+    if (seen.has(key)) return "A policy with this name already exists.";
+    seen.add(key);
+  }
+  return null;
+}
+
 // Validates one policy's Eligibility/Rules/Approval Flows sections against
 // user-stories/013-category-creation.md's rules — shared between Step 3
 // (Claim/Exception) and Step 4 (Project), which differ only in which

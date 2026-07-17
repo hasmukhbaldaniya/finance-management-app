@@ -191,6 +191,9 @@ export function PoliciesAndApprovalsForm({ categoryId }: PoliciesAndApprovalsFor
               onChange={(updated) => updateClaimPolicy(index, updated)}
               onDuplicate={() => wizard.setClaimPolicies([...wizard.claimPolicies, duplicatePolicy(policy, wizard.claimPolicies.map((p) => p.name))])}
               onDelete={() => deleteClaimPolicy(index)}
+              hasDuplicateName={wizard.claimPolicies.some(
+                (other, otherIndex) => otherIndex !== index && other.name.trim().toLowerCase() === policy.name.trim().toLowerCase() && policy.name.trim() !== ""
+              )}
             />
           ))}
         </Stack>
@@ -218,6 +221,9 @@ export function PoliciesAndApprovalsForm({ categoryId }: PoliciesAndApprovalsFor
                 wizard.setExceptionPolicies([...wizard.exceptionPolicies, duplicatePolicy(policy, wizard.exceptionPolicies.map((p) => p.name))])
               }
               onDelete={() => deleteExceptionPolicy(index)}
+              hasDuplicateName={wizard.exceptionPolicies.some(
+                (other, otherIndex) => otherIndex !== index && other.name.trim().toLowerCase() === policy.name.trim().toLowerCase() && policy.name.trim() !== ""
+              )}
             />
           ))}
         </Stack>

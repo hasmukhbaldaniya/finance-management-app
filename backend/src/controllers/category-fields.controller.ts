@@ -95,10 +95,24 @@ function applyFieldRenames(formula: string, renameMap: Map<string, string>): str
   });
 }
 
+// 013's own Validation Rules: "Date fields support difference only, written
+// as {{End Date}} - {{Start Date}}." — a date reference anywhere in a
+// formula restricts the *whole* formula to exactly that shape (two date
+// fields, one subtraction, nothing else); it can't be mixed with numeric
+// fields or any other operator, since "today - {{Start Date}}" or
+// "{{Start Date}} + {{Number}}" aren't a duration in the way the spec means.
 function isValidFormula(formula: string, numericFieldNames: Set<string>, dateFieldNames: Set<string>): boolean {
   const references = extractFormulaReferences(formula);
   if (references.length === 0) return false;
   if (!references.every((reference) => numericFieldNames.has(reference) || dateFieldNames.has(reference))) return false;
+
+  const usesDateField = references.some((reference) => dateFieldNames.has(reference));
+  if (usesDateField) {
+    if (references.length !== 2 || !references.every((reference) => dateFieldNames.has(reference))) return false;
+    const dateDifferencePattern = /^\{\{[^}]+\}\}\s*-\s*\{\{[^}]+\}\}$/;
+    return dateDifferencePattern.test(formula.trim());
+  }
+
   const stripped = formula.replace(/\{\{[^}]+\}\}/g, "0");
   return /^[\d\s+\-*/().]+$/.test(stripped);
 }
@@ -253,6 +267,11 @@ export async function saveCategoryFields(req: AuthenticatedRequest, res: Respons
   }
 
   if (!isDraftSave) {
+    // Built here (rather than only down near validateFieldConfig's own use
+    // of them) so the Red Flag "Formula Based" check below can reuse them.
+    const numericFieldNames = new Set(incoming.filter((field) => field.fieldType === "amount" || field.fieldType === "number").map((field) => field.fieldName));
+    const dateFieldNames = new Set(incoming.filter((field) => field.fieldType === "date").map((field) => field.fieldName));
+
     const seenNames = new Set<string>();
     for (const field of incoming) {
       if (field.fieldName.length < MIN_FIELD_NAME_LENGTH || field.fieldName.length > MAX_FIELD_NAME_LENGTH) {
@@ -278,6 +297,16 @@ export async function saveCategoryFields(req: AuthenticatedRequest, res: Respons
           return;
         }
       }
+      // 013's own Red Flags spec: Formula Based mode uses "the same
+      // {{FieldName}} ... mechanic" as the Amount/Number Formula Builder —
+      // previously only "ai" mode was validated here, so any string (even
+      // one referencing nonexistent fields) was silently accepted.
+      if (field.redFlagMode === "formula" && field.redFlagValue) {
+        if (!isValidFormula(field.redFlagValue.trim(), numericFieldNames, dateFieldNames)) {
+          res.status(400).json({ error: "Enter a valid formula using existing Number/Amount fields." });
+          return;
+        }
+      }
     }
 
     for (const type of SINGLE_INSTANCE_FIELD_TYPES) {
@@ -287,9 +316,6 @@ export async function saveCategoryFields(req: AuthenticatedRequest, res: Respons
         return;
       }
     }
-
-    const numericFieldNames = new Set(incoming.filter((field) => field.fieldType === "amount" || field.fieldType === "number").map((field) => field.fieldName));
-    const dateFieldNames = new Set(incoming.filter((field) => field.fieldType === "date").map((field) => field.fieldName));
 
     // Only queried when a city_list field is actually present — every other
     // save skips this round-trip entirely.

@@ -3,6 +3,7 @@ import type { AuthenticatedRequest } from "../middleware/require-auth";
 import { getActiveOrganizationId } from "../utils/auth";
 import { Category, CategoryPolicy } from "../models";
 import {
+  findDuplicatePolicyName,
   parseIncomingPolicy,
   validatePolicy,
   type IncomingPolicy,
@@ -67,6 +68,19 @@ export async function saveCategoryPolicies(req: AuthenticatedRequest, res: Respo
     checkRuleDuplicates: !isDraftSave,
     ...fieldLookups,
   };
+
+  if (!isDraftSave) {
+    const duplicateClaimName = findDuplicatePolicyName(validClaimPolicies);
+    if (duplicateClaimName) {
+      res.status(400).json({ error: duplicateClaimName });
+      return;
+    }
+    const duplicateExceptionName = findDuplicatePolicyName(validExceptionPolicies);
+    if (duplicateExceptionName) {
+      res.status(400).json({ error: duplicateExceptionName });
+      return;
+    }
+  }
 
   for (const policy of validClaimPolicies) {
     const error = validatePolicy(policy, claimOptions);

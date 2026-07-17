@@ -181,6 +181,9 @@ export function ProjectPoliciesForm({ categoryId }: ProjectPoliciesFormProps) {
                   wizard.setProjectPolicies([...wizard.projectPolicies, duplicatePolicy(policy, wizard.projectPolicies.map((p) => p.name))])
                 }
                 onDelete={() => deletePolicy(index)}
+                hasDuplicateName={wizard.projectPolicies.some(
+                  (other, otherIndex) => otherIndex !== index && other.name.trim().toLowerCase() === policy.name.trim().toLowerCase() && policy.name.trim() !== ""
+                )}
               />
             ))}
           </Stack>

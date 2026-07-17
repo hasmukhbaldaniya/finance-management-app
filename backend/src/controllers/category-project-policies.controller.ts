@@ -2,7 +2,13 @@ import type { Response } from "express";
 import type { AuthenticatedRequest } from "../middleware/require-auth";
 import { getActiveOrganizationId } from "../utils/auth";
 import { Category, CategoryPolicy } from "../models";
-import { parseIncomingPolicy, validatePolicy, type IncomingPolicy, type PolicyValidationOptions } from "../utils/category-policy-validation";
+import {
+  findDuplicatePolicyName,
+  parseIncomingPolicy,
+  validatePolicy,
+  type IncomingPolicy,
+  type PolicyValidationOptions,
+} from "../utils/category-policy-validation";
 import { buildFieldLookups, persistPolicy } from "../utils/category-policy-persistence";
 import { createCategoryVersion } from "../utils/category-versioning";
 import { MAX_PROJECT_POLICIES } from "../utils/constants/category.constant";
@@ -63,6 +69,12 @@ export async function saveCategoryProjectPolicies(req: AuthenticatedRequest, res
   }
   if (validProjectPolicies.length > MAX_PROJECT_POLICIES) {
     res.status(400).json({ error: `You've reached the maximum of ${MAX_PROJECT_POLICIES} project policies.` });
+    return;
+  }
+
+  const duplicateProjectName = findDuplicatePolicyName(validProjectPolicies);
+  if (duplicateProjectName) {
+    res.status(400).json({ error: duplicateProjectName });
     return;
   }
 
