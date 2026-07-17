@@ -13,7 +13,7 @@ export default function ProjectPoliciesPage() {
   const params = useParams<{ id: string }>();
   const categoryId = Number(params.id);
   const wizard = useCategoryWizard();
-  const { isLoading, loadError } = useLoadCategory(categoryId);
+  const { isLoading, loadError } = useLoadCategory(categoryId, "projectPolicies");
 
   if (isLoading) {
     return (

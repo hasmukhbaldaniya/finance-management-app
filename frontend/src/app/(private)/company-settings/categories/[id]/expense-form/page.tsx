@@ -13,7 +13,7 @@ export default function ExpenseFormPage() {
   const params = useParams<{ id: string }>();
   const categoryId = Number(params.id);
   const wizard = useCategoryWizard();
-  const { isLoading, loadError } = useLoadCategory(categoryId);
+  const { isLoading, loadError } = useLoadCategory(categoryId, "expenseForm");
 
   if (isLoading) {
     return (

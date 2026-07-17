@@ -93,7 +93,7 @@ export function BasicDetailsForm() {
       // category — protect them from being clobbered the moment Step 2's
       // own useLoadCategory fetches this brand-new (still-empty) category.
       if (wasNewCategory) {
-        wizard.setSkipNextLoadForCategoryId(id);
+        wizard.startSkippingLoadsFor(id);
       }
       wizard.markStepReached(1);
       router.push(ROUTES.categoryStep(id, CATEGORY_STEP_SEGMENTS.expenseForm));
