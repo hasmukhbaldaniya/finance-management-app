@@ -1,8 +1,9 @@
 "use client";
 
 import { useRouter } from "next/navigation";
+import Box from "@mui/material/Box";
+import Typography from "@mui/material/Typography";
 import { CheckIcon } from "@phosphor-icons/react";
-import { cn } from "@/lib/utils";
 import { CATEGORY_STEP_SEGMENTS, CATEGORY_WIZARD_STEPS, CATEGORY_WIZARD_STEP_LABELS } from "@/utils/constants/category.constant";
 import { ROUTES } from "@/utils/constants/route.constant";
 import type { CategoryWizardStep } from "@/types/category.type";
@@ -28,8 +29,8 @@ export function WizardStepNav({ categoryId, currentStep, highestStepIndexReached
   }
 
   return (
-    <nav aria-label="Category wizard steps" className="w-full shrink-0 md:w-72">
-      <ol className="space-y-2">
+    <Box component="nav" aria-label="Category wizard steps" sx={{ width: { xs: "100%", md: 288 }, flexShrink: 0 }}>
+      <Box component="ol" sx={{ display: "flex", flexDirection: "column", gap: 1, listStyle: "none", p: 0, m: 0 }}>
         {CATEGORY_WIZARD_STEPS.map((step, index) => {
           const isActive = index === currentIndex;
           const isCompleted = !isActive && index <= highestStepIndexReached;
@@ -37,39 +38,63 @@ export function WizardStepNav({ categoryId, currentStep, highestStepIndexReached
           const { title, subtitle } = CATEGORY_WIZARD_STEP_LABELS[step];
 
           return (
-            <li key={step}>
-              <button
+            <Box component="li" key={step}>
+              <Box
+                component="button"
                 type="button"
                 disabled={!isClickable}
                 onClick={() => handleClick(index)}
                 aria-current={isActive ? "step" : undefined}
-                className={cn(
-                  "flex w-full items-start gap-3 rounded-lg border px-4 py-3 text-left transition-colors",
-                  isActive ? "border-primary bg-primary/5" : "border-border",
-                  isClickable ? "cursor-pointer hover:bg-muted/50" : "cursor-default"
-                )}
+                sx={{
+                  display: "flex",
+                  width: "100%",
+                  alignItems: "flex-start",
+                  gap: 1.5,
+                  borderRadius: 2,
+                  border: 1,
+                  borderColor: isActive ? "primary.main" : "divider",
+                  bgcolor: isActive ? "action.selected" : "transparent",
+                  px: 2,
+                  py: 1.5,
+                  textAlign: "left",
+                  background: isActive ? undefined : "none",
+                  cursor: isClickable ? "pointer" : "default",
+                  "&:hover": isClickable ? { bgcolor: "action.hover" } : undefined,
+                }}
               >
-                <span
-                  className={cn(
-                    "mt-0.5 flex size-6 shrink-0 items-center justify-center rounded-full border text-xs font-medium",
-                    isActive
-                      ? "border-primary bg-primary text-primary-foreground"
-                      : isCompleted
-                        ? "border-green-600 bg-green-600 text-white"
-                        : "border-border text-muted-foreground"
-                  )}
+                <Box
+                  sx={{
+                    mt: 0.25,
+                    display: "flex",
+                    width: 24,
+                    height: 24,
+                    flexShrink: 0,
+                    alignItems: "center",
+                    justifyContent: "center",
+                    borderRadius: "50%",
+                    border: 1,
+                    borderColor: isActive ? "primary.main" : isCompleted ? "success.main" : "divider",
+                    bgcolor: isActive ? "primary.main" : isCompleted ? "success.main" : "transparent",
+                    color: isActive ? "primary.contrastText" : isCompleted ? "success.contrastText" : "text.secondary",
+                    fontSize: "0.75rem",
+                    fontWeight: 500,
+                  }}
                 >
                   {isCompleted ? <CheckIcon size={14} weight="bold" /> : index + 1}
-                </span>
-                <span className="flex flex-col">
-                  <span className={cn("text-sm font-medium", isActive ? "text-foreground" : "text-foreground/90")}>{title}</span>
-                  <span className="text-xs text-muted-foreground">{subtitle}</span>
-                </span>
-              </button>
-            </li>
+                </Box>
+                <Box sx={{ display: "flex", flexDirection: "column" }}>
+                  <Typography variant="body2" sx={{ fontWeight: 500, color: "text.primary" }}>
+                    {title}
+                  </Typography>
+                  <Typography variant="caption" color="text.secondary">
+                    {subtitle}
+                  </Typography>
+                </Box>
+              </Box>
+            </Box>
           );
         })}
-      </ol>
-    </nav>
+      </Box>
+    </Box>
   );
 }

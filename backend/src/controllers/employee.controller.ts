@@ -393,7 +393,7 @@ export async function updateEmployeeCompanyAccess(req: AuthenticatedRequest, res
   if (projectIds.length > 0) {
     const projects = await Project.findAll({ where: { id: projectIds, organizationId, departmentId } });
     if (projects.length !== projectIds.length) {
-      res.status(400).json({ error: "One or more selected projects don't belong to this department." });
+      res.status(404).json({ error: "One or more selected projects don't belong to this department." });
       return;
     }
   }
@@ -459,7 +459,7 @@ export async function addEmployeeFfNumbers(req: AuthenticatedRequest, res: Respo
   if (ffNumbers.length > 0) {
     const airlines = await Airline.findAll({ where: { id: ffNumbers.map((row) => row.airlineId) } });
     if (airlines.length !== seenAirlineIds.size) {
-      res.status(400).json({ error: "Please select a valid airline." });
+      res.status(404).json({ error: "Please select a valid airline." });
       return;
     }
   }
@@ -525,7 +525,7 @@ export async function saveEmployeeApprovals(req: AuthenticatedRequest, res: Resp
     where: { id: approvers.map((approver) => approver.approverEmployeeId), organizationId, status: "active" },
   });
   if (approverEmployees.length !== approvers.length) {
-    res.status(400).json({ error: "The selected approver is no longer active." });
+    res.status(404).json({ error: "The selected approver is no longer active." });
     return;
   }
 
@@ -572,8 +572,15 @@ export async function sendEmployeeInvite(req: AuthenticatedRequest, res: Respons
     return;
   }
 
+  // This send's own timestamp, embedded in the token and stored on its
+  // EmployeeInvite row below — the same value in both places is what lets
+  // requireOnboardingEmployee recognize a still-unexpired but superseded
+  // token from an earlier send (011's own "resend supersedes, doesn't
+  // extend" rule / TC-13).
+  const sentAt = new Date();
+
   try {
-    const onboardingToken = signOnboardingToken(employee.id, employee.email);
+    const onboardingToken = signOnboardingToken(employee.id, employee.email, sentAt);
     const onboardingLink = `${env.corsOrigin}/onboarding?token=${onboardingToken}`;
     await sendEmployeeInviteEmail(employee.email, employee.firstName, onboardingLink);
   } catch {
@@ -581,7 +588,7 @@ export async function sendEmployeeInvite(req: AuthenticatedRequest, res: Respons
     return;
   }
 
-  await EmployeeInvite.create({ employeeId, sentAt: new Date(), sentBy: req.userId });
+  await EmployeeInvite.create({ employeeId, sentAt, sentBy: req.userId });
 
   res.status(200).json({ message: "Invitation sent." });
 }

@@ -1,126 +1,120 @@
 "use client";
 
 import { useEffect, useState } from "react";
-import { toast } from "sonner";
-import { splitExpense } from "@/apis/claim";
-import { SelectField } from "@/components/select-field";
+import Stack from "@mui/material/Stack";
+import { toast } from "@/components/ui/toast";
 import { Button } from "@/components/ui/button";
 import { Dialog, DialogContent, DialogDescription, DialogFooter, DialogHeader, DialogTitle } from "@/components/ui/dialog";
-import { Input } from "@/components/ui/input";
 import { Label } from "@/components/ui/label";
-import { Spinner } from "@/components/ui/spinner";
-import { formatInr } from "@/utils/helpers/format.helper";
-import { ApiError, GENERIC_ERROR_MESSAGE } from "@/utils/apiManager/apiManager";
+import { useSession } from "@/contexts/SessionContext";
+import type { EmployeeListItem } from "@/types/employee.type";
 import type { ClaimableCategory } from "@/types/claim.type";
-import { CategorySelect } from "./category-select";
+import { SplitAmongSelect } from "./split-among-select";
+import { SplitPercentageTable, distributeEvenly, membersToColleagues, type SplitMember } from "./split-percentage-table";
+import { getClientComputedAmount } from "./expense-completeness";
 import type { LocalExpense } from "./local-expense.type";
 
-type Portion = { categoryId: number | null; amount: string; paidBy: "company" | "self" };
+const MAX_COLLEAGUES = 9;
+const SUM_TOLERANCE = 0.01;
 
 type SplitExpenseDialogProps = {
-  claimId: number;
   expense: LocalExpense | null;
   categories: ClaimableCategory[];
+  initialMembers?: SplitMember[];
   onOpenChange: (open: boolean) => void;
-  onSplit: () => void;
+  onConfirm: (members: SplitMember[]) => void;
 };
 
-// 022's Split an Expense — divides one expense's Amount across 2+
-// Category/Amount portions; portions must sum to the original Amount.
-export function SplitExpenseDialog({ claimId, expense, categories, onOpenChange, onSplit }: SplitExpenseDialogProps) {
-  const [portions, setPortions] = useState<Portion[]>([]);
-  const [isSubmitting, setIsSubmitting] = useState(false);
+// 027's redesign — replaces both the old Category/Amount-portions "Split
+// Expense" and 025's own "Split with Colleagues": a single cross-employee
+// percentage split, scoped to just this one expense. "Yes, Submit" only
+// stages the chosen split via `onConfirm` — the actual Split Request (and its
+// colleague email) is created only once the parent's Save Claim succeeds, see
+// claim-manual-form.tsx's/ai-review-screen.tsx's own `pendingExpenseSplits`.
+export function SplitExpenseDialog({ expense, categories, initialMembers, onOpenChange, onConfirm }: SplitExpenseDialogProps) {
+  const { user } = useSession();
+  const [colleagues, setColleagues] = useState<EmployeeListItem[]>([]);
+  const [members, setMembers] = useState<SplitMember[]>([]);
+
+  // Reads the live, in-progress field value (not the server-denormalized
+  // `expense.amount`, which is stale until the next save) so the dialog
+  // reflects whatever the user just typed, saved or not.
+  const category = expense ? categories.find((candidate) => candidate.id === expense.categoryId) ?? null : null;
+  const originalAmount = expense ? getClientComputedAmount(expense, category) ?? 0 : 0;
 
   useEffect(() => {
-    if (expense) {
-      setPortions([
-        { categoryId: null, amount: "", paidBy: "self" },
-        { categoryId: null, amount: "", paidBy: "self" },
-      ]);
+    if (!expense) {
+      setColleagues([]);
+      setMembers([]);
+      return;
     }
-  }, [expense]);
+    if (initialMembers && initialMembers.length > 0) {
+      // Percentages are the staged intent; amounts are recomputed against
+      // the current total in case fields were edited since staging.
+      const recomputed = initialMembers.map((member) => ({ ...member, amount: Number(((member.percentage / 100) * originalAmount).toFixed(2)) }));
+      setMembers(recomputed);
+      setColleagues(membersToColleagues(recomputed));
+      return;
+    }
+    // Reset to just the requester at 100% whenever a different expense is opened.
+    setColleagues([]);
+    setMembers(distributeEvenly([{ employeeId: user.id, name: user.name, isRequester: true }], originalAmount));
+    // eslint-disable-next-line react-hooks/exhaustive-deps
+  }, [expense?.id]);
+
+  function handleColleaguesChange(nextColleagues: EmployeeListItem[]): void {
+    setColleagues(nextColleagues);
+    const memberSeeds = [
+      { employeeId: user.id, name: user.name, isRequester: true },
+      ...nextColleagues.map((employee) => ({ employeeId: employee.id, name: `${employee.firstName} ${employee.lastName}`.trim(), isRequester: false })),
+    ];
+    setMembers(distributeEvenly(memberSeeds, originalAmount));
+  }
 
   if (!expense) return null;
 
-  const originalAmount = Number(expense.amount ?? 0);
-  const allocated = portions.reduce((total, portion) => total + (Number(portion.amount) || 0), 0);
-  const remaining = originalAmount - allocated;
+  const percentageSum = members.reduce((total, member) => total + member.percentage, 0);
+  const canSubmit = colleagues.length > 0 && Math.abs(percentageSum - 100) <= SUM_TOLERANCE;
 
-  function updatePortion(index: number, patch: Partial<Portion>): void {
-    setPortions((previous) => previous.map((portion, portionIndex) => (portionIndex === index ? { ...portion, ...patch } : portion)));
-  }
-
-  async function handleConfirm(): Promise<void> {
-    if (portions.length < 2 || portions.some((portion) => !portion.categoryId || !portion.amount)) {
-      toast.error("Fill in a category and amount for every portion.");
+  function handleConfirm(): void {
+    if (!canSubmit) {
+      toast.error("Splits must add up to 100%.");
       return;
     }
-    if (Math.abs(remaining) > 0.01) {
-      toast.error("Split amounts must add up to the original expense amount.");
-      return;
-    }
-
-    setIsSubmitting(true);
-    try {
-      await splitExpense(
-        claimId,
-        expense!.id!,
-        portions.map((portion) => ({ categoryId: portion.categoryId!, amount: Number(portion.amount), paidBy: portion.paidBy }))
-      );
-      toast.success("Expense split.");
-      onSplit();
-      onOpenChange(false);
-    } catch (error) {
-      toast.error(error instanceof ApiError ? error.message : GENERIC_ERROR_MESSAGE);
-    } finally {
-      setIsSubmitting(false);
-    }
+    onConfirm(members);
+    toast.success("Split saved — it'll be sent to your colleagues when you save this claim.");
+    onOpenChange(false);
   }
 
   return (
     <Dialog open={expense !== null} onOpenChange={onOpenChange}>
-      <DialogContent className="max-w-lg">
+      <DialogContent sx={{ width: "100%", maxWidth: 600 }}>
         <DialogHeader>
           <DialogTitle>Split Expense</DialogTitle>
-          <DialogDescription>Original amount: ₹{formatInr(originalAmount)}. Remaining to allocate: ₹{formatInr(remaining)}.</DialogDescription>
+          <DialogDescription>Distribute the total bill amount among your colleagues. Ensure the sum matches the receipt total.</DialogDescription>
         </DialogHeader>
 
-        <div className="space-y-4">
-          {portions.map((portion, index) => (
-            <div key={index} className="grid grid-cols-2 gap-2 rounded-md border border-border p-3">
-              <div className="col-span-2 space-y-1">
-                <Label>Category</Label>
-                <CategorySelect categories={categories} value={portion.categoryId} onChange={(categoryId) => updatePortion(index, { categoryId })} />
-              </div>
-              <div className="space-y-1">
-                <Label>Amount</Label>
-                <Input type="number" value={portion.amount} onChange={(event) => updatePortion(index, { amount: event.target.value })} />
-              </div>
-              <div className="space-y-1">
-                <Label>Paid By</Label>
-                <SelectField
-                  value={portion.paidBy}
-                  onValueChange={(value) => updatePortion(index, { paidBy: value as "company" | "self" })}
-                  options={[
-                    { value: "self", label: "Self Paid" },
-                    { value: "company", label: "Company Paid" },
-                  ]}
-                />
-              </div>
-            </div>
-          ))}
-          <Button type="button" variant="outline" size="sm" onClick={() => setPortions((previous) => [...previous, { categoryId: null, amount: "", paidBy: "self" }])}>
-            Add Portion
-          </Button>
-        </div>
+        <Stack spacing={2}>
+          <Stack spacing={1}>
+            <Label>Split Among</Label>
+            <SplitAmongSelect
+              requesterId={user.id}
+              requesterName={user.name}
+              selectedColleagues={colleagues}
+              onChange={handleColleaguesChange}
+              maxColleagues={MAX_COLLEAGUES}
+            />
+          </Stack>
+
+          <SplitPercentageTable members={members} totalAmount={originalAmount} onChange={setMembers} />
+        </Stack>
 
         <DialogFooter>
           <Button type="button" variant="outline" onClick={() => onOpenChange(false)}>
             Cancel
           </Button>
-          <Button type="button" onClick={handleConfirm} disabled={isSubmitting}>
-            {isSubmitting ? <Spinner /> : null}
-            Confirm Split
+          <Button type="button" onClick={handleConfirm} disabled={!canSubmit}>
+            Yes, Submit
           </Button>
         </DialogFooter>
       </DialogContent>

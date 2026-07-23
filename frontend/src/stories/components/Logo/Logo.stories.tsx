@@ -16,5 +16,5 @@ type Story = StoryObj<typeof meta>;
 export const Default: Story = {};
 
 export const MarkOnly: Story = {
-  render: () => <LogoMark className="size-9" />,
+  render: () => <LogoMark />,
 };

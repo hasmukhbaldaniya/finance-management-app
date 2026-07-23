@@ -2,7 +2,10 @@
 
 import Link from "next/link";
 import { usePathname, useRouter } from "next/navigation";
-import { toast } from "sonner";
+import Box from "@mui/material/Box";
+import Stack from "@mui/material/Stack";
+import Typography from "@mui/material/Typography";
+import { toast } from "@/components/ui/toast";
 import { logout } from "@/apis/auth";
 import { Logo } from "@/components/logo";
 import {
@@ -53,11 +56,31 @@ const ASSOCIATED_ORGANIZATIONS_NETWORK_LINK = {
   href: ROUTES.COMPANY_SETTINGS.ASSOCIATED_ORGANIZATIONS,
 };
 
-const NAV_LINK_CLASSNAME =
-  "rounded-md px-2.5 py-1.5 text-sm font-medium text-muted-foreground hover:bg-muted hover:text-foreground aria-[current=page]:bg-muted aria-[current=page]:text-foreground";
+const navLinkSx = {
+  borderRadius: 1.5,
+  px: 1.5,
+  py: 0.75,
+  fontSize: "0.875rem",
+  fontWeight: 500,
+  color: "text.secondary",
+  textDecoration: "none",
+  transition: "background-color 0.15s, color 0.15s",
+  "&:hover": { bgcolor: "action.hover", color: "text.primary" },
+  '&[aria-current="page"]': { bgcolor: "action.hover", color: "text.primary" },
+} as const;
 
-const SUB_NAV_LINK_CLASSNAME =
-  "rounded-md px-2.5 py-1 text-sm font-medium text-muted-foreground hover:bg-background hover:text-foreground aria-[current=page]:bg-background aria-[current=page]:text-foreground aria-[current=page]:shadow-sm";
+const subNavLinkSx = {
+  borderRadius: 1.5,
+  px: 1.5,
+  py: 0.5,
+  fontSize: "0.875rem",
+  fontWeight: 500,
+  color: "text.secondary",
+  textDecoration: "none",
+  transition: "background-color 0.15s, color 0.15s",
+  "&:hover": { bgcolor: "background.paper", color: "text.primary" },
+  '&[aria-current="page"]': { bgcolor: "background.paper", color: "text.primary", boxShadow: 1 },
+} as const;
 
 export function Header({ user, organization, isOwner }: HeaderProps) {
   const pathname = usePathname();
@@ -81,11 +104,16 @@ export function Header({ user, organization, isOwner }: HeaderProps) {
 
   return (
     <>
-      <header className="flex items-center justify-between gap-4 border-b border-border bg-background px-4 py-3">
+      <Stack
+        component="header"
+        direction="row"
+        spacing={2}
+        sx={{ alignItems: "center", justifyContent: "space-between", borderBottom: 1, borderColor: "divider", bgcolor: "background.paper", px: 2, py: 1.5 }}
+      >
         <Logo />
 
-        <div className="flex items-center gap-6">
-          <nav className="flex items-center gap-1">
+        <Stack direction="row" spacing={3} sx={{ alignItems: "center" }}>
+          <Stack component="nav" direction="row" spacing={0.5} sx={{ alignItems: "center" }}>
             {NAV_LINKS.map((link) => {
               // A section's nav link stays highlighted for every route
               // nested under it (e.g. /claims/new, /claims/123/manual all
@@ -98,27 +126,30 @@ export function Header({ user, organization, isOwner }: HeaderProps) {
                 ? pathname.startsWith(link.activeMatch)
                 : pathname === link.href || pathname.startsWith(`${link.href}/`);
               return (
-                <Link
-                  key={link.href}
-                  href={link.href}
-                  aria-current={isActive ? "page" : undefined}
-                  className={NAV_LINK_CLASSNAME}
-                >
+                <Box key={link.href} component={Link} href={link.href} aria-current={isActive ? "page" : undefined} sx={navLinkSx}>
                   {link.label}
-                </Link>
+                </Box>
               );
             })}
-          </nav>
+          </Stack>
 
           <DropdownMenu>
-            <DropdownMenuTrigger className="rounded-md border border-border bg-background px-3 py-1.5 text-sm font-medium hover:bg-muted">
+            <DropdownMenuTrigger
+              sx={{ borderRadius: 1.5, border: 1, borderColor: "divider", bgcolor: "background.paper", px: 1.5, py: 0.75, fontSize: "0.875rem", fontWeight: 500, cursor: "pointer", "&:hover": { bgcolor: "action.hover" } }}
+            >
               {user.name}
             </DropdownMenuTrigger>
             <DropdownMenuContent align="end">
-              <div className="px-1.5 py-1">
-                <p className="text-sm font-semibold text-foreground">{user.name}</p>
-                {organization ? <p className="text-xs text-muted-foreground">{organization.name}</p> : null}
-              </div>
+              <Box sx={{ px: 1.5, py: 1 }}>
+                <Typography variant="body2" sx={{ fontWeight: 600 }}>
+                  {user.name}
+                </Typography>
+                {organization ? (
+                  <Typography variant="caption" color="text.secondary">
+                    {organization.name}
+                  </Typography>
+                ) : null}
+              </Box>
               <DropdownMenuSeparator />
               <DropdownMenuItem render={<Link href={ROUTES.PROFILE}>View Profile</Link>} />
               <DropdownMenuItem variant="destructive" onClick={handleLogout}>
@@ -126,25 +157,17 @@ export function Header({ user, organization, isOwner }: HeaderProps) {
               </DropdownMenuItem>
             </DropdownMenuContent>
           </DropdownMenu>
-        </div>
-      </header>
+        </Stack>
+      </Stack>
 
       {isOnCompanySettings ? (
-        <nav
-          aria-label="Company Settings"
-          className="flex items-center gap-1 border-b border-border bg-muted/40 px-4 py-2"
-        >
+        <Stack component="nav" direction="row" spacing={0.5} aria-label="Company Settings" sx={{ alignItems: "center", borderBottom: 1, borderColor: "divider", bgcolor: "action.hover", px: 2, py: 1 }}>
           {companySettingsLinks.map((link) => (
-            <Link
-              key={link.href}
-              href={link.href}
-              aria-current={pathname === link.href ? "page" : undefined}
-              className={SUB_NAV_LINK_CLASSNAME}
-            >
+            <Box key={link.href} component={Link} href={link.href} aria-current={pathname === link.href ? "page" : undefined} sx={subNavLinkSx}>
               {link.label}
-            </Link>
+            </Box>
           ))}
-        </nav>
+        </Stack>
       ) : null}
     </>
   );

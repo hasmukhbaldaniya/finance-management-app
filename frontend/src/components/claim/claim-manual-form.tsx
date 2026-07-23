@@ -2,10 +2,14 @@
 
 import { useEffect, useState } from "react";
 import { useRouter } from "next/navigation";
-import { toast } from "sonner";
+import Box from "@mui/material/Box";
+import Stack from "@mui/material/Stack";
+import Typography from "@mui/material/Typography";
+import { toast } from "@/components/ui/toast";
 import { PlusIcon } from "@phosphor-icons/react";
 import { createClaim, getClaimDetail, saveExpenses, updateClaim } from "@/apis/claim";
 import { getClaimableCategories } from "@/apis/category";
+import { createSplitRequest } from "@/apis/split-request";
 import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
 import { Label } from "@/components/ui/label";
@@ -15,10 +19,11 @@ import { MAX_CLAIM_NAME_LENGTH, MAX_EXPENSE_COUNT, MIN_CLAIM_NAME_LENGTH } from 
 import { ROUTES } from "@/utils/constants/route.constant";
 import type { ClaimableCategory, ClaimType } from "@/types/claim.type";
 import { ExpensePanel } from "./expense-panel";
+import { isExpenseComplete } from "./expense-completeness";
 import type { LocalExpense } from "./local-expense.type";
 import { SplitClaimDialog } from "./split-claim-dialog";
 import { SplitExpenseDialog } from "./split-expense-dialog";
-import { SplitWithColleaguesDialog } from "./split-with-colleagues-dialog";
+import { colleagueNamesLabel, type SplitMember } from "./split-percentage-table";
 import { TripSelect, type TripSelectValue } from "./trip-select";
 
 type ClaimManualFormProps = { mode: "create" } | { mode: "edit"; claimId: number };
@@ -46,9 +51,14 @@ export function ClaimManualForm(props: ClaimManualFormProps) {
   const [isSubmittingDraft, setIsSubmittingDraft] = useState(false);
   const [isSubmittingFinal, setIsSubmittingFinal] = useState(false);
 
-  const [splitExpenseTarget, setSplitExpenseTarget] = useState<LocalExpense | null>(null);
-  const [splitWithColleaguesTarget, setSplitWithColleaguesTarget] = useState<LocalExpense | null>(null);
+  const [splitExpenseIndex, setSplitExpenseIndex] = useState<number | null>(null);
   const [isSplitClaimOpen, setIsSplitClaimOpen] = useState(false);
+  // Splits chosen via "Yes, Submit" in either dialog are staged here, not
+  // sent to the backend yet — the actual split-request rows (and their
+  // colleague emails) are only created once Save Claim succeeds, keyed by
+  // this array's index since a brand-new expense has no id until then.
+  const [pendingExpenseSplits, setPendingExpenseSplits] = useState<Record<number, SplitMember[]>>({});
+  const [pendingClaimSplit, setPendingClaimSplit] = useState<SplitMember[] | null>(null);
 
   useEffect(() => {
     getClaimableCategories()
@@ -111,21 +121,76 @@ export function ClaimManualForm(props: ClaimManualFormProps) {
 
   function removeExpense(index: number): void {
     setExpenses((previous) => previous.filter((_, expenseIndex) => expenseIndex !== index));
+    setPendingExpenseSplits((previous) => {
+      const next: Record<number, SplitMember[]> = {};
+      Object.entries(previous).forEach(([key, value]) => {
+        const keyIndex = Number(key);
+        if (keyIndex === index) return;
+        next[keyIndex > index ? keyIndex - 1 : keyIndex] = value;
+      });
+      return next;
+    });
   }
 
-  async function refetchClaim(id: number): Promise<void> {
+  async function refetchClaim(id: number): Promise<LocalExpense[]> {
     const { claim } = await getClaimDetail(id);
-    setExpenses(
-      claim.expenses.map((expense) => ({
-        id: expense.id,
-        categoryId: expense.categoryId,
-        paidBy: expense.paidBy,
-        fieldValues: expense.fieldValues,
-        amount: expense.amount,
-        isRedFlagged: expense.isRedFlagged,
-        redFlagReason: expense.redFlagReason,
-      }))
-    );
+    const freshExpenses = claim.expenses.map((expense) => ({
+      id: expense.id,
+      categoryId: expense.categoryId,
+      paidBy: expense.paidBy,
+      fieldValues: expense.fieldValues,
+      amount: expense.amount,
+      isRedFlagged: expense.isRedFlagged,
+      redFlagReason: expense.redFlagReason,
+    }));
+    setExpenses(freshExpenses);
+    return freshExpenses;
+  }
+
+  // Split requests are created (and their colleague emails sent) only once
+  // Save Claim actually succeeds — never at "Yes, Submit" time — so the
+  // dialogs open instantly with no persist step; nothing here calls the
+  // split-request API until the claim itself is saved. Keyed by whatever
+  // this array's index was after the just-completed save/refetch, matching
+  // pendingExpenseSplits's own indexing.
+  //
+  // A staged Split Claim always wins over any staged individual Split
+  // Expense — both apply to the exact same set of expenses, so submitting
+  // both would double-split. The two are also kept mutually exclusive at
+  // staging time (see the dialogs' onConfirm below); this is just a second,
+  // defensive guard against the two ever coexisting here.
+  async function submitPendingSplits(id: number, freshExpenses: LocalExpense[]): Promise<void> {
+    const tasks: Promise<unknown>[] = [];
+    if (pendingClaimSplit) {
+      freshExpenses.forEach((expense) => {
+        if (expense.id) {
+          tasks.push(
+            createSplitRequest(id, expense.id, {
+              splitType: "percentage",
+              members: pendingClaimSplit.map((member) => ({ employeeId: member.employeeId, percentage: member.percentage })),
+            })
+          );
+        }
+      });
+    } else {
+      Object.entries(pendingExpenseSplits).forEach(([indexKey, members]) => {
+        const expense = freshExpenses[Number(indexKey)];
+        if (expense?.id) {
+          tasks.push(
+            createSplitRequest(id, expense.id, {
+              splitType: "percentage",
+              members: members.map((member) => ({ employeeId: member.employeeId, percentage: member.percentage })),
+            })
+          );
+        }
+      });
+    }
+    if (tasks.length === 0) return;
+    const results = await Promise.allSettled(tasks);
+    const failed = results.filter((result) => result.status === "rejected").length;
+    if (failed > 0) {
+      toast.warning(`${failed} split request${failed === 1 ? "" : "s"} couldn't be sent — reopen this claim's Edit page to retry.`);
+    }
   }
 
   async function persistClaimShell(isDraftSave: boolean): Promise<number | null> {
@@ -184,6 +249,10 @@ export function ClaimManualForm(props: ClaimManualFormProps) {
         if (!isEdit) router.replace(ROUTES.claimManualEdit(id));
         await refetchClaim(id);
       } else {
+        if (Object.keys(pendingExpenseSplits).length > 0 || pendingClaimSplit) {
+          const freshExpenses = await refetchClaim(id);
+          await submitPendingSplits(id, freshExpenses);
+        }
         toast.success("Claim saved.");
         router.push(ROUTES.CLAIMS);
       }
@@ -200,53 +269,63 @@ export function ClaimManualForm(props: ClaimManualFormProps) {
 
   if (isLoading) {
     return (
-      <div className="flex justify-center py-16">
-        <Spinner className="size-6" />
-      </div>
+      <Box sx={{ display: "flex", justifyContent: "center", py: 8 }}>
+        <Spinner size={24} />
+      </Box>
     );
   }
 
-  return (
-    <div className="mx-auto max-w-4xl space-y-8 px-6 py-8">
-      <div className="flex items-center justify-between gap-3">
-        <h1 className="text-2xl font-semibold tracking-tight">{isEdit ? "Edit Claim" : "Add Manually"}</h1>
-        {claimId !== null ? (
-          <Button type="button" variant="outline" size="sm" onClick={() => setIsSplitClaimOpen(true)} disabled={expenses.length < 2}>
-            Move to New Claim
-          </Button>
-        ) : null}
-      </div>
+  const canSplitClaim =
+    expenses.length > 0 && expenses.every((expense) => isExpenseComplete(expense, categories.find((category) => category.id === expense.categoryId) ?? null));
 
-      <div className="space-y-3">
+  return (
+    <Stack spacing={4} sx={{ mx: "auto", maxWidth: 896, px: 3, py: 4 }}>
+      <Stack direction="row" spacing={1.5} sx={{ alignItems: "center", justifyContent: "space-between", flexWrap: "wrap" }}>
+        <Typography variant="h5" sx={{ fontWeight: 600, letterSpacing: "-0.01em" }}>
+          {isEdit ? "Edit Claim" : "Add Manually"}
+        </Typography>
+        <Stack direction="row" spacing={1} sx={{ alignItems: "center" }}>
+          {pendingClaimSplit ? (
+            <Typography variant="caption" color="text.secondary">
+              Split with: {colleagueNamesLabel(pendingClaimSplit)}
+            </Typography>
+          ) : null}
+          <Button type="button" variant="outline" size="sm" onClick={() => setIsSplitClaimOpen(true)} disabled={!canSplitClaim}>
+            {pendingClaimSplit ? "Edit Claim Split" : "Split Claim"}
+          </Button>
+        </Stack>
+      </Stack>
+
+      <Stack spacing={1.5}>
         <Label>Claim Type</Label>
-        <div className="flex gap-4 text-sm">
+        <Stack direction="row" spacing={2} sx={{ fontSize: "0.875rem" }}>
           {(
             [
               { value: "standalone" as const, label: "Create New Claim" },
               { value: "trip_linked" as const, label: "Link to Trip" },
             ] as const
           ).map((option) => (
-            <label key={option.value} className="flex items-center gap-2">
+            <Box component="label" key={option.value} sx={{ display: "flex", alignItems: "center", gap: 1 }}>
               <input type="radio" name="claim-type" checked={claimType === option.value} onChange={() => setClaimType(option.value)} />
               {option.label}
-            </label>
+            </Box>
           ))}
-        </div>
-      </div>
+        </Stack>
+      </Stack>
 
       {claimType === "standalone" ? (
-        <div className="max-w-md space-y-2">
+        <Stack spacing={1} sx={{ maxWidth: 448 }}>
           <Label htmlFor="claim-name">Claim Name</Label>
           <Input id="claim-name" value={name} onChange={(event) => setName(event.target.value)} maxLength={MAX_CLAIM_NAME_LENGTH} />
-        </div>
+        </Stack>
       ) : (
-        <div className="max-w-md space-y-2">
+        <Stack spacing={1} sx={{ maxWidth: 448 }}>
           <Label>Trip Name</Label>
           <TripSelect value={trip} onChange={setTrip} placeholder="Select trip" />
-        </div>
+        </Stack>
       )}
 
-      <div className="space-y-4">
+      <Stack spacing={2}>
         {expenses.map((expense, index) => (
           <ExpensePanel
             key={expense.id ?? `new-${index}`}
@@ -255,17 +334,17 @@ export function ClaimManualForm(props: ClaimManualFormProps) {
             categories={categories}
             onChange={(patch) => updateExpense(index, patch)}
             onRemove={() => removeExpense(index)}
-            onSplit={() => setSplitExpenseTarget(expense)}
-            onSplitWithColleagues={() => setSplitWithColleaguesTarget(expense)}
+            onSplit={() => setSplitExpenseIndex(index)}
+            pendingSplitMembers={pendingExpenseSplits[index]}
             canRemove={expenses.length > 1}
           />
         ))}
         <Button type="button" variant="outline" onClick={addExpense} disabled={expenses.length >= MAX_EXPENSE_COUNT}>
           <PlusIcon size={16} /> Add Expense
         </Button>
-      </div>
+      </Stack>
 
-      <div className="flex flex-wrap items-center justify-end gap-3 border-t border-border pt-6">
+      <Stack direction="row" spacing={1.5} sx={{ alignItems: "center", justifyContent: "flex-end", flexWrap: "wrap", borderTop: 1, borderColor: "divider", pt: 3 }}>
         <Button type="button" variant="outline" onClick={handleCancel}>
           Cancel
         </Button>
@@ -277,24 +356,41 @@ export function ClaimManualForm(props: ClaimManualFormProps) {
           {isSubmittingFinal ? <Spinner /> : null}
           Save Claim
         </Button>
-      </div>
+      </Stack>
 
       <SplitExpenseDialog
-        claimId={claimId ?? 0}
-        expense={splitExpenseTarget}
+        expense={splitExpenseIndex !== null ? expenses[splitExpenseIndex] : null}
         categories={categories}
-        onOpenChange={(open) => !open && setSplitExpenseTarget(null)}
-        onSplit={() => claimId !== null && refetchClaim(claimId)}
+        initialMembers={splitExpenseIndex !== null ? pendingExpenseSplits[splitExpenseIndex] : undefined}
+        onOpenChange={(open) => !open && setSplitExpenseIndex(null)}
+        onConfirm={(members) => {
+          if (splitExpenseIndex === null) return;
+          setPendingExpenseSplits((previous) => ({ ...previous, [splitExpenseIndex]: members }));
+          // A whole-claim split already covers this same expense — an
+          // individual split for it would double it up, so staging one
+          // cancels the claim-level split entirely.
+          if (pendingClaimSplit) {
+            setPendingClaimSplit(null);
+            toast.warning("Split Claim was cleared — it can't apply together with an individual Split Expense.");
+          }
+        }}
       />
-      <SplitWithColleaguesDialog
-        claimId={claimId ?? 0}
-        expense={splitWithColleaguesTarget}
-        onOpenChange={(open) => !open && setSplitWithColleaguesTarget(null)}
-        onSplit={() => setSplitWithColleaguesTarget(null)}
+      <SplitClaimDialog
+        expenses={expenses}
+        categories={categories}
+        initialMembers={pendingClaimSplit ?? undefined}
+        open={isSplitClaimOpen}
+        onOpenChange={setIsSplitClaimOpen}
+        onConfirm={(members) => {
+          setPendingClaimSplit(members);
+          // Split Claim applies to every expense, so it overrides any
+          // individually-staged splits rather than stacking with them.
+          if (Object.keys(pendingExpenseSplits).length > 0) {
+            setPendingExpenseSplits({});
+            toast.warning("Your individual Split Expense selections were cleared — Split Claim now applies to every expense instead.");
+          }
+        }}
       />
-      {claimId !== null ? (
-        <SplitClaimDialog claimId={claimId} expenses={expenses} categories={categories} open={isSplitClaimOpen} onOpenChange={setIsSplitClaimOpen} />
-      ) : null}
-    </div>
+    </Stack>
   );
 }

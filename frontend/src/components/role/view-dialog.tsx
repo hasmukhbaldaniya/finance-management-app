@@ -1,5 +1,6 @@
 "use client";
 
+import Stack from "@mui/material/Stack";
 import { Dialog, DialogContent, DialogHeader, DialogTitle } from "@/components/ui/dialog";
 import { Input } from "@/components/ui/input";
 import { Label } from "@/components/ui/label";
@@ -19,17 +20,17 @@ export function RoleViewDialog({ role, onOpenChange }: RoleViewDialogProps) {
           <DialogTitle>{role?.name}</DialogTitle>
         </DialogHeader>
 
-        <div className="space-y-4">
-          <div className="space-y-1.5">
+        <Stack spacing={2}>
+          <Stack spacing={0.75}>
             <Label htmlFor="role-view-name">Role Name</Label>
             <Input id="role-view-name" value={role?.name ?? ""} disabled />
-          </div>
+          </Stack>
 
-          <div className="space-y-1.5">
+          <Stack spacing={0.75}>
             <Label>Privileges</Label>
             <PrivilegeCheckboxList selected={role?.privileges ?? []} disabled />
-          </div>
-        </div>
+          </Stack>
+        </Stack>
       </DialogContent>
     </Dialog>
   );

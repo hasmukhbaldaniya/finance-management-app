@@ -1,5 +1,6 @@
 "use client";
 
+import Box from "@mui/material/Box";
 import { evaluateFormula } from "@/utils/helpers/formula-evaluator";
 import type { CategoryField } from "@/types/category.type";
 import { ExpenseFieldRenderer } from "./expense-field-renderer";
@@ -43,13 +44,14 @@ export function ExpenseDynamicForm({ fields, fieldValues, onFieldValuesChange, e
   const visibleFields = orderedFields.filter(isVisible);
 
   return (
-    <div className="grid grid-cols-1 gap-4 sm:grid-cols-2">
+    <Box sx={{ display: "grid", gridTemplateColumns: { xs: "1fr", sm: "1fr 1fr" }, gap: 2 }}>
       {visibleFields.map((field) => {
         const hasFormula = (field.fieldType === "amount" || field.fieldType === "number") && typeof field.config.formula === "string" && field.config.formula.trim().length > 0;
         const computedValue = hasFormula ? evaluateFormula((field.config.formula as string).trim(), numericByName) : undefined;
+        const spansFullWidth = field.fieldType === "large_text" || field.fieldType === "invoice" || field.fieldType === "file_upload";
 
         return (
-          <div key={field.id} className={field.fieldType === "large_text" || field.fieldType === "invoice" || field.fieldType === "file_upload" ? "sm:col-span-2" : ""}>
+          <Box key={field.id} sx={spansFullWidth ? { gridColumn: { sm: "span 2" } } : undefined}>
             <ExpenseFieldRenderer
               field={field}
               value={fieldValues[String(field.id)]}
@@ -61,9 +63,9 @@ export function ExpenseDynamicForm({ fields, fieldValues, onFieldValuesChange, e
               error={errors?.[String(field.id)]}
               isAutoFilled={autoFilledFieldIds?.has(field.id)}
             />
-          </div>
+          </Box>
         );
       })}
-    </div>
+    </Box>
   );
 }

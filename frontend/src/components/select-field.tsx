@@ -1,7 +1,8 @@
 "use client";
 
-import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from "@/components/ui/select";
-import { cn } from "@/lib/utils";
+import Select from "@mui/material/Select";
+import MenuItem from "@mui/material/MenuItem";
+import type { SxProps, Theme } from "@mui/material/styles";
 
 export type SelectFieldOption = { value: string; label: string; disabled?: boolean };
 
@@ -12,37 +13,41 @@ type SelectFieldProps = {
   placeholder?: string;
   disabled?: boolean;
   hasError?: boolean;
-  className?: string;
+  sx?: SxProps<Theme>;
   id?: string;
 };
 
-// Base UI's Select (like Radix's) reserves an empty string as "no value
-// selected," so a real empty-string option (e.g. an "All" filter choice)
-// needs a stand-in internally — translated back at the edges so callers
-// keep using "" exactly like a native <select> always did.
-const EMPTY_VALUE_SENTINEL = "__empty__";
-
-// A single-select shadcn Select wrapper replacing native <select> across
-// the app — same value/onChange shape every native select already used
-// (a plain string, including "" for an "All"-style option), just backed by
-// shadcn's Select instead of hand-styling a native element.
-export function SelectField({ value, onValueChange, options, placeholder = "Select…", disabled, hasError, className, id }: SelectFieldProps) {
+// 026's MUI Migration — MUI's Select allows an empty-string `value`
+// natively (unlike Base UI's, which reserves "" to mean "nothing
+// selected"), so the old EMPTY_VALUE_SENTINEL workaround this component
+// used to need is dropped outright, not just hidden behind the interface.
+// Same external value/onValueChange/options/placeholder/disabled/
+// hasError/id shape every caller already used (className replaced by sx
+// once every call site moved off Tailwind) — a plain string, including ""
+// for an "All"-style option, exactly like a native <select> always worked.
+export function SelectField({ value, onValueChange, options, placeholder = "Select…", disabled, hasError, sx, id }: SelectFieldProps) {
   return (
     <Select
-      value={value === "" ? EMPTY_VALUE_SENTINEL : value}
-      onValueChange={(next: string | null) => onValueChange(!next || next === EMPTY_VALUE_SENTINEL ? "" : next)}
+      id={id}
+      sx={sx}
+      value={value}
+      onChange={(event) => onValueChange(event.target.value)}
       disabled={disabled}
+      error={hasError}
+      displayEmpty
+      fullWidth
+      size="small"
+      renderValue={(selected) => {
+        const matched = options.find((option) => option.value === selected);
+        if (matched) return matched.label;
+        return <span style={{ opacity: 0.6 }}>{placeholder}</span>;
+      }}
     >
-      <SelectTrigger id={id} className={cn("h-8 w-full", hasError && "border-destructive", className)}>
-        <SelectValue placeholder={placeholder} />
-      </SelectTrigger>
-      <SelectContent>
-        {options.map((option) => (
-          <SelectItem key={option.value || EMPTY_VALUE_SENTINEL} value={option.value === "" ? EMPTY_VALUE_SENTINEL : option.value} disabled={option.disabled}>
-            {option.label}
-          </SelectItem>
-        ))}
-      </SelectContent>
+      {options.map((option) => (
+        <MenuItem key={option.value || "__empty__"} value={option.value} disabled={option.disabled}>
+          {option.label}
+        </MenuItem>
+      ))}
     </Select>
   );
 }

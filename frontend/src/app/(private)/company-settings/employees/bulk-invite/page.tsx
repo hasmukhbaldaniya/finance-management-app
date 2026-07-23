@@ -3,16 +3,19 @@
 import Link from "next/link";
 import { useRouter } from "next/navigation";
 import { useRef, useState, type ChangeEvent, type ReactNode } from "react";
-import { toast } from "sonner";
+import Box from "@mui/material/Box";
+import Stack from "@mui/material/Stack";
+import Paper from "@mui/material/Paper";
+import Typography from "@mui/material/Typography";
+import { toast } from "@/components/ui/toast";
 import { CheckCircleIcon, DownloadSimpleIcon, WarningCircleIcon } from "@phosphor-icons/react";
-import { Button, buttonVariants } from "@/components/ui/button";
+import { Button } from "@/components/ui/button";
 import { Label } from "@/components/ui/label";
 import { Spinner } from "@/components/ui/spinner";
 import { confirmBulkImport, downloadBulkImportErrors, downloadBulkTemplate, uploadBulkImport } from "@/apis/employee";
 import type { BulkUploadSummary } from "@/types/employee.type";
 import { ApiError, GENERIC_ERROR_MESSAGE } from "@/utils/apiManager/apiManager";
 import { ROUTES } from "@/utils/constants/route.constant";
-import { cn } from "@/lib/utils";
 
 const MAX_FILE_SIZE_BYTES = 10 * 1024 * 1024;
 const ALLOWED_EXTENSIONS = [".csv", ".xlsx"];
@@ -40,13 +43,17 @@ type SummaryStatProps = {
 
 function SummaryStat({ label, value, icon }: SummaryStatProps) {
   return (
-    <div className="rounded-md border border-border p-3">
-      <div className="flex items-center gap-1.5 text-xs text-muted-foreground">
+    <Paper variant="outlined" sx={{ p: 1.5, borderRadius: 1.5 }}>
+      <Stack direction="row" spacing={0.75} sx={{ alignItems: "center" }}>
         {icon}
-        {label}
-      </div>
-      <div className="mt-1 text-lg font-semibold">{value}</div>
-    </div>
+        <Typography variant="caption" color="text.secondary">
+          {label}
+        </Typography>
+      </Stack>
+      <Typography variant="h6" sx={{ mt: 0.5, fontWeight: 600 }}>
+        {value}
+      </Typography>
+    </Paper>
   );
 }
 
@@ -148,78 +155,119 @@ export default function BulkInviteEmployeesPage() {
   const canInvite = summary !== null && summary.created + summary.updated > 0 && !isUploading;
 
   return (
-    <div className="mx-auto w-full max-w-3xl flex-1 px-4 py-10">
-      <h1 className="text-2xl font-semibold tracking-tight">Bulk Invite Employees</h1>
-      <p className="mt-1 text-sm text-muted-foreground">Upload a CSV or XLSX file to create or update multiple employees at once.</p>
+    <Box sx={{ mx: "auto", width: "100%", maxWidth: 768, flex: 1, px: 2, py: 5 }}>
+      <Typography variant="h5" sx={{ fontWeight: 600 }}>
+        Bulk Invite Employees
+      </Typography>
+      <Typography variant="body2" color="text.secondary" sx={{ mt: 0.5 }}>
+        Upload a CSV or XLSX file to create or update multiple employees at once.
+      </Typography>
 
-      <div className="mt-6 space-y-6 rounded-lg border border-border bg-background p-6">
-        <Button type="button" variant="outline" onClick={handleDownloadTemplate}>
-          <DownloadSimpleIcon data-icon="inline-start" />
-          Download Sample File
-        </Button>
-
-        <p className="rounded-md bg-muted/50 p-4 text-sm text-muted-foreground">
-          Employees will not receive invite emails immediately. Existing employees will be updated. New employees will be created. Use Invite or
-          Resend Invite from Employee Listing.
-        </p>
-
-        <div className="space-y-1.5">
-          <Label htmlFor="bulk-file">Upload File</Label>
-          <input
-            ref={fileInputRef}
-            id="bulk-file"
-            type="file"
-            accept=".csv,.xlsx"
-            onChange={handleFileChange}
-            disabled={isUploading}
-            className="block w-full text-sm text-foreground file:mr-4 file:rounded-md file:border file:border-input file:bg-transparent file:px-3 file:py-1.5 file:text-sm file:font-medium hover:file:bg-accent disabled:pointer-events-none disabled:opacity-50"
-          />
-          {selectedFileName ? <p className="text-xs text-muted-foreground">Selected: {selectedFileName}</p> : null}
-          {isUploading ? (
-            <p className="flex items-center gap-1.5 text-xs text-muted-foreground">
-              <Spinner className="size-3.5" />
-              Validating…
-            </p>
-          ) : null}
-        </div>
-
-        {summary ? (
-          <div className="space-y-4">
-            <div className="grid grid-cols-2 gap-3 sm:grid-cols-5">
-              <SummaryStat label="Total Records" value={summary.total} />
-              <SummaryStat
-                label="Success"
-                value={summary.created + summary.updated}
-                icon={<CheckCircleIcon className="size-4 text-green-600" />}
-              />
-              <SummaryStat
-                label="Failed"
-                value={summary.failed}
-                icon={summary.failed > 0 ? <WarningCircleIcon className="size-4 text-destructive" /> : undefined}
-              />
-              <SummaryStat label="Updated" value={summary.updated} />
-              <SummaryStat label="New Employees" value={summary.created} />
-            </div>
-
-            {summary.failed > 0 ? (
-              <Button type="button" variant="outline" size="sm" disabled={isDownloadingErrors} onClick={handleDownloadErrors}>
-                {isDownloadingErrors ? <Spinner /> : null}
-                Download Error Report
-              </Button>
-            ) : null}
-          </div>
-        ) : null}
-
-        <div className="flex justify-end gap-2 pt-2">
-          <Link href={ROUTES.COMPANY_SETTINGS.EMPLOYEES} className={cn(buttonVariants({ variant: "outline" }))}>
-            Cancel
-          </Link>
-          <Button type="button" disabled={!canInvite || isConfirming} onClick={handleInvite}>
-            {isUploading || isConfirming ? <Spinner /> : null}
-            {isUploading ? "Uploading…" : "Invite"}
+      <Paper variant="outlined" sx={{ mt: 3, borderRadius: 2, p: 3 }}>
+        <Stack spacing={3}>
+          <Button type="button" variant="outline" onClick={handleDownloadTemplate} sx={{ alignSelf: "flex-start" }}>
+            <DownloadSimpleIcon size={16} />
+            Download Sample File
           </Button>
-        </div>
-      </div>
-    </div>
+
+          <Typography variant="body2" color="text.secondary" sx={{ bgcolor: "action.hover", borderRadius: 1.5, p: 2 }}>
+            Employees will not receive invite emails immediately. Existing employees will be updated. New employees will be created. Use Invite or Resend Invite from Employee Listing.
+          </Typography>
+
+          <Stack spacing={0.75}>
+            <Label htmlFor="bulk-file">Upload File</Label>
+            <Box
+              component="input"
+              ref={fileInputRef}
+              id="bulk-file"
+              type="file"
+              accept=".csv,.xlsx"
+              onChange={handleFileChange}
+              disabled={isUploading}
+              sx={{
+                display: "block",
+                width: "100%",
+                fontSize: "0.875rem",
+                color: "text.primary",
+                "&:disabled": { pointerEvents: "none", opacity: 0.5 },
+                "&::file-selector-button": {
+                  mr: 2,
+                  borderRadius: 1.5,
+                  border: 1,
+                  borderColor: "divider",
+                  bgcolor: "transparent",
+                  px: 1.5,
+                  py: 0.75,
+                  fontSize: "0.875rem",
+                  fontWeight: 500,
+                  cursor: "pointer",
+                },
+                "&:hover::file-selector-button": { bgcolor: "action.hover" },
+              }}
+            />
+            {selectedFileName ? (
+              <Typography variant="caption" color="text.secondary">
+                Selected: {selectedFileName}
+              </Typography>
+            ) : null}
+            {isUploading ? (
+              <Stack direction="row" spacing={0.75} sx={{ alignItems: "center" }}>
+                <Spinner size={14} />
+                <Typography variant="caption" color="text.secondary">
+                  Validating…
+                </Typography>
+              </Stack>
+            ) : null}
+          </Stack>
+
+          {summary ? (
+            <Stack spacing={2}>
+              <Box sx={{ display: "grid", gridTemplateColumns: { xs: "repeat(2, 1fr)", sm: "repeat(5, 1fr)" }, gap: 1.5 }}>
+                <SummaryStat label="Total Records" value={summary.total} />
+                <SummaryStat
+                  label="Success"
+                  value={summary.created + summary.updated}
+                  icon={
+                    <Box component="span" sx={{ display: "inline-flex", color: "success.main" }}>
+                      <CheckCircleIcon size={16} />
+                    </Box>
+                  }
+                />
+                <SummaryStat
+                  label="Failed"
+                  value={summary.failed}
+                  icon={
+                    summary.failed > 0 ? (
+                      <Box component="span" sx={{ display: "inline-flex", color: "error.main" }}>
+                        <WarningCircleIcon size={16} />
+                      </Box>
+                    ) : undefined
+                  }
+                />
+                <SummaryStat label="Updated" value={summary.updated} />
+                <SummaryStat label="New Employees" value={summary.created} />
+              </Box>
+
+              {summary.failed > 0 ? (
+                <Button type="button" variant="outline" size="sm" disabled={isDownloadingErrors} onClick={handleDownloadErrors} sx={{ alignSelf: "flex-start" }}>
+                  {isDownloadingErrors ? <Spinner /> : null}
+                  Download Error Report
+                </Button>
+              ) : null}
+            </Stack>
+          ) : null}
+
+          <Stack direction="row" spacing={1} sx={{ justifyContent: "flex-end", pt: 1 }}>
+            <Button component={Link} href={ROUTES.COMPANY_SETTINGS.EMPLOYEES} variant="outline">
+              Cancel
+            </Button>
+            <Button type="button" disabled={!canInvite || isConfirming} onClick={handleInvite}>
+              {isUploading || isConfirming ? <Spinner /> : null}
+              {isUploading ? "Uploading…" : "Invite"}
+            </Button>
+          </Stack>
+        </Stack>
+      </Paper>
+    </Box>
   );
 }

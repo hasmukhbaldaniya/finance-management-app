@@ -2,6 +2,10 @@
 
 import Link from "next/link";
 import { useEffect, useState } from "react";
+import Box from "@mui/material/Box";
+import Stack from "@mui/material/Stack";
+import Typography from "@mui/material/Typography";
+import InputAdornment from "@mui/material/InputAdornment";
 import { MagnifyingGlassIcon, PlusIcon } from "@phosphor-icons/react";
 import { getClaims } from "@/apis/claim";
 import { getSplitRequests } from "@/apis/split-request";
@@ -10,12 +14,11 @@ import { ClaimRow } from "@/components/claim/claim-row";
 import { DeleteClaimDialog } from "@/components/claim/delete-claim-dialog";
 import { SplitRequestRow } from "@/components/claim/split-request-row";
 import { DatePicker } from "@/components/date-picker";
-import { buttonVariants } from "@/components/ui/button";
+import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
 import { Label } from "@/components/ui/label";
 import { Spinner } from "@/components/ui/spinner";
 import { useInfiniteScroll } from "@/hooks/useInfiniteScroll";
-import { cn } from "@/lib/utils";
 import type { ClaimListItem } from "@/types/claim.type";
 import type { SplitRequestListItem } from "@/types/split-request.type";
 import { ApiError, GENERIC_ERROR_MESSAGE } from "@/utils/apiManager/apiManager";
@@ -160,118 +163,145 @@ export default function ClaimsPage() {
   const splitRequestSentinelRef = useInfiniteScroll(handleLoadMoreSplitRequests, splitRequestsHasMore, isLoadingMoreSplitRequests);
 
   return (
-    <div className="flex flex-col md:flex-row">
+    <Stack direction={{ xs: "column", md: "row" }}>
       {tab === "mine" ? (
         <ClaimFilters filters={filters} onChange={setFilters} />
       ) : (
-        <aside className="w-full shrink-0 space-y-6 border-r border-border p-4 md:w-64">
-          <h2 className="text-sm font-semibold">Filter</h2>
-          <div className="space-y-2">
+        <Stack component="aside" spacing={3} sx={{ width: { xs: "100%", md: 256 }, flexShrink: 0, borderRight: 1, borderColor: "divider", p: 2 }}>
+          <Typography variant="subtitle2" sx={{ fontWeight: 600 }}>
+            Filter
+          </Typography>
+          <Stack spacing={1}>
             <Label htmlFor="filter-requested-on">Requested On</Label>
-            <DatePicker id="filter-requested-on" value={requestedOn} onChange={setRequestedOn} className="h-8" />
-          </div>
-        </aside>
+            <DatePicker id="filter-requested-on" value={requestedOn} onChange={setRequestedOn} sx={{ height: 32 }} />
+          </Stack>
+        </Stack>
       )}
 
-      <div className="min-w-0 flex-1 space-y-6 p-6">
-        <div className="flex flex-wrap items-center justify-between gap-3">
-          <h1 className="text-2xl font-semibold tracking-tight">My Claim</h1>
-          <div className="flex items-center gap-2">
-            <div className="relative">
-              <MagnifyingGlassIcon size={14} className="absolute top-1/2 left-2 -translate-y-1/2 text-muted-foreground" />
-              <Input
-                value={searchInput}
-                onChange={(event) => setSearchInput(event.target.value)}
-                placeholder="Search"
-                className="h-8 w-48 pl-7"
-              />
-            </div>
-            <Link href={ROUTES.CLAIM_NEW} className={cn(buttonVariants())}>
+      <Stack spacing={3} sx={{ minWidth: 0, flex: 1, p: 3 }}>
+        <Stack direction="row" spacing={1.5} sx={{ alignItems: "center", justifyContent: "space-between", flexWrap: "wrap" }}>
+          <Typography variant="h5" sx={{ fontWeight: 600, letterSpacing: "-0.01em" }}>
+            My Claim
+          </Typography>
+          <Stack direction="row" spacing={1} sx={{ alignItems: "center" }}>
+            <Input
+              value={searchInput}
+              onChange={(event) => setSearchInput(event.target.value)}
+              placeholder="Search"
+              sx={{ height: 32, width: 192 }}
+              startAdornment={
+                <InputAdornment position="start">
+                  <MagnifyingGlassIcon size={14} />
+                </InputAdornment>
+              }
+            />
+            <Button component={Link} href={ROUTES.CLAIM_NEW}>
               <PlusIcon size={16} /> Create Claim
-            </Link>
-          </div>
-        </div>
+            </Button>
+          </Stack>
+        </Stack>
 
-        <div className="flex gap-1 border-b border-border">
+        <Stack direction="row" spacing={0.5} sx={{ borderBottom: 1, borderColor: "divider" }}>
           {(
             [
               { key: "mine", label: "My Claim" },
               { key: "split-request", label: "Split Request" },
             ] as const
           ).map((option) => (
-            <button
+            <Box
+              component="button"
               key={option.key}
               type="button"
               onClick={() => setTab(option.key)}
-              className={cn(
-                "border-b-2 px-4 py-2 text-sm font-medium transition-colors",
-                tab === option.key ? "border-primary text-foreground" : "border-transparent text-muted-foreground hover:text-foreground"
-              )}
+              sx={{
+                borderBottom: 2,
+                borderColor: tab === option.key ? "primary.main" : "transparent",
+                px: 2,
+                py: 1,
+                fontSize: "0.875rem",
+                fontWeight: 500,
+                background: "none",
+                border: "none",
+                borderBottomWidth: 2,
+                borderBottomStyle: "solid",
+                cursor: "pointer",
+                color: tab === option.key ? "text.primary" : "text.secondary",
+                transition: "color 0.15s",
+                "&:hover": { color: "text.primary" },
+              }}
             >
               {option.label}
-            </button>
+            </Box>
           ))}
-        </div>
+        </Stack>
 
         {tab === "mine" ? (
           isLoading ? (
-            <div className="flex justify-center py-16">
-              <Spinner className="size-6" />
-            </div>
+            <Box sx={{ display: "flex", justifyContent: "center", py: 8 }}>
+              <Spinner size={24} />
+            </Box>
           ) : loadError ? (
-            <p className="py-16 text-center text-sm text-destructive">{loadError}</p>
+            <Typography variant="body2" color="error" sx={{ py: 8, textAlign: "center" }}>
+              {loadError}
+            </Typography>
           ) : claims.length === 0 ? (
-            <div className="flex flex-col items-center gap-3 rounded-lg border border-dashed border-border py-16 text-center">
-              <p className="text-sm text-muted-foreground">No claims yet.</p>
-              <Link href={ROUTES.CLAIM_NEW} className={cn(buttonVariants())}>
+            <Stack spacing={1.5} sx={{ alignItems: "center", borderRadius: 2, border: 1, borderStyle: "dashed", borderColor: "divider", py: 8, textAlign: "center" }}>
+              <Typography variant="body2" color="text.secondary">
+                No claims yet.
+              </Typography>
+              <Button component={Link} href={ROUTES.CLAIM_NEW}>
                 <PlusIcon size={16} /> Create Claim
-              </Link>
-            </div>
+              </Button>
+            </Stack>
           ) : (
             <>
-              <div className="space-y-4">
+              <Stack spacing={2}>
                 {claims.map((claim) => (
                   <ClaimRow key={claim.id} claim={claim} onDelete={setDeleteTarget} />
                 ))}
-              </div>
+              </Stack>
               {hasMore ? (
-                <div ref={sentinelRef} className="flex justify-center py-4">
-                  {isLoadingMore ? <Spinner className="size-5" /> : null}
-                </div>
+                <Box ref={sentinelRef} sx={{ display: "flex", justifyContent: "center", py: 2 }}>
+                  {isLoadingMore ? <Spinner size={20} /> : null}
+                </Box>
               ) : null}
             </>
           )
         ) : isLoadingSplitRequests ? (
-          <div className="flex justify-center py-16">
-            <Spinner className="size-6" />
-          </div>
+          <Box sx={{ display: "flex", justifyContent: "center", py: 8 }}>
+            <Spinner size={24} />
+          </Box>
         ) : splitRequestsError ? (
-          <p className="py-16 text-center text-sm text-destructive">{splitRequestsError}</p>
+          <Typography variant="body2" color="error" sx={{ py: 8, textAlign: "center" }}>
+            {splitRequestsError}
+          </Typography>
         ) : splitRequests.length === 0 ? (
-          <div className="flex flex-col items-center gap-3 rounded-lg border border-dashed border-border py-16 text-center">
-            <p className="text-sm text-muted-foreground">No split requests yet.</p>
-          </div>
+          <Stack spacing={1.5} sx={{ alignItems: "center", borderRadius: 2, border: 1, borderStyle: "dashed", borderColor: "divider", py: 8, textAlign: "center" }}>
+            <Typography variant="body2" color="text.secondary">
+              No split requests yet.
+            </Typography>
+          </Stack>
         ) : (
           <>
-            <div className="space-y-4">
+            <Stack spacing={2}>
               {splitRequests.map((request) => (
                 <SplitRequestRow key={request.id} request={request} />
               ))}
-            </div>
+            </Stack>
             {splitRequestsHasMore ? (
-              <div ref={splitRequestSentinelRef} className="flex justify-center py-4">
-                {isLoadingMoreSplitRequests ? <Spinner className="size-5" /> : null}
-              </div>
+              <Box ref={splitRequestSentinelRef} sx={{ display: "flex", justifyContent: "center", py: 2 }}>
+                {isLoadingMoreSplitRequests ? <Spinner size={20} /> : null}
+              </Box>
             ) : null}
           </>
         )}
-      </div>
+      </Stack>
 
       <DeleteClaimDialog
         claim={deleteTarget}
         onOpenChange={(open) => !open && setDeleteTarget(null)}
         onDeleted={(claimId) => setClaims((previous) => previous.filter((claim) => claim.id !== claimId))}
       />
-    </div>
+    </Stack>
   );
 }

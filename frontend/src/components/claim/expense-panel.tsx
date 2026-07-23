@@ -1,11 +1,19 @@
 "use client";
 
-import { WarningCircleIcon, XIcon } from "@phosphor-icons/react";
+import Box from "@mui/material/Box";
+import Stack from "@mui/material/Stack";
+import Typography from "@mui/material/Typography";
+import Chip from "@mui/material/Chip";
+import { ArrowsSplitIcon, WarningCircleIcon, XIcon } from "@phosphor-icons/react";
+import { statusTones } from "@/theme/colors";
+import { Button } from "@/components/ui/button";
 import { Label } from "@/components/ui/label";
 import type { ClaimableCategory } from "@/types/claim.type";
 import { CategorySelect } from "./category-select";
 import { ExpenseDynamicForm } from "./expense-dynamic-form";
+import { isExpenseComplete } from "./expense-completeness";
 import type { LocalExpense } from "./local-expense.type";
+import { colleagueNamesLabel, type SplitMember } from "./split-percentage-table";
 
 type ExpensePanelProps = {
   index: number;
@@ -14,80 +22,86 @@ type ExpensePanelProps = {
   onChange: (patch: Partial<LocalExpense>) => void;
   onRemove: () => void;
   onSplit: () => void;
-  onSplitWithColleagues: () => void;
+  pendingSplitMembers?: SplitMember[];
   canRemove: boolean;
 };
 
 // 022's Expense panel — Category dropdown, that category's own dynamic
-// field configuration, and Paid By, all per-expense. Split Expense is
-// disabled until the expense has a Category and Amount, matching the
-// reference screenshot's own greyed-out state on a blank expense. Split
-// with Colleagues (025) shares the same gate — sharing an expense's cost
-// needs the same Category/Amount as splitting it into portions does.
-export function ExpensePanel({ index, expense, categories, onChange, onRemove, onSplit, onSplitWithColleagues, canRemove }: ExpensePanelProps) {
+// field configuration, and Paid By, all per-expense. Split Expense (027's
+// redesign — a cross-employee percentage split, see split-expense-dialog.tsx)
+// sits at the bottom, below this expense's own fields, and is enabled once
+// every one of its required fields is filled client-side — it doesn't need
+// to already be saved, since the split itself is only sent to the backend
+// once the whole claim is saved (see claim-manual-form.tsx's
+// `pendingExpenseSplits`).
+export function ExpensePanel({ index, expense, categories, onChange, onRemove, onSplit, pendingSplitMembers, canRemove }: ExpensePanelProps) {
   const category = categories.find((candidate) => candidate.id === expense.categoryId) ?? null;
-  const canSplit = expense.id !== undefined && expense.categoryId !== null && Boolean(expense.amount) && Number(expense.amount) > 0;
+  const canSplit = isExpenseComplete(expense, category);
+  const hasPendingSplit = Boolean(pendingSplitMembers && pendingSplitMembers.length > 0);
 
   return (
-    <div className="space-y-4 rounded-lg border border-border bg-background p-5">
-      <div className="flex items-center justify-between gap-3">
-        <h3 className="font-semibold">Expense {String(index + 1).padStart(2, "0")}</h3>
-        <div className="flex items-center gap-2">
+    <Stack spacing={2} sx={{ borderRadius: 2, border: 1, borderColor: "divider", bgcolor: "background.paper", p: 2.5 }}>
+      <Stack direction="row" spacing={1.5} sx={{ alignItems: "center", justifyContent: "space-between" }}>
+        <Typography variant="subtitle1" sx={{ fontWeight: 600 }}>
+          Expense {String(index + 1).padStart(2, "0")}
+        </Typography>
+        <Stack direction="row" spacing={1} sx={{ alignItems: "center" }}>
           {expense.isRedFlagged ? (
-            <span className="inline-flex items-center gap-1.5 rounded-full bg-red-100 px-2.5 py-1 text-xs font-medium text-red-800" title={expense.redFlagReason ?? undefined}>
-              <WarningCircleIcon size={14} /> Red Flag
-            </span>
+            <Chip
+              size="small"
+              icon={<WarningCircleIcon size={14} />}
+              label="Red Flag"
+              title={expense.redFlagReason ?? undefined}
+              sx={{ fontWeight: 500, bgcolor: statusTones.rejected.background, color: statusTones.rejected.text, "& .MuiChip-icon": { color: "inherit" } }}
+            />
           ) : null}
-          <button
-            type="button"
-            onClick={onSplit}
-            disabled={!canSplit}
-            className="rounded-md px-2 py-1 text-xs font-medium text-muted-foreground hover:bg-muted disabled:cursor-not-allowed disabled:opacity-50"
-          >
-            Split Expense
-          </button>
-          <button
-            type="button"
-            onClick={onSplitWithColleagues}
-            disabled={!canSplit}
-            className="rounded-md px-2 py-1 text-xs font-medium text-muted-foreground hover:bg-muted disabled:cursor-not-allowed disabled:opacity-50"
-          >
-            Split with Colleagues
-          </button>
           {canRemove ? (
-            <button
+            <Box
+              component="button"
               type="button"
               aria-label={`Remove expense ${index + 1}`}
               onClick={onRemove}
-              className="flex size-7 items-center justify-center rounded-md text-muted-foreground hover:bg-destructive/10 hover:text-destructive"
+              sx={{
+                display: "flex",
+                width: 28,
+                height: 28,
+                alignItems: "center",
+                justifyContent: "center",
+                borderRadius: 1.5,
+                color: "text.secondary",
+                background: "none",
+                border: "none",
+                cursor: "pointer",
+                "&:hover": { bgcolor: "error.main", color: "error.contrastText", opacity: 0.9 },
+              }}
             >
               <XIcon size={14} />
-            </button>
+            </Box>
           ) : null}
-        </div>
-      </div>
+        </Stack>
+      </Stack>
 
-      <div className="space-y-2">
+      <Stack spacing={1}>
         <Label>Category</Label>
         <CategorySelect
           categories={categories}
           value={expense.categoryId}
           onChange={(categoryId) => onChange({ categoryId, fieldValues: {} })}
         />
-      </div>
+      </Stack>
 
       {category ? <ExpenseDynamicForm fields={category.fields} fieldValues={expense.fieldValues} onFieldValuesChange={(fieldValues) => onChange({ fieldValues })} /> : null}
 
-      <div className="space-y-2 border-t border-border pt-4">
+      <Stack spacing={1} sx={{ borderTop: 1, borderColor: "divider", pt: 2 }}>
         <Label>Paid By</Label>
-        <div className="flex gap-4 text-sm">
+        <Stack direction="row" spacing={2} sx={{ fontSize: "0.875rem" }}>
           {(
             [
               { value: "company", label: "Company Paid" },
               { value: "self", label: "Self Paid" },
             ] as const
           ).map((option) => (
-            <label key={option.value} className="flex items-center gap-2">
+            <Box component="label" key={option.value} sx={{ display: "flex", alignItems: "center", gap: 1 }}>
               <input
                 type="radio"
                 name={`paid-by-${index}`}
@@ -95,10 +109,26 @@ export function ExpensePanel({ index, expense, categories, onChange, onRemove, o
                 onChange={() => onChange({ paidBy: option.value })}
               />
               {option.label}
-            </label>
+            </Box>
           ))}
-        </div>
-      </div>
-    </div>
+        </Stack>
+      </Stack>
+
+      <Stack direction="row" spacing={1} sx={{ alignItems: "center", justifyContent: "space-between", borderTop: 1, borderColor: "divider", pt: 2 }}>
+        {hasPendingSplit ? (
+          <Stack direction="row" spacing={1} sx={{ alignItems: "center", minWidth: 0 }}>
+            <Chip size="small" label="Split Pending" sx={{ fontWeight: 500, bgcolor: statusTones.pending.background, color: statusTones.pending.text, flexShrink: 0 }} />
+            <Typography variant="caption" color="text.secondary" noWrap>
+              Split with: {colleagueNamesLabel(pendingSplitMembers!)}
+            </Typography>
+          </Stack>
+        ) : (
+          <Box />
+        )}
+        <Button type="button" variant="outline" size="sm" onClick={onSplit} disabled={!canSplit} sx={{ flexShrink: 0 }}>
+          <ArrowsSplitIcon size={14} /> {hasPendingSplit ? "Edit Split" : "Split Expense"}
+        </Button>
+      </Stack>
+    </Stack>
   );
 }

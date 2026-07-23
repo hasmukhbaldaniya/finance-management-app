@@ -2,7 +2,10 @@
 
 import { useRef, useState } from "react";
 import { useRouter } from "next/navigation";
-import { toast } from "sonner";
+import Stack from "@mui/material/Stack";
+import Typography from "@mui/material/Typography";
+import { alpha } from "@mui/material/styles";
+import { toast } from "@/components/ui/toast";
 import { getCategoryDetail, saveCategoryFields } from "@/apis/category";
 import { useCategoryWizard } from "@/contexts/CategoryWizardContext";
 import { ApiError, GENERIC_ERROR_MESSAGE } from "@/utils/apiManager/apiManager";
@@ -186,22 +189,22 @@ export function ExpenseFormBuilder({ categoryId }: ExpenseFormBuilderProps) {
   const pendingDeleteField = fields.find((field) => field.id === pendingDeleteId) ?? null;
 
   return (
-    <div className="space-y-4">
+    <Stack spacing={2}>
       {formErrors.length > 0 ? (
-        <div className="space-y-1 rounded-lg border border-destructive/50 bg-destructive/5 p-3">
+        <Stack spacing={0.5} sx={{ borderRadius: 2, border: 1, borderColor: "error.light", bgcolor: (theme) => alpha(theme.palette.error.main, 0.05), p: 1.5 }}>
           {formErrors.map((error) => (
-            <p key={error} className="text-sm text-destructive">
+            <Typography key={error} variant="body2" color="error">
               {error}
-            </p>
+            </Typography>
           ))}
-        </div>
+        </Stack>
       ) : null}
 
-      <div className="flex flex-col gap-4 md:flex-row">
+      <Stack direction={{ xs: "column", md: "row" }} spacing={2}>
         <FieldLibrary disabledTypes={disabledTypes} onAdd={addField} />
         <FieldList fields={fields} selectedFieldId={selectedFieldId} onSelect={setSelectedFieldId} onMove={moveField} onDelete={setPendingDeleteId} />
         {selectedField ? <FieldConfigPanel field={selectedField} allFields={fields} onChange={handleFieldChange} /> : null}
-      </div>
+      </Stack>
 
       <WizardFooter
         showSaveAsDraft={showSaveAsDraft}
@@ -218,6 +221,6 @@ export function ExpenseFormBuilder({ categoryId }: ExpenseFormBuilderProps) {
         onOpenChange={(open) => !open && setPendingDeleteId(null)}
         onConfirm={confirmDelete}
       />
-    </div>
+    </Stack>
   );
 }

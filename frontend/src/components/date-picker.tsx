@@ -1,12 +1,8 @@
 "use client";
 
-import { useState } from "react";
 import { format } from "date-fns";
-import { CaretDownIcon } from "@phosphor-icons/react";
-import { Button } from "@/components/ui/button";
-import { Calendar } from "@/components/ui/calendar";
-import { Popover, PopoverContent, PopoverTrigger } from "@/components/ui/popover";
-import { cn } from "@/lib/utils";
+import { DatePicker as MuiDatePicker } from "@mui/x-date-pickers/DatePicker";
+import type { SxProps, Theme } from "@mui/material/styles";
 
 type DatePickerProps = {
   value: string; // "" | "YYYY-MM-DD" — matches <input type="date">'s own value shape
@@ -14,55 +10,52 @@ type DatePickerProps = {
   placeholder?: string;
   id?: string;
   className?: string;
+  sx?: SxProps<Theme>;
   disabled?: boolean;
+  hasError?: boolean;
 };
 
-function parseDateOnly(value: string): Date | undefined {
-  if (!value) return undefined;
+// Local midnight, not UTC — matches this component's own long-standing
+// contract (and native <input type="date">'s own behavior), so a date
+// picked in any timezone maps to the exact calendar day shown, never
+// shifting by a day.
+function parseDateOnly(value: string): Date | null {
+  if (!value) return null;
   const date = new Date(`${value}T00:00:00`);
-  return Number.isNaN(date.getTime()) ? undefined : date;
+  return Number.isNaN(date.getTime()) ? null : date;
 }
 
 function formatDateOnly(date: Date): string {
   return format(date, "yyyy-MM-dd");
 }
 
-// A Calendar+Popover date picker, replacing native <input type="date">
-// across the app — operates on the same "YYYY-MM-DD" string value native
-// date inputs already use, so callers only ever swap the component, not
-// their state shape.
-export function DatePicker({ value, onChange, placeholder = "Select date", id, className, disabled }: DatePickerProps) {
-  const [open, setOpen] = useState(false);
-  const selected = parseDateOnly(value);
-
+// 026's MUI Migration — internals swap to @mui/x-date-pickers' DatePicker
+// (a single self-contained trigger+popover+calendar component, replacing
+// the old hand-composed Popover+Calendar), doing the string<->Date
+// conversion at this component's own boundary — callers still only ever
+// see the same "YYYY-MM-DD" string, never a Date object. `placeholder`
+// maps onto the field's `label` rather than a literal placeholder — MUI's
+// sectioned date field has no single placeholder string slot (each
+// date/month/year section shows its own token when empty), so a
+// floating label is the closest equivalent "hint when empty" mechanism.
+export function DatePicker({ value, onChange, placeholder = "Select date", id, className, sx, disabled, hasError }: DatePickerProps) {
   return (
-    <Popover open={open} onOpenChange={setOpen}>
-      <PopoverTrigger
-        render={
-          <Button
-            id={id}
-            type="button"
-            variant="outline"
-            disabled={disabled}
-            data-empty={!selected}
-            className={cn("w-full justify-between text-left font-normal data-[empty=true]:text-muted-foreground", className)}
-          >
-            {selected ? format(selected, "PPP") : <span>{placeholder}</span>}
-            <CaretDownIcon size={16} className="shrink-0 opacity-60" />
-          </Button>
-        }
-      />
-      <PopoverContent className="w-auto p-0" align="start">
-        <Calendar
-          mode="single"
-          selected={selected}
-          defaultMonth={selected}
-          onSelect={(date) => {
-            onChange(date ? formatDateOnly(date) : "");
-            setOpen(false);
-          }}
-        />
-      </PopoverContent>
-    </Popover>
+    <MuiDatePicker
+      value={parseDateOnly(value)}
+      onChange={(date) => onChange(date ? formatDateOnly(date) : "")}
+      disabled={disabled}
+      format="PPP"
+      slotProps={{
+        textField: {
+          id,
+          className,
+          sx,
+          fullWidth: true,
+          size: "small",
+          label: placeholder,
+          error: hasError,
+        },
+      }}
+    />
   );
 }

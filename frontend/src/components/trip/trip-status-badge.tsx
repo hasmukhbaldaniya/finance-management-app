@@ -1,6 +1,7 @@
+import Chip from "@mui/material/Chip";
 import { InfoIcon, StarIcon, UserCheckIcon } from "@phosphor-icons/react";
-import { cn } from "@/lib/utils";
-import { TRIP_STATUS_BADGE_STYLE, TRIP_STATUS_LABEL } from "@/utils/constants/trip.constant";
+import { statusTones } from "@/theme/colors";
+import { TRIP_STATUS_LABEL } from "@/utils/constants/trip.constant";
 import type { TripStatus } from "@/types/trip.type";
 
 const STATUS_ICON: Record<TripStatus, typeof InfoIcon> = {
@@ -10,12 +11,29 @@ const STATUS_ICON: Record<TripStatus, typeof InfoIcon> = {
   approved_for_reimbursement: UserCheckIcon,
 };
 
+const STATUS_TONE: Record<TripStatus, { background: string; text: string }> = {
+  draft: { background: "transparent", text: "" },
+  new: { background: "transparent", text: "" },
+  pending_for_approval: statusTones.pending,
+  approved_for_reimbursement: statusTones.accepted,
+};
+
 export function TripStatusBadge({ status }: { status: TripStatus }) {
   const Icon = STATUS_ICON[status];
+  const isNeutral = status === "draft" || status === "new";
+  const tone = STATUS_TONE[status];
+
   return (
-    <span className={cn("inline-flex items-center gap-1.5 rounded-full px-3 py-1 text-xs font-medium", TRIP_STATUS_BADGE_STYLE[status])}>
-      <Icon size={14} />
-      {TRIP_STATUS_LABEL[status]}
-    </span>
+    <Chip
+      size="small"
+      icon={<Icon size={14} />}
+      label={TRIP_STATUS_LABEL[status]}
+      sx={{
+        fontWeight: 500,
+        bgcolor: isNeutral ? "action.hover" : tone.background,
+        color: isNeutral ? "text.secondary" : tone.text,
+        "& .MuiChip-icon": { color: "inherit" },
+      }}
+    />
   );
 }

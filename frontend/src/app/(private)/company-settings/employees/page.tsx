@@ -1,11 +1,20 @@
 "use client";
 
 import Link from "next/link";
-import { CaretDownIcon, CaretUpIcon, DownloadSimpleIcon, FunnelIcon, MagnifyingGlassIcon, PencilSimpleIcon, XIcon } from "@phosphor-icons/react";
+import { DownloadSimpleIcon, FunnelIcon, MagnifyingGlassIcon, PencilSimpleIcon, XIcon } from "@phosphor-icons/react";
 import { useEffect, useState } from "react";
-import { toast } from "sonner";
+import Box from "@mui/material/Box";
+import Stack from "@mui/material/Stack";
+import Typography from "@mui/material/Typography";
+import TableSortLabel from "@mui/material/TableSortLabel";
+import Chip from "@mui/material/Chip";
+import Avatar from "@mui/material/Avatar";
+import IconButton from "@mui/material/IconButton";
+import InputAdornment from "@mui/material/InputAdornment";
+import MuiLink from "@mui/material/Link";
+import { toast } from "@/components/ui/toast";
 import { SelectField } from "@/components/select-field";
-import { Button, buttonVariants } from "@/components/ui/button";
+import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
 import { Spinner } from "@/components/ui/spinner";
 import { Switch } from "@/components/ui/switch";
@@ -16,7 +25,6 @@ import { useInfiniteScroll } from "@/hooks/useInfiniteScroll";
 import type { EmployeeListItem, EmployeeSortBy, EmployeeStatusFilterValue, SortDirection } from "@/types/employee.type";
 import { ApiError, GENERIC_ERROR_MESSAGE } from "@/utils/apiManager/apiManager";
 import { ROUTES } from "@/utils/constants/route.constant";
-import { cn } from "@/lib/utils";
 
 const PAGE_SIZE = 20;
 const EXPORT_PAGE_SIZE = 1000;
@@ -54,9 +62,9 @@ function toCsvValue(value: string): string {
 
 function EmployeeAvatar({ name }: { name: string }) {
   return (
-    <span className="inline-flex size-6 shrink-0 items-center justify-center rounded-full bg-muted text-xs font-semibold uppercase text-muted-foreground">
-      {name.charAt(0)}
-    </span>
+    <Avatar sx={{ width: 24, height: 24, fontSize: "0.75rem", fontWeight: 600, bgcolor: "action.selected", color: "text.secondary" }}>
+      {name.charAt(0).toUpperCase()}
+    </Avatar>
   );
 }
 
@@ -170,17 +178,19 @@ export default function EmployeeListingPage() {
     setIsFilterRowOpen(false);
   }
 
-  function renderSortIcon(column: EmployeeSortBy) {
-    if (sortBy !== column) return null;
-    return sortDir === "asc" ? <CaretUpIcon className="inline size-3" /> : <CaretDownIcon className="inline size-3" />;
-  }
-
   async function handleResend(employee: EmployeeListItem): Promise<void> {
     setResendingId(employee.id);
     try {
       await resendEmployeeInvite(employee.id);
       toast.success("Invitation resent.");
     } catch (error) {
+      // A 409 here means this row is stale — the employee already
+      // completed registration since this list last loaded. Reflect that
+      // locally so Resend Invite disappears instead of staying clickable
+      // against an already-registered employee (009's own TC-10).
+      if (error instanceof ApiError && error.status === 409) {
+        setEmployees((previous) => previous.map((e) => (e.id === employee.id ? { ...e, invitationStatus: "registered" } : e)));
+      }
       toast.error(error instanceof ApiError ? error.message : GENERIC_ERROR_MESSAGE);
     } finally {
       setResendingId(null);
@@ -245,59 +255,62 @@ export default function EmployeeListingPage() {
   const sentinelRef = useInfiniteScroll(handleLoadMore, hasMore, isLoadingMore);
 
   return (
-    <div className="mx-auto flex min-h-0 w-full max-w-6xl flex-1 flex-col overflow-hidden px-4 py-10">
-      <div className="flex items-center justify-between gap-4">
-        <div className="flex items-center gap-2">
-          <h1 className="text-2xl font-semibold tracking-tight">Employee Management</h1>
-          <Button
-            type="button"
-            variant="ghost"
-            size="icon"
+    <Box sx={{ mx: "auto", display: "flex", minHeight: 0, width: "100%", maxWidth: 1152, flex: 1, flexDirection: "column", overflow: "hidden", px: 2, py: 5 }}>
+      <Stack direction="row" sx={{ alignItems: "center", justifyContent: "space-between", gap: 2 }}>
+        <Stack direction="row" spacing={1} sx={{ alignItems: "center" }}>
+          <Typography variant="h5" sx={{ fontWeight: 600 }}>
+            Employee Management
+          </Typography>
+          <IconButton
             onClick={() => (isFilterRowOpen ? handleCloseFilters() : setIsFilterRowOpen(true))}
             aria-label={isFilterRowOpen ? "Close filters" : "Show filters"}
-            className={cn(
-              "rounded-full",
-              isFilterRowOpen ? "bg-destructive/10 text-destructive hover:bg-destructive/20" : "bg-muted"
-            )}
+            size="small"
+            sx={{
+              bgcolor: isFilterRowOpen ? "error.main" : "action.selected",
+              color: isFilterRowOpen ? "error.contrastText" : "text.primary",
+              "&:hover": { bgcolor: isFilterRowOpen ? "error.dark" : "action.selected" },
+            }}
           >
-            {isFilterRowOpen ? <XIcon className="size-4" /> : <FunnelIcon className="size-4" />}
-          </Button>
-        </div>
-        <div className="flex items-center gap-2">
+            {isFilterRowOpen ? <XIcon size={16} /> : <FunnelIcon size={16} />}
+          </IconButton>
+        </Stack>
+        <Stack direction="row" spacing={1} sx={{ alignItems: "center" }}>
           <Button variant="outline" disabled={isExporting} onClick={handleExport}>
-            {isExporting ? <Spinner /> : <DownloadSimpleIcon data-icon="inline-start" />}
+            {isExporting ? <Spinner /> : <DownloadSimpleIcon size={16} />}
             Export
           </Button>
-          <Link href={ROUTES.EMPLOYEE_BULK_INVITE} className={cn(buttonVariants({ variant: "outline" }))}>
+          <Button component={Link} href={ROUTES.EMPLOYEE_BULK_INVITE} variant="outline">
             Bulk Invite
-          </Link>
-          <Link href={ROUTES.EMPLOYEE_INVITE} className={cn(buttonVariants())}>
-            Invite
-          </Link>
-        </div>
-      </div>
+          </Button>
+          <Button component={Link} href={ROUTES.EMPLOYEE_INVITE}>Invite</Button>
+        </Stack>
+      </Stack>
 
       {loadError ? (
-        <div className="mt-6 flex flex-col items-center gap-4 text-center">
-          <p className="text-sm text-muted-foreground">{loadError}</p>
+        <Stack sx={{ mt: 3, alignItems: "center", gap: 2, textAlign: "center" }}>
+          <Typography variant="body2" color="text.secondary">
+            {loadError}
+          </Typography>
           <Button onClick={() => window.location.reload()}>Retry</Button>
-        </div>
+        </Stack>
       ) : isLoading ? (
-        <div className="mt-6 flex items-center justify-center gap-2 text-sm text-muted-foreground">
+        <Stack direction="row" sx={{ mt: 3, alignItems: "center", justifyContent: "center", gap: 1 }}>
           <Spinner />
-          Loading…
-        </div>
+          <Typography variant="body2" color="text.secondary">
+            Loading…
+          </Typography>
+        </Stack>
       ) : (
-        <div className="mt-6 flex min-h-0 flex-1 flex-col overflow-hidden rounded-lg border border-border">
-          <div className="min-h-0 flex-1 overflow-y-auto">
+        <Box sx={{ mt: 3, display: "flex", minHeight: 0, flex: 1, flexDirection: "column", overflow: "hidden", borderRadius: 2, border: 1, borderColor: "divider" }}>
+          <Box sx={{ minHeight: 0, flex: 1, overflowY: "auto" }}>
             <Table>
               <TableHeader>
                 <TableRow>
                   {SORTABLE_COLUMNS.map((column) => (
                     <TableHead key={column.key}>
-                      <button type="button" onClick={() => handleSort(column.key)} className="flex items-center gap-1 font-medium">
-                        {column.label} {renderSortIcon(column.key)}
-                      </button>
+                      <TableSortLabel active={sortBy === column.key} direction={sortBy === column.key ? sortDir : "asc"} onClick={() => handleSort(column.key)}>
+                        {column.label}
+                      </TableSortLabel>
                     </TableHead>
                   ))}
                   <TableHead>Actions</TableHead>
@@ -306,40 +319,46 @@ export default function EmployeeListingPage() {
                 {isFilterRowOpen ? (
                   <TableRow>
                     <TableHead>
-                      <div className="relative">
-                        <MagnifyingGlassIcon className="absolute left-2 top-1/2 size-3.5 -translate-y-1/2 text-muted-foreground" />
-                        <Input
-                          value={nameInput}
-                          onChange={(event) => setNameInput(event.target.value)}
-                          placeholder="Search"
-                          className="h-8 pl-7 text-xs font-normal"
-                        />
-                      </div>
+                      <Input
+                        value={nameInput}
+                        onChange={(event) => setNameInput(event.target.value)}
+                        placeholder="Search"
+                        size="small"
+                        startAdornment={
+                          <InputAdornment position="start">
+                            <MagnifyingGlassIcon size={14} />
+                          </InputAdornment>
+                        }
+                      />
                     </TableHead>
                     <TableHead>
-                      <div className="relative">
-                        <MagnifyingGlassIcon className="absolute left-2 top-1/2 size-3.5 -translate-y-1/2 text-muted-foreground" />
-                        <Input
-                          value={emailInput}
-                          onChange={(event) => setEmailInput(event.target.value)}
-                          placeholder="Search"
-                          className="h-8 pl-7 text-xs font-normal"
-                        />
-                      </div>
+                      <Input
+                        value={emailInput}
+                        onChange={(event) => setEmailInput(event.target.value)}
+                        placeholder="Search"
+                        size="small"
+                        startAdornment={
+                          <InputAdornment position="start">
+                            <MagnifyingGlassIcon size={14} />
+                          </InputAdornment>
+                        }
+                      />
                     </TableHead>
                     <TableHead />
                     <TableHead />
                     <TableHead />
                     <TableHead>
-                      <div className="relative">
-                        <MagnifyingGlassIcon className="absolute left-2 top-1/2 size-3.5 -translate-y-1/2 text-muted-foreground" />
-                        <Input
-                          value={contactNumberInput}
-                          onChange={(event) => setContactNumberInput(event.target.value)}
-                          placeholder="Search"
-                          className="h-8 pl-7 text-xs font-normal"
-                        />
-                      </div>
+                      <Input
+                        value={contactNumberInput}
+                        onChange={(event) => setContactNumberInput(event.target.value)}
+                        placeholder="Search"
+                        size="small"
+                        startAdornment={
+                          <InputAdornment position="start">
+                            <MagnifyingGlassIcon size={14} />
+                          </InputAdornment>
+                        }
+                      />
                     </TableHead>
                     <TableHead />
                     <TableHead>
@@ -347,7 +366,6 @@ export default function EmployeeListingPage() {
                         value={statusFilter}
                         onValueChange={(next) => setStatusFilter(next as EmployeeStatusFilterValue | "")}
                         options={[{ value: "", label: "All" }, ...STATUS_OPTIONS]}
-                        className="h-8 text-xs font-normal"
                       />
                     </TableHead>
                     <TableHead />
@@ -357,18 +375,20 @@ export default function EmployeeListingPage() {
               <TableBody>
                 {employees.length === 0 ? (
                   <TableRow>
-                    <TableCell colSpan={SORTABLE_COLUMNS.length + 1} className="py-6 text-center text-sm text-muted-foreground">
-                      No Employees Found
+                    <TableCell colSpan={SORTABLE_COLUMNS.length + 1} sx={{ py: 3, textAlign: "center" }}>
+                      <Typography variant="body2" color="text.secondary">
+                        No Employees Found
+                      </Typography>
                     </TableCell>
                   </TableRow>
                 ) : (
                   employees.map((employee) => (
                     <TableRow key={employee.id}>
                       <TableCell>
-                        <div className="flex items-center gap-2">
+                        <Stack direction="row" spacing={1} sx={{ alignItems: "center" }}>
                           <EmployeeAvatar name={employee.firstName} />
-                          {`${employee.firstName} ${employee.lastName}`.trim()}
-                        </div>
+                          <Typography variant="body2">{`${employee.firstName} ${employee.lastName}`.trim()}</Typography>
+                        </Stack>
                       </TableCell>
                       <TableCell>{employee.email}</TableCell>
                       <TableCell>{employee.role ?? "—"}</TableCell>
@@ -376,61 +396,40 @@ export default function EmployeeListingPage() {
                       <TableCell>{employee.grade ?? "—"}</TableCell>
                       <TableCell>{formatContactNumber(employee)}</TableCell>
                       <TableCell>
-                        <span
-                          className={cn(
-                            "rounded-full px-2.5 py-0.5 text-xs font-medium",
-                            employee.invitationStatus === "pending"
-                              ? "bg-amber-100 text-amber-700 dark:bg-amber-900/40 dark:text-amber-400"
-                              : "bg-green-100 text-green-700 dark:bg-green-900/40 dark:text-green-400"
-                          )}
-                        >
-                          {employee.invitationStatus === "pending" ? "Pending" : "Registered"}
-                        </span>
+                        <Chip
+                          label={employee.invitationStatus === "pending" ? "Pending" : "Registered"}
+                          color={employee.invitationStatus === "pending" ? "warning" : "success"}
+                          size="small"
+                        />
                       </TableCell>
                       <TableCell>
-                        <span
-                          className={cn(
-                            "rounded-full px-2.5 py-0.5 text-xs font-medium",
-                            employee.status === "active"
-                              ? "bg-green-100 text-green-700 dark:bg-green-900/40 dark:text-green-400"
-                              : "bg-muted text-muted-foreground"
-                          )}
-                        >
-                          {employee.status === "active" ? "Active" : "Suspended"}
-                        </span>
+                        <Chip label={employee.status === "active" ? "Active" : "Suspended"} color={employee.status === "active" ? "success" : "default"} size="small" />
                       </TableCell>
                       <TableCell>
-                        <div className="flex items-center gap-3">
+                        <Stack direction="row" spacing={1.5} sx={{ alignItems: "center" }}>
                           {employee.invitationStatus === "pending" ? (
-                            <Button
-                              type="button"
-                              variant="ghost"
-                              size="sm"
-                              disabled={resendingId === employee.id}
-                              onClick={() => handleResend(employee)}
-                            >
+                            <Button type="button" variant="ghost" size="sm" disabled={resendingId === employee.id} onClick={() => handleResend(employee)}>
                               {resendingId === employee.id ? <Spinner /> : null}
                               Resend Invite
                             </Button>
                           ) : null}
-                          <Link
+                          <MuiLink
+                            component={Link}
                             href={ROUTES.employeeEdit(employee.id)}
                             aria-label={`Edit ${employee.firstName} ${employee.lastName}`.trim()}
-                            className="text-muted-foreground hover:text-foreground"
+                            sx={{ display: "inline-flex", color: "text.secondary", "&:hover": { color: "text.primary" } }}
                           >
-                            <PencilSimpleIcon className="size-4" />
-                          </Link>
+                            <PencilSimpleIcon size={16} />
+                          </MuiLink>
                           {/* Suspend requires confirmation; Activate applies immediately —
                               an intentional asymmetry per 009's Flow, not the same
                               always-confirm pattern Grade/Department/Role use. */}
                           <Switch
                             checked={employee.status === "active"}
-                            onCheckedChange={(checked) =>
-                              checked ? handleActivate(employee) : setSuspendDialogEmployee(employee)
-                            }
+                            onCheckedChange={(checked) => (checked ? handleActivate(employee) : setSuspendDialogEmployee(employee))}
                             aria-label={employee.status === "active" ? "Suspend" : "Activate"}
                           />
-                        </div>
+                        </Stack>
                       </TableCell>
                     </TableRow>
                   ))
@@ -438,14 +437,14 @@ export default function EmployeeListingPage() {
               </TableBody>
             </Table>
 
-            {hasMore ? <div ref={sentinelRef} aria-hidden className="h-px" /> : null}
-          </div>
+            {hasMore ? <Box ref={sentinelRef} aria-hidden sx={{ height: "1px" }} /> : null}
+          </Box>
           {isLoadingMore ? (
-            <div className="flex justify-center border-t border-border p-3">
+            <Box sx={{ display: "flex", justifyContent: "center", borderTop: 1, borderColor: "divider", p: 1.5 }}>
               <Spinner />
-            </div>
+            </Box>
           ) : null}
-        </div>
+        </Box>
       )}
 
       <EmployeeStatusDialog
@@ -455,6 +454,6 @@ export default function EmployeeListingPage() {
         }}
         onStatusChanged={handleStatusChanged}
       />
-    </div>
+    </Box>
   );
 }

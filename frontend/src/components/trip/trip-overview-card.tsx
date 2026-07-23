@@ -1,26 +1,32 @@
 import type { ReactNode } from "react";
 import Link from "next/link";
+import Box from "@mui/material/Box";
+import Stack from "@mui/material/Stack";
+import Typography from "@mui/material/Typography";
 import { PencilSimpleIcon } from "@phosphor-icons/react";
-import { Button, buttonVariants } from "@/components/ui/button";
-import { cn } from "@/lib/utils";
+import { Button } from "@/components/ui/button";
 import { ROUTES } from "@/utils/constants/route.constant";
 import { countryCodeToFlagEmoji, formatTripOverviewDate, formatTripOverviewDateTime } from "@/utils/helpers/format.helper";
 import type { TripDetail } from "@/types/trip.type";
 
 function OverviewRow({ label, value }: { label: string; value: ReactNode }) {
   return (
-    <div className="grid grid-cols-2 gap-4 py-3">
-      <span className="text-sm text-muted-foreground">{label}</span>
-      <span className="text-sm font-medium">{value}</span>
-    </div>
+    <Box sx={{ display: "grid", gridTemplateColumns: "1fr 1fr", gap: 2, py: 1.5 }}>
+      <Typography variant="body2" color="text.secondary">
+        {label}
+      </Typography>
+      <Typography variant="body2" sx={{ fontWeight: 500 }}>
+        {value}
+      </Typography>
+    </Box>
   );
 }
 
 function LocationValue({ city, countryName, countryCode }: { city: string; countryName: string; countryCode: string }) {
   return (
-    <span title={countryName}>
+    <Box component="span" title={countryName}>
       {countryCodeToFlagEmoji(countryCode)} {city}
-    </span>
+    </Box>
   );
 }
 
@@ -36,20 +42,22 @@ export function TripOverviewCard({ trip }: TripOverviewCardProps) {
   const canEdit = trip.status === "new";
 
   return (
-    <div className="rounded-lg border border-border bg-background">
-      <div className="flex items-center justify-between border-b border-border p-4">
-        <h2 className="font-semibold">Trip Overview</h2>
+    <Box sx={{ borderRadius: 2, border: 1, borderColor: "divider", bgcolor: "background.paper" }}>
+      <Stack direction="row" sx={{ alignItems: "center", justifyContent: "space-between", borderBottom: 1, borderColor: "divider", p: 2 }}>
+        <Typography variant="subtitle1" sx={{ fontWeight: 600 }}>
+          Trip Overview
+        </Typography>
         {canEdit ? (
-          <Link href={ROUTES.tripEdit(trip.id)} className={cn(buttonVariants({ variant: "outline", size: "sm" }))}>
+          <Button component={Link} href={ROUTES.tripEdit(trip.id)} variant="outline" size="sm">
             <PencilSimpleIcon size={14} /> Edit
-          </Link>
+          </Button>
         ) : (
           <Button type="button" variant="outline" size="sm" disabled title="Only trips with New status can be edited">
             <PencilSimpleIcon size={14} /> Edit
           </Button>
         )}
-      </div>
-      <div className="divide-y divide-border px-4">
+      </Stack>
+      <Stack sx={{ px: 2, "& > *:not(:last-child)": { borderBottom: 1, borderColor: "divider" } }}>
         <OverviewRow label="Trip ID" value={trip.id} />
         <OverviewRow label="Trip Name" value={trip.name} />
         <OverviewRow label="Start Date & Time" value={formatTripOverviewDateTime(trip.startAt)} />
@@ -63,7 +71,7 @@ export function TripOverviewCard({ trip }: TripOverviewCardProps) {
           value={<LocationValue city={trip.endCity.name} countryName={trip.endCity.countryName} countryCode={trip.endCity.countryCode} />}
         />
         <OverviewRow label="Created On" value={formatTripOverviewDate(trip.createdAt)} />
-      </div>
-    </div>
+      </Stack>
+    </Box>
   );
 }

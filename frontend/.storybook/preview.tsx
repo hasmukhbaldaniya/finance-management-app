@@ -1,0 +1,39 @@
+import type { Preview } from "@storybook/react-vite";
+import { CacheProvider } from "@emotion/react";
+import createCache from "@emotion/cache";
+import { CssBaseline, ThemeProvider } from "@mui/material";
+import { LocalizationProvider } from "@mui/x-date-pickers/LocalizationProvider";
+import { AdapterDateFns } from "@mui/x-date-pickers/AdapterDateFns";
+import { theme } from "../src/theme/theme";
+
+// Storybook has no Next.js App Router to thread an emotion cache through,
+// so it uses a plain `@emotion/cache` instance instead of
+// `AppRouterCacheProvider` — no Next-specific requirement here, just the
+// same `ThemeProvider`/`theme.ts` every real page gets via app/layout.tsx
+// (026's Establish the MUI Theme & Colors Foundation story).
+const emotionCache = createCache({ key: "mui-storybook" });
+
+const preview: Preview = {
+  parameters: {
+    controls: {
+      matchers: {
+        color: /(background|color)$/i,
+        date: /Date$/i,
+      },
+    },
+  },
+  decorators: [
+    (Story) => (
+      <CacheProvider value={emotionCache}>
+        <ThemeProvider theme={theme}>
+          <CssBaseline />
+          <LocalizationProvider dateAdapter={AdapterDateFns}>
+            <Story />
+          </LocalizationProvider>
+        </ThemeProvider>
+      </CacheProvider>
+    ),
+  ],
+};
+
+export default preview;

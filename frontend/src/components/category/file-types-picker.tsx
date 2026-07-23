@@ -1,6 +1,6 @@
 "use client";
 
-import { cn } from "@/lib/utils";
+import Box from "@mui/material/Box";
 import { ALLOWED_FILE_TYPES } from "@/utils/constants/category.constant";
 
 type FileTypesPickerProps = {
@@ -17,20 +17,31 @@ export function FileTypesPicker({ selected, onChange }: FileTypesPickerProps) {
   }
 
   return (
-    <div className="flex flex-wrap gap-2">
+    <Box sx={{ display: "flex", flexWrap: "wrap", gap: 1 }}>
       {ALLOWED_FILE_TYPES.map((type) => (
-        <button
+        <Box
+          component="button"
           key={type}
           type="button"
           onClick={() => toggle(type)}
-          className={cn(
-            "rounded-full border px-3 py-1 text-xs font-medium transition-colors",
-            selected.includes(type) ? "border-primary bg-primary text-primary-foreground" : "border-border text-muted-foreground hover:bg-muted/50"
-          )}
+          sx={{
+            borderRadius: 999,
+            border: 1,
+            px: 1.5,
+            py: 0.5,
+            fontSize: "0.75rem",
+            fontWeight: 500,
+            cursor: "pointer",
+            transition: "background-color 0.15s",
+            borderColor: selected.includes(type) ? "primary.main" : "divider",
+            bgcolor: selected.includes(type) ? "primary.main" : "transparent",
+            color: selected.includes(type) ? "primary.contrastText" : "text.secondary",
+            "&:hover": selected.includes(type) ? undefined : { bgcolor: "action.hover" },
+          }}
         >
           {type}
-        </button>
+        </Box>
       ))}
-    </div>
+    </Box>
   );
 }

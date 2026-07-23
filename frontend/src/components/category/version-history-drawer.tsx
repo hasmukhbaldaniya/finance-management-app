@@ -2,10 +2,13 @@
 
 import { useEffect, useState } from "react";
 import Link from "next/link";
+import Box from "@mui/material/Box";
+import Stack from "@mui/material/Stack";
+import Typography from "@mui/material/Typography";
+import MuiLink from "@mui/material/Link";
 import { getCategoryVersions } from "@/apis/category";
 import { Dialog, DialogContent, DialogHeader, DialogTitle } from "@/components/ui/dialog";
 import { Spinner } from "@/components/ui/spinner";
-import { cn } from "@/lib/utils";
 import { ROUTES } from "@/utils/constants/route.constant";
 import { ApiError, GENERIC_ERROR_MESSAGE } from "@/utils/apiManager/apiManager";
 import type { CategoryListItem, CategoryVersionListItem } from "@/types/category.type";
@@ -44,53 +47,80 @@ export function VersionHistoryDrawer({ category, onOpenChange }: VersionHistoryD
 
   return (
     <Dialog open={category !== null} onOpenChange={onOpenChange}>
-      <DialogContent className="sm:max-w-md">
+      <DialogContent sx={{ width: "100%", maxWidth: { sm: 448 } }}>
         <DialogHeader>
           <DialogTitle>{category?.name} Version History</DialogTitle>
         </DialogHeader>
 
         {isLoading ? (
-          <div className="flex justify-center py-6">
+          <Box sx={{ display: "flex", justifyContent: "center", py: 3 }}>
             <Spinner />
-          </div>
+          </Box>
         ) : loadError ? (
-          <p className="text-sm text-destructive">{loadError}</p>
+          <Typography variant="body2" color="error">
+            {loadError}
+          </Typography>
         ) : isDraft ? (
-          <div className="flex items-center justify-between rounded-lg border border-border p-3">
-            <div className="flex items-center gap-2">
-              <span className="size-2 rounded-full bg-amber-500" />
-              <div>
-                <p className="text-sm font-medium">Draft</p>
-                <p className="text-xs text-muted-foreground">Unsaved draft changes</p>
-              </div>
-            </div>
+          <Stack direction="row" sx={{ alignItems: "center", justifyContent: "space-between", borderRadius: 2, border: 1, borderColor: "divider", p: 1.5 }}>
+            <Stack direction="row" spacing={1} sx={{ alignItems: "center" }}>
+              <Box sx={{ width: 8, height: 8, borderRadius: "50%", bgcolor: "warning.main" }} />
+              <Box>
+                <Typography variant="body2" sx={{ fontWeight: 500 }}>
+                  Draft
+                </Typography>
+                <Typography variant="caption" color="text.secondary">
+                  Unsaved draft changes
+                </Typography>
+              </Box>
+            </Stack>
             {category ? (
-              <Link href={ROUTES.categoryDetails(category.id)} className="text-sm font-medium text-primary hover:underline">
+              <MuiLink component={Link} href={ROUTES.categoryDetails(category.id)} variant="body2" sx={{ fontWeight: 500, "&:hover": { textDecoration: "underline" } }}>
                 View Details
-              </Link>
+              </MuiLink>
             ) : null}
-          </div>
+          </Stack>
         ) : (
-          <ul className="max-h-96 space-y-2 overflow-y-auto">
+          <Stack component="ul" spacing={1} sx={{ maxHeight: 384, overflowY: "auto", listStyle: "none", p: 0, m: 0 }}>
             {versions.map((version) => (
-              <li key={version.version} className="flex items-center justify-between rounded-lg border border-border p-3">
-                <div className="flex items-center gap-2">
-                  <span className={cn("size-2 rounded-full", version.isMajor ? "bg-green-600" : "border border-muted-foreground bg-transparent")} />
-                  <div>
-                    <p className="text-sm font-medium">Version {version.version}</p>
-                    <p className="text-xs text-muted-foreground">
+              <Stack
+                component="li"
+                direction="row"
+                key={version.version}
+                sx={{ alignItems: "center", justifyContent: "space-between", borderRadius: 2, border: 1, borderColor: "divider", p: 1.5 }}
+              >
+                <Stack direction="row" spacing={1} sx={{ alignItems: "center" }}>
+                  <Box
+                    sx={{
+                      width: 8,
+                      height: 8,
+                      borderRadius: "50%",
+                      bgcolor: version.isMajor ? "success.main" : "transparent",
+                      border: version.isMajor ? "none" : 1,
+                      borderColor: "text.secondary",
+                    }}
+                  />
+                  <Box>
+                    <Typography variant="body2" sx={{ fontWeight: 500 }}>
+                      Version {version.version}
+                    </Typography>
+                    <Typography variant="caption" color="text.secondary">
                       {formatDateTime(version.createdAt)} {version.createdBy ? `· ${version.createdBy.name}` : ""}
-                    </p>
-                  </div>
-                </div>
+                    </Typography>
+                  </Box>
+                </Stack>
                 {category ? (
-                  <Link href={`${ROUTES.categoryDetails(category.id)}?version=${version.version}`} className="text-sm font-medium text-primary hover:underline">
+                  <MuiLink
+                    component={Link}
+                    href={`${ROUTES.categoryDetails(category.id)}?version=${version.version}`}
+                    variant="body2"
+                    sx={{ fontWeight: 500, "&:hover": { textDecoration: "underline" } }}
+                  >
                     View Details
-                  </Link>
+                  </MuiLink>
                 ) : null}
-              </li>
+              </Stack>
             ))}
-          </ul>
+          </Stack>
         )}
       </DialogContent>
     </Dialog>

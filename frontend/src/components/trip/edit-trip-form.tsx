@@ -2,7 +2,9 @@
 
 import { useRouter } from "next/navigation";
 import { useEffect, useState } from "react";
-import { toast } from "sonner";
+import Box from "@mui/material/Box";
+import Typography from "@mui/material/Typography";
+import { toast } from "@/components/ui/toast";
 import { getTripDetail } from "@/apis/trip";
 import { Spinner } from "@/components/ui/spinner";
 import { ApiError, GENERIC_ERROR_MESSAGE } from "@/utils/apiManager/apiManager";
@@ -62,14 +64,18 @@ export function EditTripForm({ tripId }: EditTripFormProps) {
 
   if (isLoading) {
     return (
-      <div className="flex justify-center py-16">
-        <Spinner className="size-6" />
-      </div>
+      <Box sx={{ display: "flex", justifyContent: "center", py: 8 }}>
+        <Spinner size={24} />
+      </Box>
     );
   }
 
   if (loadError || !initialValues) {
-    return <p className="px-6 py-16 text-center text-sm text-destructive">{loadError ?? "This trip could not be found."}</p>;
+    return (
+      <Typography variant="body2" color="error" sx={{ px: 3, py: 8, textAlign: "center" }}>
+        {loadError ?? "This trip could not be found."}
+      </Typography>
+    );
   }
 
   return <TripForm mode="edit" tripId={tripId} initialValues={initialValues} />;

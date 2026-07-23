@@ -2,7 +2,13 @@
 
 import { useEffect, useRef, useState } from "react";
 import { useRouter } from "next/navigation";
-import { toast } from "sonner";
+import Box from "@mui/material/Box";
+import Stack from "@mui/material/Stack";
+import Typography from "@mui/material/Typography";
+import Chip from "@mui/material/Chip";
+import { alpha } from "@mui/material/styles";
+import { statusTones } from "@/theme/colors";
+import { toast } from "@/components/ui/toast";
 import {
   ArrowsMergeIcon,
   ArrowsSplitIcon,
@@ -32,16 +38,18 @@ import { DeleteInvoiceFileDialog } from "@/components/claim/delete-invoice-file-
 import { ExpenseDynamicForm } from "@/components/claim/expense-dynamic-form";
 import { SplitClaimDialog } from "@/components/claim/split-claim-dialog";
 import { SplitExpenseDialog } from "@/components/claim/split-expense-dialog";
-import { SplitWithColleaguesDialog } from "@/components/claim/split-with-colleagues-dialog";
+import { carryOverFieldValues, isExpenseComplete } from "@/components/claim/expense-completeness";
 import { Button } from "@/components/ui/button";
 import { Spinner } from "@/components/ui/spinner";
 import { getInvoiceFileContent } from "@/apis/claim/getInvoiceFileContent.api";
+import { createSplitRequest } from "@/apis/split-request";
 import { formatClaimName, formatInr } from "@/utils/helpers/format.helper";
 import { ApiError, GENERIC_ERROR_MESSAGE } from "@/utils/apiManager/apiManager";
 import { MAX_INVOICE_FILE_COUNT } from "@/utils/constants/claim.constant";
 import { ROUTES } from "@/utils/constants/route.constant";
 import type { ClaimableCategory, ClaimInvoiceFile, DuplicateMatch, Expense } from "@/types/claim.type";
 import type { LocalExpense } from "@/components/claim/local-expense.type";
+import { colleagueNamesLabel, type SplitMember } from "@/components/claim/split-percentage-table";
 
 const POLL_INTERVAL_MS = 1500;
 const MIN_ZOOM = 0.5;
@@ -86,8 +94,14 @@ export function AiReviewScreen({ claimId }: { claimId: number }) {
   const [isUploadingMore, setIsUploadingMore] = useState(false);
   const [fileToDelete, setFileToDelete] = useState<ClaimInvoiceFile | null>(null);
   const [splitExpenseTarget, setSplitExpenseTarget] = useState<LocalExpense | null>(null);
-  const [splitWithColleaguesTarget, setSplitWithColleaguesTarget] = useState<LocalExpense | null>(null);
   const [isSplitClaimOpen, setIsSplitClaimOpen] = useState(false);
+  // Splits chosen via "Yes, Submit" in either dialog are staged here, not
+  // sent to the backend yet — the actual split-request rows (and their
+  // colleague emails) are only created once Save Claim succeeds. Keyed by
+  // expenseId (unlike the manual form's index-keying) since every expense in
+  // this screen already has a real, stable id from the moment it's created.
+  const [pendingExpenseSplits, setPendingExpenseSplits] = useState<Record<number, SplitMember[]>>({});
+  const [pendingClaimSplit, setPendingClaimSplit] = useState<SplitMember[] | null>(null);
   const [zoom, setZoom] = useState(1);
   const addExpenseInputRef = useRef<HTMLInputElement>(null);
 
@@ -207,13 +221,18 @@ export function AiReviewScreen({ claimId }: { claimId: number }) {
     const previousIds = new Set(expenses.map((expense) => expense.id));
     setIsUploadingMore(true);
     try {
-      await uploadInvoiceFiles(claimId, files);
-      await processInvoiceFiles(claimId);
-      await pollUntilComplete({ current: false });
-      const nextExpenses = await loadReviewData();
-      const newExpense = nextExpenses.find((expense) => !previousIds.has(expense.id));
-      if (newExpense) setSelectedExpenseId(newExpense.id!);
-      toast.success(files.length > 1 ? "Invoices processed." : "Invoice processed.");
+      const uploadResult = await uploadInvoiceFiles(claimId, files);
+      uploadResult.failed.forEach((failedFile) => {
+        toast.warning(`${failedFile.originalFileName} couldn't be read — it may be corrupted or password-protected.`);
+      });
+      if (uploadResult.files.length > 0) {
+        await processInvoiceFiles(claimId);
+        await pollUntilComplete({ current: false });
+        const nextExpenses = await loadReviewData();
+        const newExpense = nextExpenses.find((expense) => !previousIds.has(expense.id));
+        if (newExpense) setSelectedExpenseId(newExpense.id!);
+        toast.success(uploadResult.files.length > 1 ? "Invoices processed." : "Invoice processed.");
+      }
     } catch (error) {
       toast.error(error instanceof ApiError ? error.message : GENERIC_ERROR_MESSAGE);
     } finally {
@@ -229,6 +248,12 @@ export function AiReviewScreen({ claimId }: { claimId: number }) {
   function removeManualExpense(expenseId: number): void {
     setExpenses((previous) => previous.filter((expense) => expense.id !== expenseId));
     if (selectedExpenseId === expenseId) setSelectedExpenseId(null);
+    setPendingExpenseSplits((previous) => {
+      if (!(expenseId in previous)) return previous;
+      const next = { ...previous };
+      delete next[expenseId];
+      return next;
+    });
   }
 
   const selectedExpense = expenses.find((expense) => expense.id === selectedExpenseId) ?? null;
@@ -301,6 +326,50 @@ export function AiReviewScreen({ claimId }: { claimId: number }) {
     }
   }
 
+  // Split requests are created (and their colleague emails sent) only once
+  // Save Claim actually succeeds — never at "Yes, Submit" time — so the
+  // dialogs open instantly with no persist step; nothing here calls the
+  // split-request API until the claim itself is saved.
+  //
+  // A staged Split Claim always wins over any staged individual Split
+  // Expense — both apply to the exact same set of expenses, so submitting
+  // both would double-split. The two are also kept mutually exclusive at
+  // staging time (see the dialogs' onConfirm below); this is just a second,
+  // defensive guard against the two ever coexisting here.
+  async function submitPendingSplits(): Promise<void> {
+    const tasks: Promise<unknown>[] = [];
+    if (pendingClaimSplit) {
+      expenses.forEach((expense) => {
+        if (expense.id) {
+          tasks.push(
+            createSplitRequest(claimId, expense.id, {
+              splitType: "percentage",
+              members: pendingClaimSplit.map((member) => ({ employeeId: member.employeeId, percentage: member.percentage })),
+            })
+          );
+        }
+      });
+    } else {
+      Object.entries(pendingExpenseSplits).forEach(([expenseIdKey, members]) => {
+        const expenseId = Number(expenseIdKey);
+        if (expenses.some((expense) => expense.id === expenseId)) {
+          tasks.push(
+            createSplitRequest(claimId, expenseId, {
+              splitType: "percentage",
+              members: members.map((member) => ({ employeeId: member.employeeId, percentage: member.percentage })),
+            })
+          );
+        }
+      });
+    }
+    if (tasks.length === 0) return;
+    const results = await Promise.allSettled(tasks);
+    const failed = results.filter((result) => result.status === "rejected").length;
+    if (failed > 0) {
+      toast.warning(`${failed} split request${failed === 1 ? "" : "s"} couldn't be sent — reopen this claim's Review screen to retry.`);
+    }
+  }
+
   async function handleSave(isDraftSave: boolean): Promise<void> {
     const setSubmitting = isDraftSave ? setIsSubmittingDraft : setIsSubmittingFinal;
     setSubmitting(true);
@@ -321,6 +390,9 @@ export function AiReviewScreen({ claimId }: { claimId: number }) {
         toast.success("Claim saved as draft.");
         await loadReviewData();
       } else {
+        if (Object.keys(pendingExpenseSplits).length > 0 || pendingClaimSplit) {
+          await submitPendingSplits();
+        }
         toast.success("Claim saved.");
         router.push(ROUTES.CLAIMS);
       }
@@ -335,28 +407,36 @@ export function AiReviewScreen({ claimId }: { claimId: number }) {
     return <AiProcessingPipeline status={processingStatus} />;
   }
 
-  const canSplitSelected = Boolean(selectedExpense?.id && selectedExpense.id > 0 && selectedExpense.categoryId !== null && Number(selectedExpense.amount ?? 0) > 0);
+  const canSplitSelected = selectedExpense !== null && isExpenseComplete(selectedExpense, selectedCategory);
+  const canSplitClaim =
+    expenses.length > 0 && expenses.every((expense) => isExpenseComplete(expense, categories.find((category) => category.id === expense.categoryId) ?? null));
 
   return (
-    <div className="flex flex-col gap-4 p-6">
-      <div className="flex flex-wrap items-center justify-between gap-3">
-        <div className="flex flex-wrap items-baseline gap-2">
-          <h1 className="text-2xl font-semibold tracking-tight">Create Claim</h1>
-          <span className="text-muted-foreground">|</span>
-          <span className="text-sm text-muted-foreground">
-            Claim Name: <span className="font-medium text-foreground">{claimName}</span>
-          </span>
-        </div>
-        <div className="flex items-center gap-2">
-          <input
+    <Stack spacing={2} sx={{ p: 3 }}>
+      <Stack direction="row" spacing={1.5} sx={{ alignItems: "center", justifyContent: "space-between", flexWrap: "wrap" }}>
+        <Stack direction="row" spacing={1} sx={{ alignItems: "baseline", flexWrap: "wrap" }}>
+          <Typography variant="h5" sx={{ fontWeight: 600, letterSpacing: "-0.01em" }}>
+            Create Claim
+          </Typography>
+          <Typography color="text.secondary">|</Typography>
+          <Typography variant="body2" color="text.secondary">
+            Claim Name:{" "}
+            <Typography component="span" color="text.primary" sx={{ fontWeight: 500 }}>
+              {claimName}
+            </Typography>
+          </Typography>
+        </Stack>
+        <Stack direction="row" spacing={1} sx={{ alignItems: "center" }}>
+          <Box
+            component="input"
             ref={addExpenseInputRef}
             type="file"
             multiple
             accept=".pdf,.jpg,.jpeg,.png"
-            className="hidden"
+            sx={{ display: "none" }}
             onChange={(event) => {
-              void handleAddExpenseFiles(event.target.files);
-              event.target.value = "";
+              void handleAddExpenseFiles((event.target as HTMLInputElement).files);
+              (event.target as HTMLInputElement).value = "";
             }}
           />
           <Button
@@ -366,21 +446,28 @@ export function AiReviewScreen({ claimId }: { claimId: number }) {
             onClick={() => addExpenseInputRef.current?.click()}
             disabled={isUploadingMore || invoiceFiles.length >= MAX_INVOICE_FILE_COUNT}
           >
-            {isUploadingMore ? <Spinner className="size-3.5" /> : <PlusIcon size={14} />} Add Expense
+            {isUploadingMore ? <Spinner size={14} /> : <PlusIcon size={14} />} Add Expense
           </Button>
-          <Button type="button" variant="secondary" size="sm" onClick={() => setIsSplitClaimOpen(true)} disabled={expenses.length < 2}>
-            <ArrowsSplitIcon size={14} /> Move to New Claim
+          {pendingClaimSplit ? (
+            <Typography variant="caption" color="text.secondary">
+              Split with: {colleagueNamesLabel(pendingClaimSplit)}
+            </Typography>
+          ) : null}
+          <Button type="button" variant="secondary" size="sm" onClick={() => setIsSplitClaimOpen(true)} disabled={!canSplitClaim}>
+            <ArrowsSplitIcon size={14} /> {pendingClaimSplit ? "Edit Claim Split" : "Split Claim"}
           </Button>
-        </div>
-      </div>
+        </Stack>
+      </Stack>
 
-      <div className="grid grid-cols-1 gap-4 lg:grid-cols-[280px_1fr_1fr]">
+      <Box sx={{ display: "grid", gridTemplateColumns: { xs: "1fr", lg: "280px 1fr 1fr" }, gap: 2 }}>
         {/* Invoices column */}
-        <div className="flex flex-col rounded-lg border border-border">
-          <div className="border-b border-border p-3">
-            <h2 className="text-sm font-semibold">Invoices</h2>
-          </div>
-          <div className="flex-1 space-y-3 overflow-y-auto p-3">
+        <Stack sx={{ borderRadius: 2, border: 1, borderColor: "divider" }}>
+          <Box sx={{ borderBottom: 1, borderColor: "divider", p: 1.5 }}>
+            <Typography variant="subtitle2" sx={{ fontWeight: 600 }}>
+              Invoices
+            </Typography>
+          </Box>
+          <Stack spacing={1.5} sx={{ flex: 1, overflowY: "auto", p: 1.5 }}>
             {invoiceFiles.map((file) => {
               const fileExpenses = expenses
                 .filter((expense) => expense.sourceInvoiceFileId === file.id)
@@ -389,61 +476,106 @@ export function AiReviewScreen({ claimId }: { claimId: number }) {
               const canMerge = selectedForMerge.length >= 2 && selectedForMerge.every((id) => mergeableIds.includes(id));
               const isSingleRow = fileExpenses.length <= 1;
               const soleExpense = fileExpenses[0];
+              const isSoleSelected = isSingleRow && soleExpense && selectedExpenseId === soleExpense.id;
 
               return (
-                <div key={file.id} className="space-y-1.5">
-                  <div
+                <Stack spacing={0.75} key={file.id}>
+                  <Stack
+                    spacing={0.5}
                     onClick={isSingleRow && soleExpense ? () => setSelectedExpenseId(soleExpense.id!) : undefined}
-                    className={`relative space-y-1 rounded-md border p-2 text-xs ${isSingleRow ? "cursor-pointer" : ""} ${
-                      isSingleRow && soleExpense && selectedExpenseId === soleExpense.id ? "border-primary bg-primary/5" : "border-border"
-                    } ${soleExpense?.isRedFlagged ? "border-red-400" : ""}`}
+                    sx={{
+                      position: "relative",
+                      borderRadius: 1.5,
+                      border: 1,
+                      p: 1,
+                      fontSize: "0.75rem",
+                      cursor: isSingleRow ? "pointer" : "default",
+                      borderColor: soleExpense?.isRedFlagged ? "#f87171" : isSoleSelected ? "primary.main" : "divider",
+                      bgcolor: isSoleSelected ? (theme) => alpha(theme.palette.primary.main, 0.05) : "transparent",
+                    }}
                   >
-                    <div className="flex items-start justify-between gap-2">
-                      <span className="flex items-center gap-1.5">
-                        <FileIcon size={16} className="text-muted-foreground" />
-                        <span className="rounded bg-muted px-1 py-0.5 text-[9px] font-semibold text-muted-foreground uppercase">{file.fileType}</span>
-                      </span>
-                      <button
+                    <Stack direction="row" spacing={1} sx={{ alignItems: "flex-start", justifyContent: "space-between" }}>
+                      <Stack direction="row" spacing={0.75} sx={{ alignItems: "center" }}>
+                        <Box sx={{ color: "text.secondary", display: "flex" }}>
+                          <FileIcon size={16} />
+                        </Box>
+                        <Box sx={{ borderRadius: 0.5, bgcolor: "action.hover", px: 0.5, py: 0.25, fontSize: "9px", fontWeight: 600, color: "text.secondary", textTransform: "uppercase" }}>
+                          {file.fileType}
+                        </Box>
+                      </Stack>
+                      <Box
+                        component="button"
                         type="button"
                         aria-label={`Remove ${file.originalFileName}`}
                         onClick={(event) => {
                           event.stopPropagation();
                           setFileToDelete(file);
                         }}
-                        className="flex size-6 items-center justify-center rounded-full bg-red-50 text-red-600 hover:bg-red-100"
+                        sx={{
+                          display: "flex",
+                          width: 24,
+                          height: 24,
+                          alignItems: "center",
+                          justifyContent: "center",
+                          borderRadius: "50%",
+                          bgcolor: statusTones.rejected.background,
+                          color: statusTones.rejected.text,
+                          border: "none",
+                          cursor: "pointer",
+                          "&:hover": { opacity: 0.8 },
+                        }}
                       >
                         <TrashIcon size={12} />
-                      </button>
-                    </div>
-                    <p className="truncate font-medium">{file.originalFileName}</p>
-                    <p className="text-muted-foreground">Total Expenses: {fileExpenses.length}</p>
-                  </div>
+                      </Box>
+                    </Stack>
+                    <Typography variant="caption" noWrap sx={{ fontWeight: 500, display: "block" }}>
+                      {file.originalFileName}
+                    </Typography>
+                    <Typography variant="caption" color="text.secondary" sx={{ display: "block" }}>
+                      Total Expenses: {fileExpenses.length}
+                    </Typography>
+                  </Stack>
 
                   {!isSingleRow ? (
                     <>
-                      <div className="flex items-center justify-end gap-2 px-1">
+                      <Stack direction="row" sx={{ alignItems: "center", justifyContent: "flex-end", px: 0.5 }}>
                         {canMerge ? (
-                          <button
+                          <Box
+                            component="button"
                             type="button"
                             onClick={() => handleMerge(file.id)}
                             disabled={isMerging}
-                            className="flex items-center gap-1 text-xs font-medium text-primary hover:underline"
+                            sx={{ display: "flex", alignItems: "center", gap: 0.5, fontSize: "0.75rem", fontWeight: 500, color: "primary.main", background: "none", border: "none", cursor: "pointer", "&:hover": { textDecoration: "underline" } }}
                           >
                             <ArrowsMergeIcon size={12} /> Merge
-                          </button>
+                          </Box>
                         ) : null}
-                      </div>
+                      </Stack>
                       {fileExpenses.map((expense) => {
                         const isMergedRow = Array.isArray(expense.mergedFromExpenseIds) && expense.mergedFromExpenseIds.length > 0;
                         const canCheckMerge = file.fileType === "pdf" && expense.sourcePageNumber !== null;
+                        const isSelected = selectedExpenseId === expense.id;
                         return (
-                          <button
-                            key={expense.id}
+                          <Stack
+                            component="button"
+                            direction="row"
                             type="button"
+                            key={expense.id}
+                            spacing={1}
                             onClick={() => setSelectedExpenseId(expense.id!)}
-                            className={`flex w-full items-center gap-2 rounded-md border p-2 text-left text-xs ${
-                              selectedExpenseId === expense.id ? "border-primary bg-primary/5" : "border-border"
-                            } ${expense.isRedFlagged ? "border-red-400" : ""}`}
+                            sx={{
+                              width: "100%",
+                              alignItems: "center",
+                              borderRadius: 1.5,
+                              border: 1,
+                              borderColor: expense.isRedFlagged ? "#f87171" : isSelected ? "primary.main" : "divider",
+                              bgcolor: isSelected ? (theme) => alpha(theme.palette.primary.main, 0.05) : "transparent",
+                              p: 1,
+                              textAlign: "left",
+                              fontSize: "0.75rem",
+                              background: isSelected ? undefined : "none",
+                              cursor: "pointer",
+                            }}
                           >
                             {canCheckMerge ? (
                               <input
@@ -457,163 +589,217 @@ export function AiReviewScreen({ claimId }: { claimId: number }) {
                                 }
                               />
                             ) : null}
-                            <span className="min-w-0 flex-1 truncate">
+                            <Typography variant="caption" noWrap sx={{ minWidth: 0, flex: 1 }}>
                               {categories.find((category) => category.id === expense.categoryId)?.name ?? "Uncategorized"}
                               {expense.sourcePageNumber ? ` — Page ${expense.sourcePageNumber}` : ""}
-                            </span>
-                            {expense.isRedFlagged ? <WarningCircleIcon size={14} className="shrink-0 text-red-600" /> : null}
+                            </Typography>
+                            {expense.isRedFlagged ? (
+                              <Box sx={{ flexShrink: 0, color: "error.main", display: "flex" }}>
+                                <WarningCircleIcon size={14} />
+                              </Box>
+                            ) : null}
                             {isMergedRow ? (
-                              <span
+                              <Box
+                                component="span"
                                 role="button"
                                 onClick={(event) => {
                                   event.stopPropagation();
                                   handleUnmerge(expense.id!);
                                 }}
-                                className="shrink-0 text-muted-foreground hover:text-foreground"
                                 title="Unmerge"
+                                sx={{ flexShrink: 0, color: "text.secondary", display: "flex", "&:hover": { color: "text.primary" } }}
                               >
                                 <ArrowsSplitIcon size={14} />
-                              </span>
+                              </Box>
                             ) : null}
-                          </button>
+                          </Stack>
                         );
                       })}
                     </>
                   ) : null}
-                </div>
+                </Stack>
               );
             })}
 
             {isUploadingMore ? (
-              <div className="flex items-center gap-2 rounded-md border border-dashed border-border p-2 text-xs text-muted-foreground">
-                <Spinner className="size-3.5 shrink-0" />
+              <Stack direction="row" spacing={1} sx={{ alignItems: "center", borderRadius: 1.5, border: 1, borderStyle: "dashed", borderColor: "divider", p: 1, fontSize: "0.75rem", color: "text.secondary" }}>
+                <Box sx={{ flexShrink: 0, display: "flex" }}>
+                  <Spinner size={14} />
+                </Box>
                 Reading your new invoice…
-              </div>
+              </Stack>
             ) : null}
 
             {manualExpenses.length > 0 ? (
-              <div className="space-y-1.5 border-t border-border pt-3">
-                <p className="text-xs font-medium text-muted-foreground">Other Expenses</p>
-                {manualExpenses.map((expense) => (
-                  <button
-                    key={expense.id}
-                    type="button"
-                    onClick={() => setSelectedExpenseId(expense.id!)}
-                    className={`flex w-full items-center justify-between gap-2 rounded-md border p-2 text-left text-xs ${
-                      selectedExpenseId === expense.id ? "border-primary bg-primary/5" : "border-border"
-                    }`}
-                  >
-                    <span className="min-w-0 flex-1 truncate">{categories.find((category) => category.id === expense.categoryId)?.name ?? "Uncategorized"}</span>
-                    <span
-                      role="button"
-                      aria-label="Remove expense"
-                      onClick={(event) => {
-                        event.stopPropagation();
-                        removeManualExpense(expense.id!);
+              <Stack spacing={0.75} sx={{ borderTop: 1, borderColor: "divider", pt: 1.5 }}>
+                <Typography variant="caption" color="text.secondary" sx={{ fontWeight: 500 }}>
+                  Other Expenses
+                </Typography>
+                {manualExpenses.map((expense) => {
+                  const isSelected = selectedExpenseId === expense.id;
+                  return (
+                    <Stack
+                      component="button"
+                      direction="row"
+                      type="button"
+                      key={expense.id}
+                      spacing={1}
+                      onClick={() => setSelectedExpenseId(expense.id!)}
+                      sx={{
+                        width: "100%",
+                        alignItems: "center",
+                        justifyContent: "space-between",
+                        borderRadius: 1.5,
+                        border: 1,
+                        borderColor: isSelected ? "primary.main" : "divider",
+                        bgcolor: isSelected ? (theme) => alpha(theme.palette.primary.main, 0.05) : "transparent",
+                        p: 1,
+                        textAlign: "left",
+                        fontSize: "0.75rem",
+                        background: isSelected ? undefined : "none",
+                        cursor: "pointer",
                       }}
-                      className="text-muted-foreground hover:text-destructive"
                     >
-                      <TrashIcon size={12} />
-                    </span>
-                  </button>
-                ))}
-              </div>
+                      <Typography variant="caption" noWrap sx={{ minWidth: 0, flex: 1 }}>
+                        {categories.find((category) => category.id === expense.categoryId)?.name ?? "Uncategorized"}
+                      </Typography>
+                      <Box
+                        component="span"
+                        role="button"
+                        aria-label="Remove expense"
+                        onClick={(event) => {
+                          event.stopPropagation();
+                          removeManualExpense(expense.id!);
+                        }}
+                        sx={{ color: "text.secondary", display: "flex", "&:hover": { color: "error.main" } }}
+                      >
+                        <TrashIcon size={12} />
+                      </Box>
+                    </Stack>
+                  );
+                })}
+              </Stack>
             ) : null}
-          </div>
-          <div className="space-y-1 border-t border-border p-3 text-sm">
-            <div className="flex items-center justify-between">
-              <span className="text-muted-foreground">Total Expenses :</span>
-              <span className="font-semibold">{expenses.length}</span>
-            </div>
-            <div className="flex items-center justify-between">
-              <span className="text-muted-foreground">Total Amount :</span>
-              <span className="font-semibold">₹{formatInr(totalAmount)}</span>
-            </div>
-          </div>
-        </div>
+          </Stack>
+          <Stack spacing={0.5} sx={{ borderTop: 1, borderColor: "divider", p: 1.5, fontSize: "0.875rem" }}>
+            <Stack direction="row" sx={{ alignItems: "center", justifyContent: "space-between" }}>
+              <Typography variant="body2" color="text.secondary">
+                Total Expenses :
+              </Typography>
+              <Typography variant="body2" sx={{ fontWeight: 600 }}>
+                {expenses.length}
+              </Typography>
+            </Stack>
+            <Stack direction="row" sx={{ alignItems: "center", justifyContent: "space-between" }}>
+              <Typography variant="body2" color="text.secondary">
+                Total Amount :
+              </Typography>
+              <Typography variant="body2" sx={{ fontWeight: 600 }}>
+                ₹{formatInr(totalAmount)}
+              </Typography>
+            </Stack>
+          </Stack>
+        </Stack>
 
         {/* Preview column */}
-        <div className="flex flex-col rounded-lg border border-border bg-muted/30">
-          <div className="flex items-center justify-between gap-2 border-b border-border p-3">
-            <p className="truncate text-sm font-medium">{selectedInvoiceFile?.originalFileName ?? "Preview"}</p>
-            {selectedInvoiceFile ? <span className="shrink-0 rounded-full bg-green-100 px-2.5 py-1 text-xs font-medium text-green-800">AI-Processed</span> : null}
-          </div>
-          <div className="flex flex-1 items-center justify-center overflow-auto p-3">
+        <Stack sx={{ borderRadius: 2, border: 1, borderColor: "divider", bgcolor: "action.hover" }}>
+          <Stack direction="row" spacing={1} sx={{ alignItems: "center", justifyContent: "space-between", borderBottom: 1, borderColor: "divider", p: 1.5 }}>
+            <Typography variant="body2" noWrap sx={{ fontWeight: 500 }}>
+              {selectedInvoiceFile?.originalFileName ?? "Preview"}
+            </Typography>
+            {selectedInvoiceFile ? (
+              <Chip label="AI-Processed" size="small" sx={{ flexShrink: 0, fontWeight: 500, bgcolor: statusTones.accepted.background, color: statusTones.accepted.text }} />
+            ) : null}
+          </Stack>
+          <Stack sx={{ flex: 1, alignItems: "center", justifyContent: "center", overflow: "auto", p: 1.5 }}>
             {!selectedInvoiceFile ? (
-              <p className="text-sm text-muted-foreground">Select an invoice to preview.</p>
+              <Typography variant="body2" color="text.secondary">
+                Select an invoice to preview.
+              </Typography>
             ) : isPreviewLoading || !previewUrl ? (
-              <div className="flex h-[50vh] w-full items-center justify-center">
-                {isPreviewLoading ? <Spinner className="size-6" /> : <p className="text-sm text-muted-foreground">Couldn&apos;t load the preview.</p>}
-              </div>
+              <Box sx={{ display: "flex", height: "50vh", width: "100%", alignItems: "center", justifyContent: "center" }}>
+                {isPreviewLoading ? (
+                  <Spinner size={24} />
+                ) : (
+                  <Typography variant="body2" color="text.secondary">
+                    Couldn&apos;t load the preview.
+                  </Typography>
+                )}
+              </Box>
             ) : selectedInvoiceFile.fileType === "pdf" ? (
-              <iframe title="Invoice preview" src={previewUrl} className="h-[50vh] w-full rounded-md border border-border" />
+              <Box component="iframe" title="Invoice preview" src={previewUrl} sx={{ height: "50vh", width: "100%", borderRadius: 1.5, border: 1, borderColor: "divider" }} />
             ) : (
-              // eslint-disable-next-line @next/next/no-img-element
-              <img
+              <Box
+                component="img"
                 src={previewUrl}
                 alt={selectedInvoiceFile.originalFileName}
-                style={{ width: `${zoom * 100}%` }}
-                className="max-h-[50vh] rounded-md border border-border object-contain"
+                sx={{ width: `${zoom * 100}%`, maxHeight: "50vh", borderRadius: 1.5, border: 1, borderColor: "divider", objectFit: "contain" }}
               />
             )}
-          </div>
+          </Stack>
           {selectedInvoiceFile && selectedInvoiceFile.fileType !== "pdf" ? (
-            <div className="flex items-center justify-center gap-3 border-t border-border p-2">
-              <button
+            <Stack direction="row" spacing={1.5} sx={{ alignItems: "center", justifyContent: "center", borderTop: 1, borderColor: "divider", p: 1 }}>
+              <Box
+                component="button"
                 type="button"
                 aria-label="Zoom out"
                 onClick={() => setZoom((previous) => Math.max(MIN_ZOOM, previous - ZOOM_STEP))}
-                className="flex size-7 items-center justify-center rounded-md text-muted-foreground hover:bg-muted"
+                sx={{ display: "flex", width: 28, height: 28, alignItems: "center", justifyContent: "center", borderRadius: 1.5, color: "text.secondary", background: "none", border: "none", cursor: "pointer", "&:hover": { bgcolor: "action.selected" } }}
               >
                 <MagnifyingGlassMinusIcon size={16} />
-              </button>
-              <span className="w-10 text-center text-xs text-muted-foreground">{Math.round(zoom * 100)}%</span>
-              <button
+              </Box>
+              <Typography variant="caption" color="text.secondary" sx={{ width: 40, textAlign: "center" }}>
+                {Math.round(zoom * 100)}%
+              </Typography>
+              <Box
+                component="button"
                 type="button"
                 aria-label="Zoom in"
                 onClick={() => setZoom((previous) => Math.min(MAX_ZOOM, previous + ZOOM_STEP))}
-                className="flex size-7 items-center justify-center rounded-md text-muted-foreground hover:bg-muted"
+                sx={{ display: "flex", width: 28, height: 28, alignItems: "center", justifyContent: "center", borderRadius: 1.5, color: "text.secondary", background: "none", border: "none", cursor: "pointer", "&:hover": { bgcolor: "action.selected" } }}
               >
                 <MagnifyingGlassPlusIcon size={16} />
-              </button>
-            </div>
+              </Box>
+            </Stack>
           ) : null}
-          <div className="flex justify-center gap-2 border-t border-border p-2">
-            <Button type="button" variant="secondary" size="sm" onClick={() => selectedExpense && setSplitExpenseTarget(selectedExpense)} disabled={!canSplitSelected}>
-              <ArrowsSplitIcon size={14} /> Split Expense
-            </Button>
-            <Button type="button" variant="secondary" size="sm" onClick={() => selectedExpense && setSplitWithColleaguesTarget(selectedExpense)} disabled={!canSplitSelected}>
-              Split with Colleagues
-            </Button>
-          </div>
-        </div>
+        </Stack>
 
         {/* Expense Form column */}
-        <div className="flex flex-col rounded-lg border border-border">
-          <div className="border-b border-border p-3">
-            <h2 className="text-sm font-semibold">Expense Form</h2>
-          </div>
-          <div className="flex-1 space-y-4 overflow-y-auto p-4">
+        <Stack sx={{ borderRadius: 2, border: 1, borderColor: "divider" }}>
+          <Box sx={{ borderBottom: 1, borderColor: "divider", p: 1.5 }}>
+            <Typography variant="subtitle2" sx={{ fontWeight: 600 }}>
+              Expense Form
+            </Typography>
+          </Box>
+          <Stack spacing={2} sx={{ flex: 1, overflowY: "auto", p: 2 }}>
             {selectedExpense ? (
               <>
                 {duplicateByExpense[selectedExpense.id!] ? (
-                  <div className="flex items-start gap-2 rounded-md bg-amber-50 p-3 text-xs text-amber-800">
-                    <WarningCircleIcon size={16} className="mt-0.5 shrink-0" />
-                    <span>
+                  <Stack direction="row" spacing={1} sx={{ alignItems: "flex-start", borderRadius: 1.5, bgcolor: statusTones.pending.background, color: statusTones.pending.text, p: 1.5, fontSize: "0.75rem" }}>
+                    <Box sx={{ mt: 0.25, flexShrink: 0, display: "flex" }}>
+                      <WarningCircleIcon size={16} />
+                    </Box>
+                    <Box component="span">
                       This looks like a bill you&apos;ve already claimed — {duplicateByExpense[selectedExpense.id!]!.claimantName}&apos;s claim on{" "}
                       {duplicateByExpense[selectedExpense.id!]!.expenseDate ?? "an earlier date"} has the same details.
-                    </span>
-                  </div>
+                    </Box>
+                  </Stack>
                 ) : null}
 
-                <div className="space-y-2">
-                  <p className="text-sm font-medium">Category</p>
+                <Stack spacing={1}>
+                  <Typography variant="body2" sx={{ fontWeight: 500 }}>
+                    Category
+                  </Typography>
                   <CategorySelect
                     categories={categories}
                     value={selectedExpense.categoryId}
-                    onChange={(categoryId) => updateExpense(selectedExpense.id!, { categoryId, fieldValues: {} })}
+                    onChange={(categoryId) => {
+                      const nextCategory = categories.find((category) => category.id === categoryId) ?? null;
+                      const fieldValues = carryOverFieldValues(selectedCategory, nextCategory, selectedExpense.fieldValues);
+                      updateExpense(selectedExpense.id!, { categoryId, fieldValues });
+                    }}
                   />
-                </div>
+                </Stack>
 
                 {selectedCategory ? (
                   <ExpenseDynamicForm
@@ -625,16 +811,18 @@ export function AiReviewScreen({ claimId }: { claimId: number }) {
                   />
                 ) : null}
 
-                <div className="space-y-2 border-t border-border pt-4">
-                  <p className="text-sm font-medium">Paid By</p>
-                  <div className="flex gap-4 text-sm">
+                <Stack spacing={1} sx={{ borderTop: 1, borderColor: "divider", pt: 2 }}>
+                  <Typography variant="body2" sx={{ fontWeight: 500 }}>
+                    Paid By
+                  </Typography>
+                  <Stack direction="row" spacing={2} sx={{ fontSize: "0.875rem" }}>
                     {(
                       [
                         { value: "company" as const, label: "Company Paid" },
                         { value: "self" as const, label: "Self Paid" },
                       ] as const
                     ).map((option) => (
-                      <label key={option.value} className="flex items-center gap-2">
+                      <Box component="label" key={option.value} sx={{ display: "flex", alignItems: "center", gap: 1 }}>
                         <input
                           type="radio"
                           name={`paid-by-${selectedExpense.id}`}
@@ -642,23 +830,45 @@ export function AiReviewScreen({ claimId }: { claimId: number }) {
                           onChange={() => updateExpense(selectedExpense.id!, { paidBy: option.value })}
                         />
                         {option.label}
-                      </label>
+                      </Box>
                     ))}
-                  </div>
-                </div>
+                  </Stack>
+                </Stack>
+
+                <Stack direction="row" spacing={1} sx={{ alignItems: "center", justifyContent: "space-between", borderTop: 1, borderColor: "divider", pt: 2 }}>
+                  {pendingExpenseSplits[selectedExpense.id!] ? (
+                    <Typography variant="caption" color="text.secondary" noWrap>
+                      Split with: {colleagueNamesLabel(pendingExpenseSplits[selectedExpense.id!]!)}
+                    </Typography>
+                  ) : (
+                    <Box />
+                  )}
+                  <Button
+                    type="button"
+                    variant="secondary"
+                    size="sm"
+                    onClick={() => setSplitExpenseTarget(selectedExpense)}
+                    disabled={!canSplitSelected}
+                    sx={{ flexShrink: 0 }}
+                  >
+                    <ArrowsSplitIcon size={14} /> {pendingExpenseSplits[selectedExpense.id!] ? "Edit Split" : "Split Expense"}
+                  </Button>
+                </Stack>
               </>
             ) : (
-              <p className="text-sm text-muted-foreground">Select an invoice to review its expense.</p>
+              <Typography variant="body2" color="text.secondary">
+                Select an invoice to review its expense.
+              </Typography>
             )}
-          </div>
-        </div>
-      </div>
+          </Stack>
+        </Stack>
+      </Box>
 
-      <div className="flex flex-wrap items-center justify-between gap-3 border-t border-border pt-6">
+      <Stack direction="row" spacing={1.5} sx={{ alignItems: "center", justifyContent: "space-between", flexWrap: "wrap", borderTop: 1, borderColor: "divider", pt: 3 }}>
         <Button type="button" variant="outline" onClick={() => router.push(ROUTES.CLAIM_NEW_AI)}>
           <CaretLeftIcon size={14} /> Back
         </Button>
-        <div className="flex flex-wrap items-center gap-3">
+        <Stack direction="row" spacing={1.5} sx={{ alignItems: "center", flexWrap: "wrap" }}>
           <Button type="button" variant="outline" onClick={() => router.push(ROUTES.CLAIMS)}>
             Cancel
           </Button>
@@ -670,8 +880,8 @@ export function AiReviewScreen({ claimId }: { claimId: number }) {
             {isSubmittingFinal ? <Spinner /> : null}
             Save Claim
           </Button>
-        </div>
-      </div>
+        </Stack>
+      </Stack>
 
       <DeleteInvoiceFileDialog
         claimId={claimId}
@@ -680,19 +890,38 @@ export function AiReviewScreen({ claimId }: { claimId: number }) {
         onDeleted={() => loadReviewData()}
       />
       <SplitExpenseDialog
-        claimId={claimId}
         expense={splitExpenseTarget}
         categories={categories}
+        initialMembers={splitExpenseTarget ? pendingExpenseSplits[splitExpenseTarget.id!] : undefined}
         onOpenChange={(open) => !open && setSplitExpenseTarget(null)}
-        onSplit={() => loadReviewData()}
+        onConfirm={(members) => {
+          if (!splitExpenseTarget?.id) return;
+          setPendingExpenseSplits((previous) => ({ ...previous, [splitExpenseTarget.id!]: members }));
+          // A whole-claim split already covers this same expense — an
+          // individual split for it would double it up, so staging one
+          // cancels the claim-level split entirely.
+          if (pendingClaimSplit) {
+            setPendingClaimSplit(null);
+            toast.warning("Split Claim was cleared — it can't apply together with an individual Split Expense.");
+          }
+        }}
       />
-      <SplitClaimDialog claimId={claimId} expenses={expenses} categories={categories} open={isSplitClaimOpen} onOpenChange={setIsSplitClaimOpen} />
-      <SplitWithColleaguesDialog
-        claimId={claimId}
-        expense={splitWithColleaguesTarget}
-        onOpenChange={(open) => !open && setSplitWithColleaguesTarget(null)}
-        onSplit={() => setSplitWithColleaguesTarget(null)}
+      <SplitClaimDialog
+        expenses={expenses}
+        categories={categories}
+        initialMembers={pendingClaimSplit ?? undefined}
+        open={isSplitClaimOpen}
+        onOpenChange={setIsSplitClaimOpen}
+        onConfirm={(members) => {
+          setPendingClaimSplit(members);
+          // Split Claim applies to every expense, so it overrides any
+          // individually-staged splits rather than stacking with them.
+          if (Object.keys(pendingExpenseSplits).length > 0) {
+            setPendingExpenseSplits({});
+            toast.warning("Your individual Split Expense selections were cleared — Split Claim now applies to every expense instead.");
+          }
+        }}
       />
-    </div>
+    </Stack>
   );
 }

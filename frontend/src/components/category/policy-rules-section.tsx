@@ -1,5 +1,8 @@
 "use client";
 
+import Box from "@mui/material/Box";
+import Stack from "@mui/material/Stack";
+import Typography from "@mui/material/Typography";
 import { PlusIcon, TrashIcon } from "@phosphor-icons/react";
 import { SelectField } from "@/components/select-field";
 import { Button } from "@/components/ui/button";
@@ -63,16 +66,22 @@ export function PolicyRulesSection({ policy, policyKind, fields, onChange }: Pol
   }
 
   return (
-    <div className="space-y-4">
-      <h4 className="text-sm font-semibold">Rules</h4>
+    <Stack spacing={2}>
+      <Typography variant="subtitle2" sx={{ fontWeight: 600 }}>
+        Rules
+      </Typography>
       {displayLevels.map((level) => {
         const rulesAtLevel = policy.rules.map((rule, index) => ({ rule, index })).filter(({ rule }) => rule.level === level);
         return (
-          <div key={level} className="space-y-2 rounded-md border border-border p-3">
-            <p className="text-xs font-semibold text-muted-foreground">Level {level}</p>
+          <Stack spacing={1} key={level} sx={{ borderRadius: 1.5, border: 1, borderColor: "divider", p: 1.5 }}>
+            <Typography variant="caption" color="text.secondary" sx={{ fontWeight: 600 }}>
+              Level {level}
+            </Typography>
             {rulesAtLevel.map(({ rule, index }) => (
-              <div key={index} className="flex flex-wrap items-center gap-2 rounded-md bg-muted/40 p-2">
-                <span className="text-xs font-medium">{rule.ruleType === "field_specific" ? "Field Specific" : "Combination"}</span>
+              <Stack direction="row" key={index} spacing={1} sx={{ alignItems: "center", flexWrap: "wrap", borderRadius: 1.5, bgcolor: "action.hover", p: 1 }}>
+                <Typography variant="caption" sx={{ fontWeight: 500 }}>
+                  {rule.ruleType === "field_specific" ? "Field Specific" : "Combination"}
+                </Typography>
                 {rule.ruleType === "field_specific" ? (
                   <>
                     <SelectField
@@ -90,7 +99,7 @@ export function PolicyRulesSection({ policy, policyKind, fields, onChange }: Pol
                       value={rule.value ?? ""}
                       onChange={(event) => updateRule(index, { value: event.target.value })}
                       placeholder="Value"
-                      className="w-32"
+                      sx={{ width: 128 }}
                     />
                   </>
                 ) : (
@@ -105,9 +114,11 @@ export function PolicyRulesSection({ policy, policyKind, fields, onChange }: Pol
                       value={rule.comparisonValue ?? ""}
                       onChange={(event) => updateRule(index, { comparisonValue: event.target.value })}
                       placeholder="Equals value"
-                      className="w-28"
+                      sx={{ width: 112 }}
                     />
-                    <span className="text-xs text-muted-foreground">then</span>
+                    <Typography variant="caption" color="text.secondary">
+                      then
+                    </Typography>
                     <SelectField
                       value={rule.amountFieldId?.toString() ?? ""}
                       onValueChange={(value) => updateRule(index, { amountFieldId: value ? Number(value) : null })}
@@ -123,31 +134,33 @@ export function PolicyRulesSection({ policy, policyKind, fields, onChange }: Pol
                       value={rule.amountValue ?? ""}
                       onChange={(event) => updateRule(index, { amountValue: event.target.value })}
                       placeholder="Value"
-                      className="w-24"
+                      sx={{ width: 96 }}
                     />
                   </>
                 )}
                 <Button type="button" variant="ghost" size="icon" aria-label="Remove rule" onClick={() => removeRule(index)}>
-                  <TrashIcon size={14} className="text-destructive" />
+                  <Box component="span" sx={{ color: "error.main", display: "flex" }}>
+                    <TrashIcon size={14} />
+                  </Box>
                 </Button>
-              </div>
+              </Stack>
             ))}
-            <div className="flex gap-2">
+            <Stack direction="row" spacing={1}>
               <Button type="button" variant="outline" size="sm" onClick={() => addRule(level, "field_specific")}>
                 <PlusIcon size={12} /> Field Specific
               </Button>
               <Button type="button" variant="outline" size="sm" onClick={() => addRule(level, "combination")}>
                 <PlusIcon size={12} /> Combination
               </Button>
-            </div>
-          </div>
+            </Stack>
+          </Stack>
         );
       })}
       {canAddLevel ? (
-        <Button type="button" variant="outline" size="sm" onClick={addLevel}>
+        <Button type="button" variant="outline" size="sm" onClick={addLevel} sx={{ alignSelf: "flex-start" }}>
           <PlusIcon size={12} /> Add Level
         </Button>
       ) : null}
-    </div>
+    </Stack>
   );
 }

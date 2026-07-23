@@ -20,11 +20,15 @@ export type CategoryWizardState = {
   // Set right after Step 1's create call returns a brand-new id for a
   // Duplicate session — the source category's copied fields/policies already
   // live in context at that point, but they only exist server-side under the
-  // *source* category, not this new one yet. Without this flag, the very
-  // next step page's own useLoadCategory would immediately refetch this
-  // brand-new (still Step-2-4-empty) category and clobber the copied data
-  // before the admin ever sees it. Cleared after being consulted once.
-  skipNextLoadForCategoryId: number | null;
+  // *source* category, not this new one yet. Without this, each step page's
+  // own useLoadCategory would refetch this brand-new (still-empty for
+  // whichever steps haven't been saved yet) category and clobber the copied
+  // data before the admin ever sees it. Per-step, not one-shot: each of the
+  // 4 steps consumes its own skip exactly once (tracked in
+  // consumedSkipSteps below), since Step 2's own page visit shouldn't burn
+  // the only skip before Step 3/4 ever get a chance to use theirs.
+  skipLoadForCategoryId: number | null;
+  consumedSkipSteps: CategoryWizardStep[];
   setCategoryId: (categoryId: number | null) => void;
   setStatus: (status: CategoryStatus | null) => void;
   setName: (name: string) => void;
@@ -35,7 +39,12 @@ export type CategoryWizardState = {
   setExceptionPolicies: (exceptionPolicies: CategoryPolicy[]) => void;
   setEnableProjectPolicies: (enableProjectPolicies: boolean) => void;
   setProjectPolicies: (projectPolicies: CategoryPolicy[]) => void;
-  setSkipNextLoadForCategoryId: (categoryId: number | null) => void;
+  startSkippingLoadsFor: (categoryId: number) => void;
+  // Returns true exactly once per (categoryId, step) pair — the caller
+  // should skip its own fetch when this returns true, and fetch normally
+  // (as always) when it returns false, including every time after the
+  // first for that step.
+  consumeSkipLoad: (categoryId: number, step: CategoryWizardStep) => boolean;
   markStepReached: (stepIndex: number) => void;
   loadFromSnapshot: (snapshot: {
     id?: number;

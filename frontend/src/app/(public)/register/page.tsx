@@ -3,7 +3,10 @@
 import Link from "next/link";
 import { useRouter } from "next/navigation";
 import { useState, type FormEvent } from "react";
-import { toast } from "sonner";
+import Stack from "@mui/material/Stack";
+import MuiLink from "@mui/material/Link";
+import Typography from "@mui/material/Typography";
+import { toast } from "@/components/ui/toast";
 import { AuthCard } from "@/components/auth-card";
 import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
@@ -96,8 +99,8 @@ export default function RegisterOrganizationPage() {
 
   return (
     <AuthCard title="Register your company" description="Let's start with your organization details.">
-      <form onSubmit={handleSubmit} noValidate className="space-y-4">
-        <div className="space-y-1.5">
+      <Stack component="form" onSubmit={handleSubmit} noValidate spacing={2}>
+        <Stack spacing={0.75}>
           <Label htmlFor="organizationName">Organization Name</Label>
           <Input
             id="organizationName"
@@ -108,13 +111,13 @@ export default function RegisterOrganizationPage() {
             aria-describedby={errors.organizationName ? "organizationName-error" : undefined}
           />
           {errors.organizationName ? (
-            <p id="organizationName-error" className="text-xs text-destructive">
+            <Typography id="organizationName-error" variant="caption" color="error">
               {errors.organizationName}
-            </p>
+            </Typography>
           ) : null}
-        </div>
+        </Stack>
 
-        <div className="space-y-1.5">
+        <Stack spacing={0.75}>
           <Label htmlFor="gstNumber">GST Number</Label>
           <Input
             id="gstNumber"
@@ -129,31 +132,38 @@ export default function RegisterOrganizationPage() {
             aria-describedby={errors.gstNumber ? "gstNumber-error" : undefined}
           />
           {errors.gstNumber ? (
-            <p id="gstNumber-error" className="text-xs text-destructive">
+            <Typography id="gstNumber-error" variant="caption" color="error">
               {errors.gstNumber}
-            </p>
+            </Typography>
           ) : gstStatus === "checking" ? (
-            <p className="flex items-center gap-1.5 text-xs text-muted-foreground">
-              <Spinner className="size-3" /> Checking availability…
-            </p>
+            <Stack direction="row" spacing={0.75} sx={{ alignItems: "center" }}>
+              <Spinner size={12} />
+              <Typography variant="caption" color="text.secondary">
+                Checking availability…
+              </Typography>
+            </Stack>
           ) : gstStatus === "available" ? (
-            <p className="text-xs text-muted-foreground">GST number is available.</p>
+            <Typography variant="caption" color="text.secondary">
+              GST number is available.
+            </Typography>
           ) : gstStatus === "taken" ? (
-            <p className="text-xs text-destructive">This GST number is already registered.</p>
+            <Typography variant="caption" color="error">
+              This GST number is already registered.
+            </Typography>
           ) : null}
-        </div>
+        </Stack>
 
-        <Button type="submit" className="w-full" disabled={isSubmitting || gstStatus === "checking" || gstStatus === "taken"}>
+        <Button type="submit" sx={{ width: "100%" }} disabled={isSubmitting || gstStatus === "checking" || gstStatus === "taken"}>
           {isSubmitting ? <Spinner /> : null}
           {isSubmitting ? "Checking…" : "Continue"}
         </Button>
 
-        <p className="text-center text-sm">
-          <Link href={ROUTES.LOGIN} className="text-primary underline-offset-4 hover:underline">
+        <Typography align="center" variant="body2">
+          <MuiLink component={Link} href={ROUTES.LOGIN} underline="hover">
             Already have an account? Log in
-          </Link>
-        </p>
-      </form>
+          </MuiLink>
+        </Typography>
+      </Stack>
     </AuthCard>
   );
 }

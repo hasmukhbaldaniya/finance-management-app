@@ -3,7 +3,10 @@
 import Link from "next/link";
 import { useRouter } from "next/navigation";
 import { useEffect, useRef, useState, type FormEvent } from "react";
-import { toast } from "sonner";
+import Stack from "@mui/material/Stack";
+import MuiLink from "@mui/material/Link";
+import Typography from "@mui/material/Typography";
+import { toast } from "@/components/ui/toast";
 import { AuthCard } from "@/components/auth-card";
 import { PasswordInput } from "@/components/password-input";
 import { Button } from "@/components/ui/button";
@@ -87,8 +90,8 @@ export default function ForgotPasswordStep3Page() {
 
   return (
     <AuthCard title="Reset password" description="Choose a new password for your account.">
-      <form onSubmit={handleSubmit} noValidate className="space-y-4">
-        <div className="space-y-1.5">
+      <Stack component="form" onSubmit={handleSubmit} noValidate spacing={2}>
+        <Stack spacing={0.75}>
           <Label htmlFor="newPassword">New Password</Label>
           <PasswordInput
             id="newPassword"
@@ -100,13 +103,13 @@ export default function ForgotPasswordStep3Page() {
             aria-describedby={errors.newPassword ? "new-password-error" : undefined}
           />
           {errors.newPassword ? (
-            <p id="new-password-error" className="text-xs text-destructive">
+            <Typography id="new-password-error" variant="caption" color="error">
               {errors.newPassword}
-            </p>
+            </Typography>
           ) : null}
-        </div>
+        </Stack>
 
-        <div className="space-y-1.5">
+        <Stack spacing={0.75}>
           <Label htmlFor="confirmPassword">Confirm Password</Label>
           <PasswordInput
             id="confirmPassword"
@@ -118,26 +121,26 @@ export default function ForgotPasswordStep3Page() {
             aria-describedby={errors.confirmPassword ? "confirm-password-error" : undefined}
           />
           {errors.confirmPassword ? (
-            <p id="confirm-password-error" className="text-xs text-destructive">
+            <Typography id="confirm-password-error" variant="caption" color="error">
               {errors.confirmPassword}
-            </p>
+            </Typography>
           ) : null}
-        </div>
+        </Stack>
 
-        <Button type="submit" className="w-full" disabled={isSubmitting}>
+        <Button type="submit" sx={{ width: "100%" }} disabled={isSubmitting}>
           {isSubmitting ? <Spinner /> : null}
           {isSubmitting ? "Submitting…" : "Submit"}
         </Button>
 
-        <div className="flex items-center justify-between text-sm">
-          <Link href={ROUTES.FORGOT_PASSWORD.VERIFY} className="text-primary underline-offset-4 hover:underline">
+        <Stack direction="row" sx={{ alignItems: "center", justifyContent: "space-between" }}>
+          <MuiLink component={Link} href={ROUTES.FORGOT_PASSWORD.VERIFY} underline="hover" variant="body2">
             ← Back
-          </Link>
-          <Link href={ROUTES.LOGIN} onClick={leaveAndReset} className="text-primary underline-offset-4 hover:underline">
+          </MuiLink>
+          <MuiLink component={Link} href={ROUTES.LOGIN} onClick={leaveAndReset} underline="hover" variant="body2">
             Back to Login
-          </Link>
-        </div>
-      </form>
+          </MuiLink>
+        </Stack>
+      </Stack>
     </AuthCard>
   );
 }

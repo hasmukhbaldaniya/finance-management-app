@@ -4,13 +4,14 @@ import { useEffect, useState } from "react";
 import { getCategoryDetail } from "@/apis/category";
 import { useCategoryWizard } from "@/contexts/CategoryWizardContext";
 import { ApiError, GENERIC_ERROR_MESSAGE } from "@/utils/apiManager/apiManager";
+import type { CategoryWizardStep } from "@/types/category.type";
 
 // Shared by every /[id]/<step>/page.tsx — always refetches on mount (rather
 // than trusting whatever's already in context) so a deep link from the
 // listing's Edit icon, or simply navigating back into the wizard later, is
 // never stale. Cheap: one GET per step visit, matching 008 edit page's own
 // always-refetch precedent.
-export function useLoadCategory(categoryId: number) {
+export function useLoadCategory(categoryId: number, step: CategoryWizardStep) {
   const wizard = useCategoryWizard();
   const [isLoading, setIsLoading] = useState(true);
   const [loadError, setLoadError] = useState<string | null>(null);
@@ -23,11 +24,11 @@ export function useLoadCategory(categoryId: number) {
     // Right after Step 1 creates a brand-new category in a Duplicate
     // session, context already holds the source's copied fields/policies —
     // this category has nothing saved server-side for them yet, so skip
-    // the fetch this one time instead of overwriting that copied data with
-    // an empty snapshot. One-time: cleared immediately so a later revisit
-    // of this same step still refetches normally.
-    if (wizard.skipNextLoadForCategoryId === categoryId) {
-      wizard.setSkipNextLoadForCategoryId(null);
+    // the fetch for *this step* this one time instead of overwriting that
+    // copied data with an empty snapshot. Per-step (see consumeSkipLoad's
+    // own doc comment) — visiting Step 2 first must not burn the only skip
+    // before Step 3/4 ever get a chance to use theirs.
+    if (wizard.consumeSkipLoad(categoryId, step)) {
       setIsLoading(false);
       return;
     }

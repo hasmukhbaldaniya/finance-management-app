@@ -2,7 +2,10 @@
 
 import { useState } from "react";
 import { useRouter } from "next/navigation";
-import { toast } from "sonner";
+import Box from "@mui/material/Box";
+import Stack from "@mui/material/Stack";
+import Typography from "@mui/material/Typography";
+import { toast } from "@/components/ui/toast";
 import { createTrip, updateTrip } from "@/apis/trip";
 import { DateTimePicker } from "@/components/date-time-picker";
 import { Button } from "@/components/ui/button";
@@ -106,10 +109,12 @@ export function TripForm(props: TripFormProps) {
   }
 
   return (
-    <div className="mx-auto max-w-4xl space-y-8 px-6 py-8">
-      <h1 className="text-2xl font-semibold tracking-tight">{isEdit ? "Edit Trip" : "Create Trip"}</h1>
+    <Stack spacing={4} sx={{ mx: "auto", maxWidth: 896, px: 3, py: 4 }}>
+      <Typography variant="h5" sx={{ fontWeight: 600, letterSpacing: "-0.01em" }}>
+        {isEdit ? "Edit Trip" : "Create Trip"}
+      </Typography>
 
-      <div className="space-y-2">
+      <Stack spacing={1}>
         <Label htmlFor="trip-name">Trip Name</Label>
         <Input
           id="trip-name"
@@ -117,45 +122,65 @@ export function TripForm(props: TripFormProps) {
           onChange={(event) => setName(event.target.value)}
           placeholder="Enter trip name"
           maxLength={MAX_TRIP_NAME_LENGTH}
-          className="max-w-md"
+          sx={{ maxWidth: 448 }}
         />
-        {errors.name ? <p className="text-sm text-destructive">{errors.name}</p> : null}
-      </div>
+        {errors.name ? (
+          <Typography variant="body2" color="error">
+            {errors.name}
+          </Typography>
+        ) : null}
+      </Stack>
 
-      <div className="grid grid-cols-1 gap-6 sm:grid-cols-2">
-        <div className="space-y-2">
+      <Box sx={{ display: "grid", gridTemplateColumns: { xs: "1fr", sm: "1fr 1fr" }, gap: 3 }}>
+        <Stack spacing={1}>
           <Label htmlFor="start-at">Start Date & Time</Label>
           <DateTimePicker id="start-at" value={startAt} onChange={setStartAt} />
-          {errors.startAt ? <p className="text-sm text-destructive">{errors.startAt}</p> : null}
-        </div>
-        <div className="space-y-2">
+          {errors.startAt ? (
+            <Typography variant="body2" color="error">
+              {errors.startAt}
+            </Typography>
+          ) : null}
+        </Stack>
+        <Stack spacing={1}>
           <Label htmlFor="end-at">End Date & Time</Label>
           <DateTimePicker id="end-at" value={endAt} onChange={setEndAt} />
-          {errors.endAt ? <p className="text-sm text-destructive">{errors.endAt}</p> : null}
-        </div>
-      </div>
+          {errors.endAt ? (
+            <Typography variant="body2" color="error">
+              {errors.endAt}
+            </Typography>
+          ) : null}
+        </Stack>
+      </Box>
 
-      <div className="grid grid-cols-1 gap-6 sm:grid-cols-2">
-        <div className="space-y-2">
+      <Box sx={{ display: "grid", gridTemplateColumns: { xs: "1fr", sm: "1fr 1fr" }, gap: 3 }}>
+        <Stack spacing={1}>
           <Label>Start Location</Label>
           <CitySelect value={startCity} onChange={setStartCity} placeholder="Select start location" />
-          {errors.startCity ? <p className="text-sm text-destructive">{errors.startCity}</p> : null}
-        </div>
-        <div className="space-y-2">
+          {errors.startCity ? (
+            <Typography variant="body2" color="error">
+              {errors.startCity}
+            </Typography>
+          ) : null}
+        </Stack>
+        <Stack spacing={1}>
           <Label>End Location</Label>
           <CitySelect value={endCity} onChange={setEndCity} placeholder="Select end location" />
-          {errors.endCity ? <p className="text-sm text-destructive">{errors.endCity}</p> : null}
-        </div>
-      </div>
+          {errors.endCity ? (
+            <Typography variant="body2" color="error">
+              {errors.endCity}
+            </Typography>
+          ) : null}
+        </Stack>
+      </Box>
 
-      <div className="flex items-center justify-end gap-3 border-t border-border pt-6">
+      <Stack direction="row" spacing={1.5} sx={{ alignItems: "center", justifyContent: "flex-end", borderTop: 1, borderColor: "divider", pt: 3 }}>
         <Button type="button" variant="outline" disabled={isSubmitting} onClick={handleCancel}>
           Cancel
         </Button>
         <Button type="button" disabled={isSubmitting} onClick={handleSubmit}>
           {isEdit ? "Save Changes" : "Create Trip"}
         </Button>
-      </div>
-    </div>
+      </Stack>
+    </Stack>
   );
 }

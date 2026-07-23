@@ -2,7 +2,10 @@
 
 import { useRouter, useSearchParams } from "next/navigation";
 import { Suspense, useEffect, useState, type FormEvent } from "react";
-import { toast } from "sonner";
+import Box from "@mui/material/Box";
+import Stack from "@mui/material/Stack";
+import Typography from "@mui/material/Typography";
+import { toast } from "@/components/ui/toast";
 import { AuthCard } from "@/components/auth-card";
 import { PasswordInput } from "@/components/password-input";
 import { Button } from "@/components/ui/button";
@@ -103,9 +106,9 @@ function OnboardingVerifyPage() {
   if (isVerifying) {
     return (
       <AuthCard title="Verifying your invitation…" description="Please wait a moment.">
-        <div className="flex justify-center py-4">
+        <Box sx={{ display: "flex", justifyContent: "center", py: 2 }}>
           <Spinner />
-        </div>
+        </Box>
       </AuthCard>
     );
   }
@@ -113,20 +116,22 @@ function OnboardingVerifyPage() {
   if (linkError || !token) {
     return (
       <AuthCard title="Invitation link invalid">
-        <p className="text-sm text-destructive">{linkError ?? GENERIC_ERROR_MESSAGE}</p>
+        <Typography variant="body2" color="error">
+          {linkError ?? GENERIC_ERROR_MESSAGE}
+        </Typography>
       </AuthCard>
     );
   }
 
   return (
     <AuthCard title="Set your password" description="Confirm your email and choose a password to get started.">
-      <form onSubmit={handleSubmit} noValidate className="space-y-4">
-        <div className="space-y-1.5">
+      <Stack component="form" onSubmit={handleSubmit} noValidate spacing={2}>
+        <Stack spacing={0.75}>
           <Label htmlFor="email">Email</Label>
           <Input id="email" name="email" type="email" value={email} disabled readOnly />
-        </div>
+        </Stack>
 
-        <div className="space-y-1.5">
+        <Stack spacing={0.75}>
           <Label htmlFor="password">Password</Label>
           <PasswordInput
             id="password"
@@ -138,13 +143,13 @@ function OnboardingVerifyPage() {
             aria-describedby={errors.password ? "password-error" : undefined}
           />
           {errors.password ? (
-            <p id="password-error" className="text-xs text-destructive">
+            <Typography id="password-error" variant="caption" color="error">
               {errors.password}
-            </p>
+            </Typography>
           ) : null}
-        </div>
+        </Stack>
 
-        <div className="space-y-1.5">
+        <Stack spacing={0.75}>
           <Label htmlFor="confirmPassword">Confirm Password</Label>
           <PasswordInput
             id="confirmPassword"
@@ -156,17 +161,17 @@ function OnboardingVerifyPage() {
             aria-describedby={errors.confirmPassword ? "confirmPassword-error" : undefined}
           />
           {errors.confirmPassword ? (
-            <p id="confirmPassword-error" className="text-xs text-destructive">
+            <Typography id="confirmPassword-error" variant="caption" color="error">
               {errors.confirmPassword}
-            </p>
+            </Typography>
           ) : null}
-        </div>
+        </Stack>
 
-        <Button type="submit" className="w-full" disabled={isSubmitting}>
+        <Button type="submit" sx={{ width: "100%" }} disabled={isSubmitting}>
           {isSubmitting ? <Spinner /> : null}
           {isSubmitting ? "Saving…" : "Continue"}
         </Button>
-      </form>
+      </Stack>
     </AuthCard>
   );
 }
@@ -176,9 +181,9 @@ export default function OnboardingPage() {
     <Suspense
       fallback={
         <AuthCard title="Verifying your invitation…" description="Please wait a moment.">
-          <div className="flex justify-center py-4">
+          <Box sx={{ display: "flex", justifyContent: "center", py: 2 }}>
             <Spinner />
-          </div>
+          </Box>
         </AuthCard>
       }
     >

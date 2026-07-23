@@ -3,7 +3,10 @@
 import Link from "next/link";
 import { useRouter } from "next/navigation";
 import { useState, type FormEvent } from "react";
-import { toast } from "sonner";
+import Stack from "@mui/material/Stack";
+import MuiLink from "@mui/material/Link";
+import Typography from "@mui/material/Typography";
+import { toast } from "@/components/ui/toast";
 import { AuthCard } from "@/components/auth-card";
 import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
@@ -48,8 +51,8 @@ export default function ForgotPasswordStep1Page() {
 
   return (
     <AuthCard title="Forgot password" description="Enter your email to receive a one-time password.">
-      <form onSubmit={handleSubmit} noValidate className="space-y-4">
-        <div className="space-y-1.5">
+      <Stack component="form" onSubmit={handleSubmit} noValidate spacing={2}>
+        <Stack spacing={0.75}>
           <Label htmlFor="email">Email</Label>
           <Input
             id="email"
@@ -62,23 +65,23 @@ export default function ForgotPasswordStep1Page() {
             aria-describedby={error ? "email-error" : undefined}
           />
           {error ? (
-            <p id="email-error" className="text-xs text-destructive">
+            <Typography id="email-error" variant="caption" color="error">
               {error}
-            </p>
+            </Typography>
           ) : null}
-        </div>
+        </Stack>
 
-        <Button type="submit" className="w-full" disabled={isSubmitting}>
+        <Button type="submit" sx={{ width: "100%" }} disabled={isSubmitting}>
           {isSubmitting ? <Spinner /> : null}
           {isSubmitting ? "Sending…" : "Submit"}
         </Button>
 
-        <p className="text-center text-sm">
-          <Link href={ROUTES.LOGIN} onClick={reset} className="text-primary underline-offset-4 hover:underline">
+        <Typography align="center" variant="body2">
+          <MuiLink component={Link} href={ROUTES.LOGIN} onClick={reset} underline="hover">
             Back to Login
-          </Link>
-        </p>
-      </form>
+          </MuiLink>
+        </Typography>
+      </Stack>
     </AuthCard>
   );
 }

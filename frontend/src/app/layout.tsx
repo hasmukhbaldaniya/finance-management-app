@@ -1,7 +1,8 @@
 import type { Metadata } from "next";
 import { Geist_Mono, Montserrat } from "next/font/google";
-import { Toaster } from "@/components/ui/sonner";
-import "./globals.css";
+import Box from "@mui/material/Box";
+import { Toaster } from "@/components/ui/toast";
+import { ThemeRegistry } from "@/theme/theme-registry";
 
 const montserrat = Montserrat({
   variable: "--font-sans",
@@ -25,14 +26,13 @@ export default function RootLayout({
   children: React.ReactNode;
 }>) {
   return (
-    <html
-      lang="en"
-      className={`${montserrat.variable} ${geistMono.variable} h-full antialiased`}
-    >
-      <body className="min-h-full flex flex-col">
-        {children}
-        <Toaster />
-      </body>
-    </html>
+    <Box component="html" lang="en" className={`${montserrat.variable} ${geistMono.variable}`} sx={{ height: "100%" }}>
+      <Box component="body" sx={{ minHeight: "100%", display: "flex", flexDirection: "column" }}>
+        <ThemeRegistry>
+          {children}
+          <Toaster />
+        </ThemeRegistry>
+      </Box>
+    </Box>
   );
 }

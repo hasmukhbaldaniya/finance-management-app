@@ -1,14 +1,7 @@
+import { useState } from "react";
 import type { Meta, StoryObj } from "@storybook/react-vite";
 import { Button } from "@/components/ui/button";
-import {
-  Dialog,
-  DialogContent,
-  DialogDescription,
-  DialogFooter,
-  DialogHeader,
-  DialogTitle,
-  DialogTrigger,
-} from "@/components/ui/dialog";
+import { Dialog, DialogContent, DialogDescription, DialogFooter, DialogHeader, DialogTitle } from "@/components/ui/dialog";
 
 const meta = {
   title: "ui/Dialog",
@@ -22,20 +15,38 @@ const meta = {
 export default meta;
 type Story = StoryObj<typeof meta>;
 
+// Every real dialog in this app is externally controlled (`open`/
+// `onOpenChange`, never an uncontrolled DialogTrigger) — this story
+// matches that same pattern with a small local-state wrapper.
 export const Default: Story = {
-  render: () => (
-    <Dialog>
-      <DialogTrigger render={<Button variant="outline">Open dialog</Button>} />
-      <DialogContent>
-        <DialogHeader>
-          <DialogTitle>Delete this grade?</DialogTitle>
-          <DialogDescription>This action cannot be undone.</DialogDescription>
-        </DialogHeader>
-        <DialogFooter>
-          <Button variant="outline">Cancel</Button>
-          <Button variant="destructive">Delete</Button>
-        </DialogFooter>
-      </DialogContent>
-    </Dialog>
-  ),
+  args: {
+    open: false,
+    children: null,
+  },
+  render: function DialogStory() {
+    const [open, setOpen] = useState(false);
+    return (
+      <>
+        <Button variant="outline" onClick={() => setOpen(true)}>
+          Open dialog
+        </Button>
+        <Dialog open={open} onOpenChange={setOpen}>
+          <DialogContent>
+            <DialogHeader>
+              <DialogTitle>Delete this grade?</DialogTitle>
+              <DialogDescription>This action cannot be undone.</DialogDescription>
+            </DialogHeader>
+            <DialogFooter>
+              <Button variant="outline" onClick={() => setOpen(false)}>
+                Cancel
+              </Button>
+              <Button variant="destructive" onClick={() => setOpen(false)}>
+                Delete
+              </Button>
+            </DialogFooter>
+          </DialogContent>
+        </Dialog>
+      </>
+    );
+  },
 };

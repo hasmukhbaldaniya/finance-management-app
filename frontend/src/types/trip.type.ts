@@ -39,3 +39,15 @@ export type TripDetail = {
   totalAmount: string;
   approvedAmount: string | null;
 };
+
+// Flattened across every Claim linked to this trip (draft and submitted
+// alike, matching Trip.totalAmount's own no-status-distinction rule), one
+// row per Expense rather than grouped by claim.
+export type TripExpenseRow = {
+  id: number;
+  claimId: number;
+  claimName: string | null;
+  categoryName: string;
+  amount: string;
+  expenseDate: string | null;
+};

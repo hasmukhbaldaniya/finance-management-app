@@ -2,7 +2,13 @@
 
 import Link from "next/link";
 import { useRouter } from "next/navigation";
+import Box from "@mui/material/Box";
+import Stack from "@mui/material/Stack";
+import Typography from "@mui/material/Typography";
+import Chip from "@mui/material/Chip";
+import { alpha } from "@mui/material/styles";
 import { ArrowRightIcon, CaretLeftIcon, PlusIcon, SparkleIcon } from "@phosphor-icons/react";
+import { statusTones } from "@/theme/colors";
 import { Button } from "@/components/ui/button";
 import { ROUTES } from "@/utils/constants/route.constant";
 
@@ -11,50 +17,96 @@ export default function CreateClaimEntryPage() {
   const router = useRouter();
 
   return (
-    <div className="mx-auto max-w-4xl space-y-8 px-6 py-8">
-      <div className="flex items-center gap-3">
+    <Stack spacing={4} sx={{ mx: "auto", maxWidth: 896, px: 3, py: 4 }}>
+      <Stack direction="row" spacing={1.5} sx={{ alignItems: "center" }}>
         <Button type="button" variant="outline" size="sm" onClick={() => router.push(ROUTES.CLAIMS)}>
           <CaretLeftIcon size={14} /> Back
         </Button>
-        <h1 className="text-2xl font-semibold tracking-tight">Create Claim</h1>
-      </div>
+        <Typography variant="h5" sx={{ fontWeight: 600, letterSpacing: "-0.01em" }}>
+          Create Claim
+        </Typography>
+      </Stack>
 
-      <div className="grid grid-cols-1 gap-6 sm:grid-cols-2">
-        <Link
+      <Box sx={{ display: "grid", gridTemplateColumns: { xs: "1fr", sm: "1fr 1fr" }, gap: 3 }}>
+        <Stack
+          component={Link}
           href={ROUTES.CLAIM_NEW_AI}
-          className="flex flex-col gap-3 rounded-lg border-2 border-dashed border-green-500 bg-green-50/50 p-6 transition-colors hover:bg-green-50"
+          spacing={1.5}
+          sx={{
+            borderRadius: 2,
+            border: 2,
+            borderStyle: "dashed",
+            borderColor: "success.main",
+            bgcolor: (theme) => alpha(theme.palette.success.main, 0.04),
+            p: 3,
+            textDecoration: "none",
+            color: "inherit",
+            transition: "background-color 0.15s",
+            "&:hover": { bgcolor: (theme) => alpha(theme.palette.success.main, 0.08) },
+          }}
         >
-          <span className="inline-flex w-fit items-center gap-1.5 rounded-full bg-green-100 px-2.5 py-1 text-xs font-medium text-green-800">
-            <SparkleIcon size={14} /> AI Powered
-          </span>
-          <h2 className="text-lg font-semibold">Automated Extraction</h2>
-          <p className="text-sm text-muted-foreground">Upload your bills and let AI read and fill in the details for you.</p>
-          <span className="mt-auto inline-flex items-center gap-1.5 text-sm font-medium text-green-700">
+          <Chip
+            icon={<SparkleIcon size={14} />}
+            label="AI Powered"
+            size="small"
+            sx={{ alignSelf: "flex-start", fontWeight: 500, bgcolor: statusTones.accepted.background, color: statusTones.accepted.text, "& .MuiChip-icon": { color: "inherit" } }}
+          />
+          <Typography variant="h6" sx={{ fontWeight: 600 }}>
+            Automated Extraction
+          </Typography>
+          <Typography variant="body2" color="text.secondary">
+            Upload your bills and let AI read and fill in the details for you.
+          </Typography>
+          <Stack direction="row" spacing={0.75} sx={{ alignItems: "center", mt: "auto", fontSize: "0.875rem", fontWeight: 500, color: "success.dark" }}>
             Proceed <ArrowRightIcon size={14} />
-          </span>
-        </Link>
+          </Stack>
+        </Stack>
 
-        <Link href={ROUTES.CLAIM_NEW_MANUAL} className="flex flex-col gap-3 rounded-lg border border-border p-6 transition-colors hover:bg-muted/50">
-          <h2 className="text-lg font-semibold">Enter your expense details manually</h2>
-          <p className="text-sm text-muted-foreground">Add each expense by hand, one or more at a time.</p>
-          <span className="mt-auto inline-flex items-center gap-1.5 text-sm font-medium">
+        <Stack
+          component={Link}
+          href={ROUTES.CLAIM_NEW_MANUAL}
+          spacing={1.5}
+          sx={{
+            borderRadius: 2,
+            border: 1,
+            borderColor: "divider",
+            p: 3,
+            textDecoration: "none",
+            color: "inherit",
+            transition: "background-color 0.15s",
+            "&:hover": { bgcolor: "action.hover" },
+          }}
+        >
+          <Typography variant="h6" sx={{ fontWeight: 600 }}>
+            Enter your expense details manually
+          </Typography>
+          <Typography variant="body2" color="text.secondary">
+            Add each expense by hand, one or more at a time.
+          </Typography>
+          <Stack direction="row" spacing={0.75} sx={{ alignItems: "center", mt: "auto", fontSize: "0.875rem", fontWeight: 500 }}>
             <PlusIcon size={14} /> Add Expense
-          </span>
-        </Link>
-      </div>
+          </Stack>
+        </Stack>
+      </Box>
 
-      <div className="rounded-lg border border-border bg-muted/40 p-4 text-sm text-muted-foreground">
-        <p>Each image you upload becomes one bill. For PDFs, every page is treated as a separate bill.</p>
-        <p>If your bill has multiple pages, merge them into a single PDF before uploading.</p>
-      </div>
+      <Box sx={{ borderRadius: 2, border: 1, borderColor: "divider", bgcolor: "action.hover", p: 2, fontSize: "0.875rem", color: "text.secondary" }}>
+        <Typography variant="body2" color="text.secondary">
+          Each image you upload becomes one bill. For PDFs, every page is treated as a separate bill.
+        </Typography>
+        <Typography variant="body2" color="text.secondary">
+          If your bill has multiple pages, merge them into a single PDF before uploading.
+        </Typography>
+      </Box>
 
-      <div className="rounded-lg border border-border p-4 text-sm">
-        <h3 className="mb-1 font-semibold">What happens next?</h3>
-        <p className="text-muted-foreground">
+      <Box sx={{ borderRadius: 2, border: 1, borderColor: "divider", p: 2, fontSize: "0.875rem" }}>
+        <Typography variant="subtitle2" sx={{ fontWeight: 600, mb: 0.5 }}>
+          What happens next?
+        </Typography>
+        <Typography variant="body2" color="text.secondary">
           Save your claim as a draft to keep working on it later, or save it to submit — it&apos;ll then move through your organization&apos;s approval
           process before being reimbursed.
-        </p>
-      </div>
-    </div>
+        </Typography>
+      </Box>
+    </Stack>
   );
 }

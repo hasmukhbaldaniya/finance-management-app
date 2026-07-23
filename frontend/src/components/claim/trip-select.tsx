@@ -1,6 +1,10 @@
 "use client";
 
 import { useEffect, useState } from "react";
+import Box from "@mui/material/Box";
+import Stack from "@mui/material/Stack";
+import Typography from "@mui/material/Typography";
+import InputAdornment from "@mui/material/InputAdornment";
 import { CaretDownIcon, MagnifyingGlassIcon } from "@phosphor-icons/react";
 import { getTrips } from "@/apis/trip";
 import { DatePicker } from "@/components/date-picker";
@@ -48,47 +52,61 @@ export function TripSelect({ value, onChange, placeholder }: TripSelectProps) {
     <DropdownMenu>
       <DropdownMenuTrigger
         render={
-          <Button type="button" variant="outline" className="w-full justify-between font-normal">
-            <span className="truncate text-left">{value ? `${value.name} (#${value.id})` : placeholder}</span>
-            <CaretDownIcon size={16} className="shrink-0" />
+          <Button type="button" variant="outline" sx={{ width: "100%", justifyContent: "space-between", fontWeight: 400 }}>
+            <Box component="span" sx={{ minWidth: 0, flex: 1, overflow: "hidden", textOverflow: "ellipsis", whiteSpace: "nowrap", textAlign: "left" }}>
+              {value ? `${value.name} (#${value.id})` : placeholder}
+            </Box>
+            <Box component="span" sx={{ flexShrink: 0, display: "flex" }}>
+              <CaretDownIcon size={16} />
+            </Box>
           </Button>
         }
       />
-      <DropdownMenuContent className="w-(--anchor-width) p-2">
-        <div className="mb-2 space-y-2">
-          <div className="relative">
-            <MagnifyingGlassIcon size={14} className="absolute top-1/2 left-2 -translate-y-1/2 text-muted-foreground" />
+      <DropdownMenuContent matchTriggerWidth sx={{ p: 1 }}>
+        <Stack spacing={1} sx={{ mb: 1 }}>
+          <Box sx={{ position: "relative" }}>
             <Input
               autoFocus
               value={search}
               onChange={(event) => setSearch(event.target.value)}
               onKeyDown={(event) => event.stopPropagation()}
               placeholder="Search trip..."
-              className="h-8 pl-7 text-sm"
+              sx={{ height: 32, fontSize: "0.875rem" }}
+              startAdornment={
+                <InputAdornment position="start">
+                  <MagnifyingGlassIcon size={14} />
+                </InputAdornment>
+              }
             />
-          </div>
-          <div onKeyDown={(event) => event.stopPropagation()}>
-            <DatePicker value={tripStartDate} onChange={setTripStartDate} placeholder="Filter by Start Date" className="h-8 text-sm" />
-          </div>
-        </div>
-        <div className="max-h-60 overflow-y-auto">
+          </Box>
+          <Box onKeyDown={(event) => event.stopPropagation()}>
+            <DatePicker value={tripStartDate} onChange={setTripStartDate} placeholder="Filter by Start Date" sx={{ height: 32, fontSize: "0.875rem" }} />
+          </Box>
+        </Stack>
+        <Box sx={{ maxHeight: 240, overflowY: "auto" }}>
           {isLoading ? (
-            <p className="px-2 py-3 text-sm text-muted-foreground">Searching…</p>
+            <Typography variant="body2" color="text.secondary" sx={{ px: 1, py: 1.5 }}>
+              Searching…
+            </Typography>
           ) : trips.length === 0 ? (
-            <p className="px-2 py-3 text-sm text-muted-foreground">No matching trips.</p>
+            <Typography variant="body2" color="text.secondary" sx={{ px: 1, py: 1.5 }}>
+              No matching trips.
+            </Typography>
           ) : (
             trips.map((trip) => (
               <DropdownMenuItem key={trip.id} onClick={() => onChange(trip)}>
-                <span className="flex flex-col">
-                  <span>
-                    {trip.name} <span className="text-muted-foreground">(#{trip.id})</span>
-                  </span>
-                  <span className="text-xs text-muted-foreground">Starts {formatDateTime(trip.startAt)}</span>
-                </span>
+                <Box component="span" sx={{ display: "flex", flexDirection: "column" }}>
+                  <Box component="span">
+                    {trip.name} <Box component="span" sx={{ color: "text.secondary" }}>(#{trip.id})</Box>
+                  </Box>
+                  <Box component="span" sx={{ fontSize: "0.75rem", color: "text.secondary" }}>
+                    Starts {formatDateTime(trip.startAt)}
+                  </Box>
+                </Box>
               </DropdownMenuItem>
             ))
           )}
-        </div>
+        </Box>
       </DropdownMenuContent>
     </DropdownMenu>
   );

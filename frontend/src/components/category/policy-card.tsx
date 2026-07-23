@@ -1,6 +1,9 @@
 "use client";
 
 import { useState } from "react";
+import Box from "@mui/material/Box";
+import Stack from "@mui/material/Stack";
+import Typography from "@mui/material/Typography";
 import { CaretDownIcon, CaretRightIcon, CopyIcon, TrashIcon } from "@phosphor-icons/react";
 import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
@@ -18,34 +21,49 @@ type PolicyCardProps = {
   onChange: (policy: CategoryPolicy) => void;
   onDuplicate: () => void;
   onDelete: () => void;
+  // 013's own Validation Rules Summary: Policy Name must be unique within
+  // the category (per policy list — Claim/Exception/Project are
+  // independent) if provided. The parent already has every sibling name in
+  // scope for duplicatePolicy's own auto-suffix logic, so it's cheapest to
+  // compute the collision there rather than pass the whole sibling list in.
+  hasDuplicateName?: boolean;
 };
 
-export function PolicyCard({ policy, policyKind, fields, pickerOptions, onChange, onDuplicate, onDelete }: PolicyCardProps) {
+export function PolicyCard({ policy, policyKind, fields, pickerOptions, onChange, onDuplicate, onDelete, hasDuplicateName }: PolicyCardProps) {
   const [isOpen, setIsOpen] = useState(true);
 
   return (
-    <div className="rounded-lg border border-border bg-background">
-      <div className="flex items-center gap-2 p-3">
-        <button type="button" onClick={() => setIsOpen((open) => !open)} aria-label={isOpen ? "Collapse policy" : "Expand policy"}>
+    <Box sx={{ borderRadius: 2, border: 1, borderColor: "divider", bgcolor: "background.paper" }}>
+      <Stack direction="row" spacing={1} sx={{ alignItems: "center", p: 1.5 }}>
+        <Box component="button" type="button" onClick={() => setIsOpen((open) => !open)} aria-label={isOpen ? "Collapse policy" : "Expand policy"} sx={{ display: "flex", background: "none", border: "none", cursor: "pointer" }}>
           {isOpen ? <CaretDownIcon size={16} /> : <CaretRightIcon size={16} />}
-        </button>
-        <Input value={policy.name} onChange={(event) => onChange({ ...policy, name: event.target.value })} className="max-w-xs" />
-        <div className="ml-auto flex items-center gap-1">
+        </Box>
+        <Stack spacing={0.5} sx={{ maxWidth: 320 }}>
+          <Input value={policy.name} onChange={(event) => onChange({ ...policy, name: event.target.value })} error={hasDuplicateName} />
+          {hasDuplicateName ? (
+            <Typography variant="caption" color="error">
+              A policy with this name already exists.
+            </Typography>
+          ) : null}
+        </Stack>
+        <Stack direction="row" spacing={0.5} sx={{ ml: "auto", alignItems: "center" }}>
           <Button type="button" variant="ghost" size="icon" aria-label="Duplicate policy" onClick={onDuplicate}>
             <CopyIcon size={16} />
           </Button>
           <Button type="button" variant="ghost" size="icon" aria-label="Delete policy" onClick={onDelete}>
-            <TrashIcon size={16} className="text-destructive" />
+            <Box component="span" sx={{ color: "error.main", display: "flex" }}>
+              <TrashIcon size={16} />
+            </Box>
           </Button>
-        </div>
-      </div>
+        </Stack>
+      </Stack>
       {isOpen ? (
-        <div className="space-y-4 border-t border-border p-4">
+        <Stack spacing={2} sx={{ borderTop: 1, borderColor: "divider", p: 2 }}>
           <PolicyEligibilitySection policy={policy} policyKind={policyKind} options={pickerOptions} onChange={onChange} />
           <PolicyRulesSection policy={policy} policyKind={policyKind} fields={fields} onChange={onChange} />
           <PolicyApprovalFlowsSection policy={policy} employees={pickerOptions.employees} onChange={onChange} />
-        </div>
+        </Stack>
       ) : null}
-    </div>
+    </Box>
   );
 }

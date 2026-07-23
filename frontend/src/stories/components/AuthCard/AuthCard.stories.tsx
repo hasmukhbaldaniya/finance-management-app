@@ -17,7 +17,7 @@ type Story = StoryObj<typeof meta>;
 export const Default: Story = {
   args: {
     title: "Log in",
-    children: <Button className="w-full">Login</Button>,
+    children: <Button sx={{ width: "100%" }}>Login</Button>,
   },
 };
 
@@ -25,7 +25,7 @@ export const WithDescription: Story = {
   args: {
     title: "Forgot password",
     description: "Enter your email to receive a one-time password.",
-    children: <Button className="w-full">Submit</Button>,
+    children: <Button sx={{ width: "100%" }}>Submit</Button>,
   },
 };
 
@@ -34,6 +34,6 @@ export const LongContent: Story = {
     title: "Register your company",
     description:
       "This is a deliberately long description to verify the card layout wraps gracefully instead of overflowing or breaking the surrounding chrome on narrow viewports.",
-    children: <Button className="w-full">Continue</Button>,
+    children: <Button sx={{ width: "100%" }}>Continue</Button>,
   },
 };

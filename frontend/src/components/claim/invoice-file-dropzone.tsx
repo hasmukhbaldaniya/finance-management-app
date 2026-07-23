@@ -1,6 +1,10 @@
 "use client";
 
 import { useRef, useState, type DragEvent } from "react";
+import Box from "@mui/material/Box";
+import Stack from "@mui/material/Stack";
+import Typography from "@mui/material/Typography";
+import { alpha } from "@mui/material/styles";
 import { FileIcon, UploadSimpleIcon, XIcon } from "@phosphor-icons/react";
 import { ALLOWED_INVOICE_FILE_EXTENSIONS, MAX_INVOICE_FILE_COUNT, MAX_INVOICE_FILE_SIZE_MB } from "@/utils/constants/claim.constant";
 
@@ -48,8 +52,9 @@ export function InvoiceFileDropzone({ files, onChange }: InvoiceFileDropzoneProp
   }
 
   return (
-    <div className="space-y-2">
-      <div
+    <Stack spacing={1}>
+      <Stack
+        spacing={1}
         onDragOver={(event) => {
           event.preventDefault();
           setIsDragging(true);
@@ -57,46 +62,77 @@ export function InvoiceFileDropzone({ files, onChange }: InvoiceFileDropzoneProp
         onDragLeave={() => setIsDragging(false)}
         onDrop={handleDrop}
         onClick={() => inputRef.current?.click()}
-        className={`flex cursor-pointer flex-col items-center justify-center gap-2 rounded-lg border-2 border-dashed p-8 text-center text-sm transition-colors ${
-          isDragging ? "border-primary bg-primary/5" : "border-input text-muted-foreground hover:bg-muted/50"
-        }`}
+        sx={{
+          alignItems: "center",
+          justifyContent: "center",
+          borderRadius: 2,
+          border: 2,
+          borderStyle: "dashed",
+          p: 4,
+          textAlign: "center",
+          fontSize: "0.875rem",
+          cursor: "pointer",
+          transition: "background-color 0.15s",
+          borderColor: isDragging ? "primary.main" : "divider",
+          bgcolor: isDragging ? (theme) => alpha(theme.palette.primary.main, 0.05) : "transparent",
+          color: isDragging ? "text.primary" : "text.secondary",
+          "&:hover": isDragging ? undefined : { bgcolor: "action.hover" },
+        }}
       >
         <UploadSimpleIcon size={24} />
-        <p>Drag and drop invoices here, or click to browse</p>
-        <p className="text-xs">PDF, JPG, JPEG, PNG · up to {MAX_INVOICE_FILE_SIZE_MB}MB each · up to {MAX_INVOICE_FILE_COUNT} files</p>
-        <input
+        <Typography variant="body2">Drag and drop invoices here, or click to browse</Typography>
+        <Typography variant="caption">
+          PDF, JPG, JPEG, PNG · up to {MAX_INVOICE_FILE_SIZE_MB}MB each · up to {MAX_INVOICE_FILE_COUNT} files
+        </Typography>
+        <Box
+          component="input"
           ref={inputRef}
           type="file"
           multiple
           accept={ALLOWED_INVOICE_FILE_EXTENSIONS.join(",")}
-          className="hidden"
+          sx={{ display: "none" }}
           onChange={(event) => {
-            addFiles(Array.from(event.target.files ?? []));
-            event.target.value = "";
+            addFiles(Array.from((event.target as HTMLInputElement).files ?? []));
+            (event.target as HTMLInputElement).value = "";
           }}
         />
-      </div>
-      {error ? <p className="text-sm text-destructive">{error}</p> : null}
+      </Stack>
+      {error ? (
+        <Typography variant="body2" color="error">
+          {error}
+        </Typography>
+      ) : null}
       {files.length > 0 ? (
-        <ul className="space-y-1">
+        <Stack component="ul" spacing={0.5} sx={{ listStyle: "none", p: 0, m: 0 }}>
           {files.map((file, index) => (
-            <li key={`${file.name}-${index}`} className="flex items-center justify-between gap-2 rounded-md border border-border px-3 py-2 text-sm">
-              <span className="flex min-w-0 items-center gap-2">
-                <FileIcon size={16} className="shrink-0 text-muted-foreground" />
-                <span className="truncate">{file.name}</span>
-              </span>
-              <button
+            <Stack
+              component="li"
+              direction="row"
+              key={`${file.name}-${index}`}
+              spacing={1}
+              sx={{ alignItems: "center", justifyContent: "space-between", borderRadius: 1.5, border: 1, borderColor: "divider", px: 1.5, py: 1, fontSize: "0.875rem" }}
+            >
+              <Stack direction="row" spacing={1} sx={{ alignItems: "center", minWidth: 0 }}>
+                <Box sx={{ flexShrink: 0, color: "text.secondary", display: "flex" }}>
+                  <FileIcon size={16} />
+                </Box>
+                <Typography variant="body2" noWrap>
+                  {file.name}
+                </Typography>
+              </Stack>
+              <Box
+                component="button"
                 type="button"
                 aria-label={`Remove ${file.name}`}
                 onClick={() => onChange(files.filter((_, fileIndex) => fileIndex !== index))}
-                className="text-muted-foreground hover:text-destructive"
+                sx={{ color: "text.secondary", background: "none", border: "none", cursor: "pointer", display: "flex", "&:hover": { color: "error.main" } }}
               >
                 <XIcon size={14} />
-              </button>
-            </li>
+              </Box>
+            </Stack>
           ))}
-        </ul>
+        </Stack>
       ) : null}
-    </div>
+    </Stack>
   );
 }

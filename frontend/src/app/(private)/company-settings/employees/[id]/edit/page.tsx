@@ -3,10 +3,12 @@
 import Link from "next/link";
 import { useParams, useRouter } from "next/navigation";
 import { useEffect, useState, type FormEvent } from "react";
-import { toast } from "sonner";
+import Box from "@mui/material/Box";
+import Stack from "@mui/material/Stack";
+import Typography from "@mui/material/Typography";
+import { toast } from "@/components/ui/toast";
 import { PlusIcon, XIcon } from "@phosphor-icons/react";
-import { Button, buttonVariants } from "@/components/ui/button";
-import { cn } from "@/lib/utils";
+import { Button } from "@/components/ui/button";
 import { Checkbox } from "@/components/ui/checkbox";
 import { DatePicker } from "@/components/date-picker";
 import { Input } from "@/components/ui/input";
@@ -80,6 +82,15 @@ type FieldErrors = {
 
 function createEmptyFfRow(): FfRow {
   return { airlineId: "", ffNumber: "" };
+}
+
+function FieldError({ message }: { message?: string }) {
+  if (!message) return null;
+  return (
+    <Typography variant="caption" color="error">
+      {message}
+    </Typography>
+  );
 }
 
 // Reuses 008's exact fields/sections/validation, per 009's own Flow note that
@@ -373,26 +384,32 @@ export default function EditEmployeePage() {
   }
 
   return (
-    <div className="mx-auto w-full max-w-5xl flex-1 px-4 py-10">
-      <h1 className="text-2xl font-semibold tracking-tight">Edit Employee</h1>
-      <p className="mt-1 text-sm text-muted-foreground">Update any of the sections below, then save your changes.</p>
+    <Box sx={{ mx: "auto", width: "100%", maxWidth: 1024, flex: 1, px: 2, py: 5 }}>
+      <Typography variant="h5" sx={{ fontWeight: 600 }}>
+        Edit Employee
+      </Typography>
+      <Typography variant="body2" color="text.secondary" sx={{ mt: 0.5 }}>
+        Update any of the sections below, then save your changes.
+      </Typography>
 
       {loadError ? (
-        <div className="mt-6 flex flex-col items-center gap-4 text-center">
-          <p className="text-sm text-muted-foreground">{loadError}</p>
+        <Stack sx={{ mt: 3, alignItems: "center", gap: 2, textAlign: "center" }}>
+          <Typography variant="body2" color="text.secondary">
+            {loadError}
+          </Typography>
           <Button onClick={() => window.location.reload()}>Retry</Button>
-        </div>
+        </Stack>
       ) : isLoading ? (
-        <div className="flex justify-center py-10">
+        <Box sx={{ display: "flex", justifyContent: "center", py: 5 }}>
           <Spinner />
-        </div>
+        </Box>
       ) : (
-        <div className="mt-6 flex gap-8">
+        <Stack direction="row" spacing={4} sx={{ mt: 3 }}>
           <StepNav steps={STEPS} />
-          <form onSubmit={handleSubmit} noValidate className="min-w-0 flex-1 space-y-6">
+          <Stack component="form" onSubmit={handleSubmit} noValidate spacing={3} sx={{ minWidth: 0, flex: 1 }}>
             <SectionCard id="basic-information" title="Basic Information" description="The employee's personal details.">
-              <div className="space-y-4">
-                <div className="space-y-1.5">
+              <Stack spacing={2}>
+                <Stack spacing={0.75}>
                   <Label htmlFor="title">Title</Label>
                   <SelectField
                     id="title"
@@ -402,56 +419,46 @@ export default function EditEmployeePage() {
                     placeholder="Select"
                     options={TITLES.map((option) => ({ value: option, label: option }))}
                   />
-                  {errors.title ? <p className="text-xs text-destructive">{errors.title}</p> : null}
-                </div>
+                  <FieldError message={errors.title} />
+                </Stack>
 
-                <div className="space-y-1.5">
+                <Stack spacing={0.75}>
                   <Label htmlFor="firstName">First Name</Label>
                   <Input id="firstName" value={firstName} onChange={(e) => setFirstName(e.target.value)} aria-invalid={Boolean(errors.firstName)} />
-                  {errors.firstName ? <p className="text-xs text-destructive">{errors.firstName}</p> : null}
-                </div>
+                  <FieldError message={errors.firstName} />
+                </Stack>
 
-                <div className="space-y-1.5">
+                <Stack spacing={0.75}>
                   <Label htmlFor="lastName">Last Name</Label>
                   <Input id="lastName" value={lastName} onChange={(e) => setLastName(e.target.value)} aria-invalid={Boolean(errors.lastName)} />
-                  {errors.lastName ? <p className="text-xs text-destructive">{errors.lastName}</p> : null}
-                </div>
+                  <FieldError message={errors.lastName} />
+                </Stack>
 
-                <div className="space-y-1.5">
+                <Stack spacing={0.75}>
                   <Label htmlFor="email">Email</Label>
                   <Input id="email" type="email" value={email} onChange={(e) => setEmail(e.target.value)} aria-invalid={Boolean(errors.email)} />
-                  {errors.email ? <p className="text-xs text-destructive">{errors.email}</p> : null}
-                </div>
+                  <FieldError message={errors.email} />
+                </Stack>
 
-                <div className="grid grid-cols-[6rem_1fr] gap-2">
-                  <div className="space-y-1.5">
+                <Box sx={{ display: "grid", gridTemplateColumns: "6rem 1fr", gap: 1 }}>
+                  <Stack spacing={0.75}>
                     <Label htmlFor="countryCode">Code</Label>
-                    <SelectField
-                      id="countryCode"
-                      value={countryCode}
-                      onValueChange={setCountryCode}
-                      options={COUNTRY_CODES.map((code) => ({ value: code, label: code }))}
-                    />
-                  </div>
-                  <div className="space-y-1.5">
+                    <SelectField id="countryCode" value={countryCode} onValueChange={setCountryCode} options={COUNTRY_CODES.map((code) => ({ value: code, label: code }))} />
+                  </Stack>
+                  <Stack spacing={0.75}>
                     <Label htmlFor="contactNumber">Contact Number</Label>
-                    <Input
-                      id="contactNumber"
-                      value={contactNumber}
-                      onChange={(e) => setContactNumber(e.target.value)}
-                      aria-invalid={Boolean(errors.contactNumber)}
-                    />
-                  </div>
-                </div>
-                {errors.contactNumber ? <p className="text-xs text-destructive">{errors.contactNumber}</p> : null}
+                    <Input id="contactNumber" value={contactNumber} onChange={(e) => setContactNumber(e.target.value)} aria-invalid={Boolean(errors.contactNumber)} />
+                  </Stack>
+                </Box>
+                <FieldError message={errors.contactNumber} />
 
-                <div className="space-y-1.5">
+                <Stack spacing={0.75}>
                   <Label htmlFor="dob">Date of Birth</Label>
-                  <DatePicker id="dob" value={dob} onChange={setDob} placeholder="Select date of birth" className={cn(Boolean(errors.dob) && "border-destructive")} />
-                  {errors.dob ? <p className="text-xs text-destructive">{errors.dob}</p> : null}
-                </div>
+                  <DatePicker id="dob" value={dob} onChange={setDob} placeholder="Select date of birth" />
+                  <FieldError message={errors.dob} />
+                </Stack>
 
-                <div className="space-y-1.5">
+                <Stack spacing={0.75}>
                   <Label htmlFor="gender">Gender</Label>
                   <SelectField
                     id="gender"
@@ -461,20 +468,20 @@ export default function EditEmployeePage() {
                     placeholder="Select"
                     options={GENDERS.map((option) => ({ value: option, label: option }))}
                   />
-                  {errors.gender ? <p className="text-xs text-destructive">{errors.gender}</p> : null}
-                </div>
+                  <FieldError message={errors.gender} />
+                </Stack>
 
-                <div className="space-y-1.5">
+                <Stack spacing={0.75}>
                   <Label htmlFor="employeeCode">Employee ID (optional)</Label>
                   <Input id="employeeCode" value={employeeCode} onChange={(e) => setEmployeeCode(e.target.value)} aria-invalid={Boolean(errors.employeeCode)} />
-                  {errors.employeeCode ? <p className="text-xs text-destructive">{errors.employeeCode}</p> : null}
-                </div>
-              </div>
+                  <FieldError message={errors.employeeCode} />
+                </Stack>
+              </Stack>
             </SectionCard>
 
             <SectionCard id="company-access" title="Company Access" description="Assign the employee's role, department, grade, and projects.">
-              <div className="space-y-4">
-                <div className="space-y-1.5">
+              <Stack spacing={2}>
+                <Stack spacing={0.75}>
                   <Label htmlFor="roleId">Role</Label>
                   <SelectField
                     id="roleId"
@@ -484,10 +491,10 @@ export default function EditEmployeePage() {
                     placeholder="Select"
                     options={roles.map((role) => ({ value: String(role.id), label: role.name }))}
                   />
-                  {errors.roleId ? <p className="text-xs text-destructive">{errors.roleId}</p> : null}
-                </div>
+                  <FieldError message={errors.roleId} />
+                </Stack>
 
-                <div className="space-y-1.5">
+                <Stack spacing={0.75}>
                   <Label htmlFor="departmentId">Department</Label>
                   <SelectField
                     id="departmentId"
@@ -497,10 +504,10 @@ export default function EditEmployeePage() {
                     placeholder="Select"
                     options={departments.map((department) => ({ value: String(department.id), label: department.name }))}
                   />
-                  {errors.departmentId ? <p className="text-xs text-destructive">{errors.departmentId}</p> : null}
-                </div>
+                  <FieldError message={errors.departmentId} />
+                </Stack>
 
-                <div className="space-y-1.5">
+                <Stack spacing={0.75}>
                   <Label htmlFor="gradeId">Grade</Label>
                   <SelectField
                     id="gradeId"
@@ -510,47 +517,49 @@ export default function EditEmployeePage() {
                     placeholder="Select"
                     options={grades.map((grade) => ({ value: String(grade.id), label: grade.name }))}
                   />
-                  {errors.gradeId ? <p className="text-xs text-destructive">{errors.gradeId}</p> : null}
-                </div>
+                  <FieldError message={errors.gradeId} />
+                </Stack>
 
-                <div className="space-y-1.5">
+                <Stack spacing={0.75}>
                   <Label>Projects</Label>
                   {!departmentId ? (
-                    <p className="text-xs text-muted-foreground">Select a department to see its projects.</p>
+                    <Typography variant="caption" color="text.secondary">
+                      Select a department to see its projects.
+                    </Typography>
                   ) : isLoadingProjects ? (
                     <Spinner />
                   ) : (
-                    <div className="space-y-2">
+                    <Stack spacing={1}>
                       {projects.map((project) => (
-                        <div key={project.id} className="flex items-center gap-2">
-                          <Checkbox
-                            id={`project-${project.id}`}
-                            checked={projectIds.includes(project.id)}
-                            onCheckedChange={(checked) => toggleProject(project.id, checked === true)}
-                          />
+                        <Stack direction="row" key={project.id} spacing={1} sx={{ alignItems: "center" }}>
+                          <Checkbox id={`project-${project.id}`} checked={projectIds.includes(project.id)} onCheckedChange={(checked) => toggleProject(project.id, checked === true)} />
                           <Label htmlFor={`project-${project.id}`}>{project.name}</Label>
-                        </div>
+                        </Stack>
                       ))}
-                      {projects.length === 0 ? <p className="text-xs text-muted-foreground">No projects yet in this department.</p> : null}
+                      {projects.length === 0 ? (
+                        <Typography variant="caption" color="text.secondary">
+                          No projects yet in this department.
+                        </Typography>
+                      ) : null}
 
-                      <div className="flex items-center gap-2 pt-1">
+                      <Stack direction="row" spacing={1} sx={{ alignItems: "center", pt: 0.5 }}>
                         <Input placeholder="New project name" value={newProjectName} onChange={(e) => setNewProjectName(e.target.value)} />
                         <Button type="button" variant="outline" size="sm" disabled={isAddingProject} onClick={handleAddProject}>
                           {isAddingProject ? <Spinner /> : null}
                           Add Project
                         </Button>
-                      </div>
-                    </div>
+                      </Stack>
+                    </Stack>
                   )}
-                </div>
-              </div>
+                </Stack>
+              </Stack>
             </SectionCard>
 
             <SectionCard id="ff-numbers" title="Frequent Flyer Numbers" description="Optionally add the employee's airline frequent flyer numbers.">
-              <div className="space-y-4">
+              <Stack spacing={2}>
                 {ffRows.map((row, index) => (
-                  <div key={index} className="flex items-start gap-2">
-                    <div className="w-1/2 space-y-1.5">
+                  <Stack direction="row" key={index} spacing={1} sx={{ alignItems: "flex-start" }}>
+                    <Stack spacing={0.75} sx={{ width: "50%" }}>
                       <Label htmlFor={`airline-${index}`}>Airline</Label>
                       <SelectField
                         id={`airline-${index}`}
@@ -560,45 +569,34 @@ export default function EditEmployeePage() {
                         placeholder="Select"
                         options={airlines.map((airline) => ({ value: String(airline.id), label: airline.name }))}
                       />
-                    </div>
-                    <div className="w-1/2 space-y-1.5">
+                    </Stack>
+                    <Stack spacing={0.75} sx={{ width: "50%" }}>
                       <Label htmlFor={`ff-number-${index}`}>FF Number</Label>
-                      <Input
-                        id={`ff-number-${index}`}
-                        value={row.ffNumber}
-                        onChange={(e) => updateFfRow(index, { ffNumber: e.target.value })}
-                        aria-invalid={Boolean(errors.ffRows?.[index])}
-                      />
-                    </div>
+                      <Input id={`ff-number-${index}`} value={row.ffNumber} onChange={(e) => updateFfRow(index, { ffNumber: e.target.value })} aria-invalid={Boolean(errors.ffRows?.[index])} />
+                    </Stack>
                     {ffRows.length > 1 ? (
-                      <Button type="button" variant="ghost" size="icon" className="mt-6" aria-label="Remove row" onClick={() => removeFfRow(index)}>
-                        <XIcon />
+                      <Button type="button" variant="ghost" size="icon" sx={{ mt: 3 }} aria-label="Remove row" onClick={() => removeFfRow(index)}>
+                        <XIcon size={16} />
                       </Button>
                     ) : null}
-                  </div>
+                  </Stack>
                 ))}
-                {errors.ffRows
-                  ? Object.values(errors.ffRows).map((message, index) => (
-                      <p key={index} className="text-xs text-destructive">
-                        {message}
-                      </p>
-                    ))
-                  : null}
+                {errors.ffRows ? Object.values(errors.ffRows).map((message, index) => <FieldError key={index} message={message} />) : null}
 
-                <Button type="button" variant="outline" size="sm" onClick={addFfRow}>
-                  <PlusIcon data-icon="inline-start" />
+                <Button type="button" variant="outline" size="sm" onClick={addFfRow} sx={{ alignSelf: "flex-start" }}>
+                  <PlusIcon size={14} />
                   Add Another
                 </Button>
-              </div>
+              </Stack>
             </SectionCard>
 
             <SectionCard id="access-approval" title="Access & Approval" description="Choose the approver chain.">
-              <div className="space-y-6">
-                <div className="space-y-3">
+              <Stack spacing={3}>
+                <Stack spacing={1.5}>
                   <Label>Approval Chain</Label>
                   {approverRows.map((row, index) => (
-                    <div key={index} className="flex items-end gap-2">
-                      <div className="flex-1 space-y-1.5">
+                    <Stack direction="row" key={index} spacing={1} sx={{ alignItems: "flex-end" }}>
+                      <Stack spacing={0.75} sx={{ flex: 1 }}>
                         <Label htmlFor={`approver-${index}`}>
                           Level {row.level} Approver{row.level === 1 ? "" : " (optional)"}
                         </Label>
@@ -611,36 +609,36 @@ export default function EditEmployeePage() {
                             .filter((employee) => employee.id !== employeeId)
                             .map((employee) => ({ value: String(employee.id), label: `${employee.firstName} ${employee.lastName} (${employee.email})` }))}
                         />
-                      </div>
+                      </Stack>
                       {index > 0 ? (
                         <Button type="button" variant="ghost" size="icon" aria-label="Remove level" onClick={() => removeApproverLevel(index)}>
-                          <XIcon />
+                          <XIcon size={16} />
                         </Button>
                       ) : null}
-                    </div>
+                    </Stack>
                   ))}
-                  <Button type="button" variant="outline" size="sm" onClick={addApproverLevel}>
-                    <PlusIcon data-icon="inline-start" />
+                  <Button type="button" variant="outline" size="sm" onClick={addApproverLevel} sx={{ alignSelf: "flex-start" }}>
+                    <PlusIcon size={14} />
                     Add Level
                   </Button>
-                </div>
+                </Stack>
 
-                {errors.approvers ? <p className="text-xs text-destructive">{errors.approvers}</p> : null}
-              </div>
+                <FieldError message={errors.approvers} />
+              </Stack>
             </SectionCard>
 
-            <div className="flex justify-end gap-2">
-              <Link href={ROUTES.COMPANY_SETTINGS.EMPLOYEES} className={cn(buttonVariants({ variant: "outline", size: "sm" }))}>
+            <Stack direction="row" spacing={1} sx={{ justifyContent: "flex-end" }}>
+              <Button component={Link} href={ROUTES.COMPANY_SETTINGS.EMPLOYEES} variant="outline" size="sm">
                 Cancel
-              </Link>
+              </Button>
               <Button type="submit" size="sm" disabled={isSubmitting}>
                 {isSubmitting ? <Spinner /> : null}
                 Save Changes
               </Button>
-            </div>
-          </form>
-        </div>
+            </Stack>
+          </Stack>
+        </Stack>
       )}
-    </div>
+    </Box>
   );
 }

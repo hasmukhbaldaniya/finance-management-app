@@ -1,18 +1,28 @@
-import * as React from "react"
+import TextField, { type TextFieldProps } from "@mui/material/TextField";
 
-import { cn } from "@/lib/utils"
+// 026's MUI Migration — every existing call site already uses the plain
+// native-textarea prop shape (id/value/onChange(event)/placeholder/
+// maxLength/rows), which MUI's TextField (multiline) accepts identically —
+// no caller needs to change. `maxLength` specifically isn't a top-level
+// TextField prop (MUI routes raw <textarea> attributes through
+// `slotProps.htmlInput`), so it's accepted here and forwarded internally,
+// keeping every caller's own prop shape untouched.
+type TextareaProps = Omit<TextFieldProps, "multiline"> & {
+  maxLength?: number;
+};
 
-function Textarea({ className, ...props }: React.ComponentProps<"textarea">) {
+function Textarea({ maxLength, slotProps, ...props }: TextareaProps) {
   return (
-    <textarea
-      data-slot="textarea"
-      className={cn(
-        "flex field-sizing-content min-h-16 w-full rounded-lg border border-input bg-transparent px-2.5 py-2 text-base transition-colors outline-none placeholder:text-muted-foreground focus-visible:border-ring focus-visible:ring-3 focus-visible:ring-ring/50 disabled:cursor-not-allowed disabled:bg-input/50 disabled:opacity-50 aria-invalid:border-destructive aria-invalid:ring-3 aria-invalid:ring-destructive/20 md:text-sm dark:bg-input/30 dark:disabled:bg-input/80 dark:aria-invalid:border-destructive/50 dark:aria-invalid:ring-destructive/40",
-        className
-      )}
+    <TextField
+      multiline
+      fullWidth
+      slotProps={{
+        ...slotProps,
+        htmlInput: { ...slotProps?.htmlInput, maxLength },
+      }}
       {...props}
     />
-  )
+  );
 }
 
-export { Textarea }
+export { Textarea };

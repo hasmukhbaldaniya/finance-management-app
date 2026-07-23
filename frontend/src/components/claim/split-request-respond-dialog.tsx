@@ -2,13 +2,17 @@
 
 import { useState } from "react";
 import { useRouter } from "next/navigation";
-import { toast } from "sonner";
+import Box from "@mui/material/Box";
+import Stack from "@mui/material/Stack";
+import Typography from "@mui/material/Typography";
+import { toast } from "@/components/ui/toast";
 import { acceptSplitRequest, rejectSplitRequest } from "@/apis/split-request";
 import { Button } from "@/components/ui/button";
 import { Dialog, DialogContent, DialogDescription, DialogFooter, DialogHeader, DialogTitle } from "@/components/ui/dialog";
 import { Input } from "@/components/ui/input";
 import { Label } from "@/components/ui/label";
 import { Spinner } from "@/components/ui/spinner";
+import { Table, TableBody, TableCell, TableHead, TableHeader, TableRow } from "@/components/ui/table";
 import { useSession } from "@/contexts/SessionContext";
 import { formatInr } from "@/utils/helpers/format.helper";
 import { ApiError, GENERIC_ERROR_MESSAGE } from "@/utils/apiManager/apiManager";
@@ -87,75 +91,77 @@ export function SplitRequestRespondDialog({ request, onOpenChange, onResponded }
 
   return (
     <Dialog open={request !== null} onOpenChange={onOpenChange}>
-      <DialogContent className="max-w-2xl">
+      <DialogContent sx={{ width: "100%", maxWidth: 672 }}>
         <DialogHeader>
           <DialogTitle>Split Request #{request.id}</DialogTitle>
           <DialogDescription>Split Request by: {request.requestedBy} — you&apos;ve been added to a split expense. Review and respond below.</DialogDescription>
         </DialogHeader>
 
-        <div className="grid gap-4 md:grid-cols-2">
-          <div className="space-y-3">
+        <Box sx={{ display: "grid", gridTemplateColumns: { xs: "1fr", md: "1fr 1fr" }, gap: 2 }}>
+          <Stack spacing={1.5}>
             <Label>Split Breakdown</Label>
-            <div className="overflow-hidden rounded-lg border border-border">
-              <table className="w-full text-sm">
-                <thead className="bg-muted/50 text-left text-xs text-muted-foreground">
-                  <tr>
-                    <th className="px-3 py-2 font-medium">Member</th>
-                    <th className="px-3 py-2 font-medium">%</th>
-                    <th className="px-3 py-2 font-medium">Amount</th>
-                  </tr>
-                </thead>
-                <tbody>
+            <Box sx={{ borderRadius: 2, border: 1, borderColor: "divider", overflow: "hidden" }}>
+              <Table>
+                <TableHeader>
+                  <TableRow>
+                    <TableHead>Member</TableHead>
+                    <TableHead>%</TableHead>
+                    <TableHead>Amount</TableHead>
+                  </TableRow>
+                </TableHeader>
+                <TableBody>
                   {request.members.map((member) => (
-                    <tr key={member.employeeId} className="border-t border-border">
-                      <td className="px-3 py-2">
-                        {member.name} {member.employeeId === user.id ? <span className="text-muted-foreground">(You)</span> : null}
-                      </td>
-                      <td className="px-3 py-2">{member.percentage}%</td>
-                      <td className="px-3 py-2">₹{formatInr(member.amount)}</td>
-                    </tr>
+                    <TableRow key={member.employeeId}>
+                      <TableCell>
+                        {member.name} {member.employeeId === user.id ? <Typography component="span" color="text.secondary">(You)</Typography> : null}
+                      </TableCell>
+                      <TableCell>{member.percentage}%</TableCell>
+                      <TableCell>₹{formatInr(member.amount)}</TableCell>
+                    </TableRow>
                   ))}
-                </tbody>
-              </table>
-            </div>
+                </TableBody>
+              </Table>
+            </Box>
             {myMember ? (
-              <div className="flex items-center justify-between rounded-md bg-muted/50 px-3 py-2 text-sm">
-                <span className="text-muted-foreground">Your Share</span>
-                <span className="font-semibold">
+              <Stack direction="row" sx={{ alignItems: "center", justifyContent: "space-between", borderRadius: 1.5, bgcolor: "action.hover", px: 1.5, py: 1, fontSize: "0.875rem" }}>
+                <Typography variant="body2" color="text.secondary">
+                  Your Share
+                </Typography>
+                <Typography variant="body2" sx={{ fontWeight: 600 }}>
                   ₹{formatInr(myMember.amount)} · {myMember.percentage}%
-                </span>
-              </div>
+                </Typography>
+              </Stack>
             ) : null}
-          </div>
+          </Stack>
 
-          <div className="space-y-3">
+          <Stack spacing={1.5}>
             <Label>Expense Form</Label>
             <SplitRequestExpenseSnapshotView expense={request.expense} />
-          </div>
-        </div>
+          </Stack>
+        </Box>
 
         {myMember?.status === "pending" ? (
-          <div className="space-y-3 border-t border-border pt-4">
+          <Stack spacing={1.5} sx={{ borderTop: 1, borderColor: "divider", pt: 2 }}>
             <Label>Claim Type*</Label>
-            <div className="flex gap-4 text-sm">
+            <Stack direction="row" spacing={2} sx={{ fontSize: "0.875rem" }}>
               {(
                 [
                   { value: "standalone" as const, label: "Create New Claim" },
                   { value: "trip_linked" as const, label: "Link to Trip" },
                 ] as const
               ).map((option) => (
-                <label key={option.value} className="flex items-center gap-2">
+                <Box component="label" key={option.value} sx={{ display: "flex", alignItems: "center", gap: 1 }}>
                   <input type="radio" name="split-respond-claim-type" checked={claimType === option.value} onChange={() => setClaimType(option.value)} />
                   {option.label}
-                </label>
+                </Box>
               ))}
-            </div>
+            </Stack>
             {claimType === "standalone" ? (
               <Input value={name} onChange={(event) => setName(event.target.value)} placeholder="Claim Name" />
             ) : (
               <TripSelect value={trip} onChange={setTrip} placeholder="Select trip" />
             )}
-          </div>
+          </Stack>
         ) : null}
 
         <DialogFooter>

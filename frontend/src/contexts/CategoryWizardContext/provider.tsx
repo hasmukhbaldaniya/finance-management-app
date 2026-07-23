@@ -2,7 +2,7 @@
 
 import { useMemo, useState, type ReactNode } from "react";
 import { CategoryWizardContext, type CategoryWizardState } from "./context";
-import type { CategoryField, CategoryPolicy, CategoryStatus } from "@/types/category.type";
+import type { CategoryField, CategoryPolicy, CategoryStatus, CategoryWizardStep } from "@/types/category.type";
 
 function computeHighestStepReached(snapshot: {
   status?: CategoryStatus;
@@ -31,7 +31,8 @@ export function CategoryWizardProvider({ children }: { children: ReactNode }) {
   const [enableProjectPolicies, setEnableProjectPolicies] = useState(false);
   const [projectPolicies, setProjectPolicies] = useState<CategoryPolicy[]>([]);
   const [highestStepIndexReached, setHighestStepIndexReached] = useState(0);
-  const [skipNextLoadForCategoryId, setSkipNextLoadForCategoryId] = useState<number | null>(null);
+  const [skipLoadForCategoryId, setSkipLoadForCategoryId] = useState<number | null>(null);
+  const [consumedSkipSteps, setConsumedSkipSteps] = useState<CategoryWizardStep[]>([]);
 
   function reset(): void {
     setCategoryId(null);
@@ -45,7 +46,23 @@ export function CategoryWizardProvider({ children }: { children: ReactNode }) {
     setEnableProjectPolicies(false);
     setProjectPolicies([]);
     setHighestStepIndexReached(0);
-    setSkipNextLoadForCategoryId(null);
+    setSkipLoadForCategoryId(null);
+    setConsumedSkipSteps([]);
+  }
+
+  function startSkippingLoadsFor(categoryId: number): void {
+    setSkipLoadForCategoryId(categoryId);
+    setConsumedSkipSteps([]);
+  }
+
+  // Per-step, not one-shot: each of the 4 steps consumes its own skip
+  // exactly once (see context.ts's own doc comment for why this replaced a
+  // single one-shot flag that only ever protected whichever step page the
+  // admin happened to visit first).
+  function consumeSkipLoad(categoryId: number, step: CategoryWizardStep): boolean {
+    if (skipLoadForCategoryId !== categoryId || consumedSkipSteps.includes(step)) return false;
+    setConsumedSkipSteps((previous) => [...previous, step]);
+    return true;
   }
 
   function loadFromSnapshot(snapshot: {
@@ -90,7 +107,8 @@ export function CategoryWizardProvider({ children }: { children: ReactNode }) {
       enableProjectPolicies,
       projectPolicies,
       highestStepIndexReached,
-      skipNextLoadForCategoryId,
+      skipLoadForCategoryId,
+      consumedSkipSteps,
       setCategoryId,
       setStatus,
       setName,
@@ -101,11 +119,17 @@ export function CategoryWizardProvider({ children }: { children: ReactNode }) {
       setExceptionPolicies,
       setEnableProjectPolicies,
       setProjectPolicies,
-      setSkipNextLoadForCategoryId,
+      startSkippingLoadsFor,
+      consumeSkipLoad,
       markStepReached,
       loadFromSnapshot,
       reset,
     }),
+    // consumeSkipLoad closes over skipLoadForCategoryId/consumedSkipSteps,
+    // both already listed below; adding the function itself here would
+    // invalidate this memo every render, since it isn't wrapped in its own
+    // useCallback (its own deps would be identical to this memo's own).
+    // eslint-disable-next-line react-hooks/exhaustive-deps
     [
       categoryId,
       status,
@@ -118,7 +142,8 @@ export function CategoryWizardProvider({ children }: { children: ReactNode }) {
       enableProjectPolicies,
       projectPolicies,
       highestStepIndexReached,
-      skipNextLoadForCategoryId,
+      skipLoadForCategoryId,
+      consumedSkipSteps,
     ]
   );
 

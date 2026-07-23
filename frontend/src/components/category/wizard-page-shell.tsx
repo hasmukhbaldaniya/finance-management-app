@@ -1,4 +1,7 @@
 import type { ReactNode } from "react";
+import Box from "@mui/material/Box";
+import Stack from "@mui/material/Stack";
+import Typography from "@mui/material/Typography";
 import { WizardStepNav } from "./wizard-step-nav";
 import type { CategoryWizardStep } from "@/types/category.type";
 
@@ -12,12 +15,14 @@ type WizardPageShellProps = {
 
 export function WizardPageShell({ categoryId, currentStep, highestStepIndexReached, heading, children }: WizardPageShellProps) {
   return (
-    <div className="mx-auto flex max-w-[1440px] flex-col gap-6 px-6 py-8 md:flex-row md:gap-10">
+    <Stack direction={{ xs: "column", md: "row" }} spacing={{ xs: 3, md: 5 }} sx={{ mx: "auto", maxWidth: 1440, px: 3, py: 4 }}>
       <WizardStepNav categoryId={categoryId} currentStep={currentStep} highestStepIndexReached={highestStepIndexReached} />
-      <div className="min-w-0 flex-1 space-y-6">
-        <h1 className="text-2xl font-semibold tracking-tight">{heading}</h1>
-        {children}
-      </div>
-    </div>
+      <Stack spacing={3} sx={{ minWidth: 0, flex: 1 }}>
+        <Typography variant="h5" sx={{ fontWeight: 600 }}>
+          {heading}
+        </Typography>
+        <Box>{children}</Box>
+      </Stack>
+    </Stack>
   );
 }

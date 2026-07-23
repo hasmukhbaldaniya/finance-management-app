@@ -1,6 +1,9 @@
 "use client";
 
 import { useEffect, useState } from "react";
+import Box from "@mui/material/Box";
+import Stack from "@mui/material/Stack";
+import Typography from "@mui/material/Typography";
 import { Dialog, DialogContent, DialogHeader, DialogTitle } from "@/components/ui/dialog";
 import { Spinner } from "@/components/ui/spinner";
 import { getRoleMembers } from "@/apis/role";
@@ -46,21 +49,27 @@ export function RoleMembersDialog({ roleId, roleName, onOpenChange }: RoleMember
         </DialogHeader>
 
         {loadError ? (
-          <p className="text-sm text-destructive">{loadError}</p>
+          <Typography variant="body2" color="error">
+            {loadError}
+          </Typography>
         ) : members ? (
-          <ul className="max-h-80 space-y-2 overflow-y-auto">
+          <Stack component="ul" spacing={1} sx={{ maxHeight: 320, overflowY: "auto", listStyle: "none", p: 0, m: 0 }}>
             {members.map((member) => (
-              <li key={member.id} className="rounded-md border border-border px-3 py-2">
-                <p className="text-sm font-medium">{member.name}</p>
-                <p className="text-xs text-muted-foreground">{member.email}</p>
-              </li>
+              <Box component="li" key={member.id} sx={{ borderRadius: 1.5, border: 1, borderColor: "divider", px: 1.5, py: 1 }}>
+                <Typography variant="body2" sx={{ fontWeight: 500 }}>
+                  {member.name}
+                </Typography>
+                <Typography variant="caption" color="text.secondary">
+                  {member.email}
+                </Typography>
+              </Box>
             ))}
-          </ul>
+          </Stack>
         ) : (
-          <div className="flex items-center justify-center gap-2 py-6 text-sm text-muted-foreground">
+          <Stack direction="row" spacing={1} sx={{ alignItems: "center", justifyContent: "center", py: 3, fontSize: "0.875rem", color: "text.secondary" }}>
             <Spinner />
             Loading…
-          </div>
+          </Stack>
         )}
       </DialogContent>
     </Dialog>

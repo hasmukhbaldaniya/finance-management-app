@@ -1,7 +1,7 @@
 import type { Request, Response } from "express";
 import { Op } from "sequelize";
 import { env } from "../config/env";
-import { Employee, Otp } from "../models";
+import { Employee, EmployeeInvite, Otp } from "../models";
 import { accessTokenCookieOptions, getCurrentOrganization, toPublicEmployee } from "../utils/auth";
 import {
   signAccessToken,
@@ -40,6 +40,17 @@ async function requireOnboardingEmployee(
 
   const employee = await Employee.findByPk(payload.employeeId);
   if (!employee || employee.email !== payload.email || employee.invitationStatus === "registered") {
+    res.status(401).json({ error: INVALID_LINK_MESSAGE });
+    return null;
+  }
+
+  // "Resend supersedes, doesn't extend, the previous link" (011's own Flow
+  // point 3 / TC-13) — a token embeds the sentAt of the EmployeeInvite row
+  // it was minted for; if a newer invite has been sent since, this token's
+  // sentAt no longer matches the latest one, so it's rejected even though
+  // it hasn't expired yet.
+  const latestInvite = await EmployeeInvite.findOne({ where: { employeeId: employee.id }, order: [["sentAt", "DESC"]] });
+  if (!latestInvite || latestInvite.sentAt.getTime() !== payload.sentAt) {
     res.status(401).json({ error: INVALID_LINK_MESSAGE });
     return null;
   }

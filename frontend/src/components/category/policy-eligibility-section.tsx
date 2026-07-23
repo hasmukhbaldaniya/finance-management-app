@@ -1,7 +1,11 @@
 "use client";
 
+import Box from "@mui/material/Box";
+import Stack from "@mui/material/Stack";
+import Typography from "@mui/material/Typography";
 import { CaretDownIcon } from "@phosphor-icons/react";
 import { Button } from "@/components/ui/button";
+import { Checkbox } from "@/components/ui/checkbox";
 import { DropdownMenu, DropdownMenuCheckboxItem, DropdownMenuContent, DropdownMenuTrigger } from "@/components/ui/dropdown-menu";
 import type { CategoryEligibilityType, CategoryPolicy } from "@/types/category.type";
 import type { PolicyKind, PolicyPickerOptions } from "./policy-shared-types";
@@ -57,16 +61,22 @@ function MultiEntityPicker({ options, selectedIds, onChange }: MultiEntityPicker
     <DropdownMenu>
       <DropdownMenuTrigger
         render={
-          <Button type="button" variant="outline" className="w-full justify-between font-normal">
-            <span className="truncate text-left">{selectedLabels.length > 0 ? selectedLabels.join(", ") : "Select…"}</span>
-            <CaretDownIcon size={16} className="shrink-0" />
+          <Button type="button" variant="outline" sx={{ width: "100%", justifyContent: "space-between", fontWeight: 400 }}>
+            <Box component="span" sx={{ minWidth: 0, flex: 1, overflow: "hidden", textOverflow: "ellipsis", whiteSpace: "nowrap", textAlign: "left" }}>
+              {selectedLabels.length > 0 ? selectedLabels.join(", ") : "Select…"}
+            </Box>
+            <Box component="span" sx={{ flexShrink: 0, display: "flex" }}>
+              <CaretDownIcon size={16} />
+            </Box>
           </Button>
         }
       />
-      <DropdownMenuContent className="w-(--anchor-width) p-2">
-        <div className="max-h-60 overflow-y-auto">
+      <DropdownMenuContent matchTriggerWidth sx={{ p: 1 }}>
+        <Box sx={{ maxHeight: 240, overflowY: "auto" }}>
           {options.length === 0 ? (
-            <p className="px-2 py-3 text-sm text-muted-foreground">No options available.</p>
+            <Typography variant="body2" color="text.secondary" sx={{ px: 1, py: 1.5 }}>
+              No options available.
+            </Typography>
           ) : (
             options.map((option) => (
               <DropdownMenuCheckboxItem key={option.id} checked={selectedIds.includes(option.id)} onCheckedChange={() => toggle(option.id)} closeOnClick={false}>
@@ -74,7 +84,7 @@ function MultiEntityPicker({ options, selectedIds, onChange }: MultiEntityPicker
               </DropdownMenuCheckboxItem>
             ))
           )}
-        </div>
+        </Box>
       </DropdownMenuContent>
     </DropdownMenu>
   );
@@ -100,27 +110,31 @@ export function PolicyEligibilitySection({ policy, policyKind, options, onChange
   }
 
   return (
-    <div className="space-y-3">
-      <h4 className="text-sm font-semibold">Eligibility</h4>
-      <div className="space-y-3">
+    <Stack spacing={1.5}>
+      <Typography variant="subtitle2" sx={{ fontWeight: 600 }}>
+        Eligibility
+      </Typography>
+      <Stack spacing={1.5}>
         {eligibilityTypes.map(({ type, label }) => {
           const entry = policy.eligibility.find((candidate) => candidate.eligibilityType === type);
           return (
-            <div key={type} className="space-y-1.5">
-              <label className="flex items-center gap-2 text-sm">
-                <input type="checkbox" checked={Boolean(entry)} onChange={() => toggleType(type)} />
+            <Stack spacing={0.75} key={type}>
+              <Box component="label" sx={{ display: "flex", alignItems: "center", gap: 1, fontSize: "0.875rem" }}>
+                <Checkbox checked={Boolean(entry)} onCheckedChange={() => toggleType(type)} />
                 {label}
-              </label>
+              </Box>
               {entry ? (
                 <MultiEntityPicker options={optionsFor(type, options)} selectedIds={entry.entityIds} onChange={(entityIds) => updateEntityIds(type, entityIds)} />
               ) : null}
-            </div>
+            </Stack>
           );
         })}
-      </div>
+      </Stack>
       {policy.eligibility.every((entry) => entry.entityIds.length === 0) ? (
-        <p className="text-xs text-muted-foreground">At least one value is required.</p>
+        <Typography variant="caption" color="text.secondary">
+          At least one value is required.
+        </Typography>
       ) : null}
-    </div>
+    </Stack>
   );
 }

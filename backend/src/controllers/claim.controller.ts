@@ -1,11 +1,13 @@
 import type { Response } from "express";
 import { Op, type WhereOptions } from "sequelize";
 import type { AuthenticatedRequest } from "../middleware/require-auth";
-import { Category, CategoryField, Claim, Expense, Trip, type ClaimType } from "../models";
+import { Category, CategoryField, Claim, ClaimInvoiceFile, Expense, Trip, type ClaimType } from "../models";
 import { getActiveOrganizationId } from "../utils/auth";
 import { DEFAULT_PAGE_SIZE, MAX_CLAIM_NAME_LENGTH, MAX_EXPENSE_COUNT, MAX_PAGE_SIZE, MIN_CLAIM_NAME_LENGTH, MIN_EXPENSE_COUNT } from "../utils/constants/claim.constant";
 import { findDuplicateExpense } from "../utils/duplicate-expense-check";
 import { validateExpenseFieldValues } from "../utils/expense-fields";
+import { deleteInvoiceFile } from "../utils/invoice-file-storage";
+import { recomputeTripFromLinkedClaims } from "../utils/trip-total";
 
 const NOT_AUTHENTICATED_MESSAGE = "Not authenticated.";
 const CLAIM_NOT_FOUND_MESSAGE = "Claim not found.";
@@ -248,6 +250,19 @@ export async function saveExpenses(req: AuthenticatedRequest, res: Response): Pr
     }
 
     const fields = fieldsByCategoryId.get(expense.categoryId) ?? [];
+
+    // 023's own Red Flag mechanism: redFlagAction "block" means a triggered
+    // flag "block[s] the expense from being saved at all" (its own words),
+    // not just highlight it like the default "highlight" action does. Only
+    // enforced on the final save — Draft stays lenient, matching every
+    // other leniency rule in this codebase (013's own Save-as-Draft
+    // posture). isRedFlagged is set once at AI-extraction time and never
+    // re-evaluated on edit, so the only way to clear it today is removing
+    // and re-extracting the expense — a known limitation, not addressed here.
+    if (!isDraftSave && existing?.isRedFlagged && fields.some((field) => field.redFlagAction === "block")) {
+      res.status(400).json({ error: "This expense is flagged and can't be submitted until it's resolved." });
+      return;
+    }
     const validation = await validateExpenseFieldValues(fields, expense.fieldValues, isDraftSave);
     if ("error" in validation) {
       res.status(400).json({ error: validation.error });
@@ -299,6 +314,8 @@ export async function saveExpenses(req: AuthenticatedRequest, res: Response): Pr
   claim.status = isDraftSave ? "draft" : "submitted";
   claim.hasBeenSaved = true;
   await claim.save();
+
+  if (claim.tripId) await recomputeTripFromLinkedClaims(claim.tripId);
 
   // Duplicate check runs at both review (023's own Review step) and here at
   // final save (022's Overview) — highlighted, never blocking.
@@ -466,6 +483,12 @@ export async function splitClaim(req: AuthenticatedRequest, res: Response): Prom
   claim.totalAmount = (Number(claim.totalAmount) - movedTotal).toFixed(2);
   await claim.save();
 
+  // The original and the new claim can be linked to different trips (or
+  // neither) — each one's own totalAmount just changed, so both need
+  // recomputing, not just whichever trip this request happened to mention.
+  if (claim.tripId) await recomputeTripFromLinkedClaims(claim.tripId);
+  if (newClaim.tripId && newClaim.tripId !== claim.tripId) await recomputeTripFromLinkedClaims(newClaim.tripId);
+
   res.status(200).json({ originalClaimId: claim.id, newClaimId: newClaim.id, message: "Claim split successfully." });
 }
 
@@ -485,7 +508,25 @@ export async function deleteClaim(req: AuthenticatedRequest, res: Response): Pro
     return;
   }
 
+  // Claim is `paranoid: true` (soft delete, see claim.model.ts) — its own
+  // `destroy()` below only sets deletedAt, so the DB's own ON DELETE CASCADE
+  // from expenses/claim_invoice_files never fires anymore. Expense and
+  // ClaimInvoiceFile stay hard-delete models, so their rows (and, for
+  // invoice files, the actual file on disk) are removed explicitly here —
+  // same real cleanup this claim's data always got, just no longer free
+  // from the database's own FK cascade. Deleting these ClaimInvoiceFile rows
+  // still cascades to ai_extraction_logs at the DB level, and deleting these
+  // Expense rows still cascades to expense_split_requests, exactly as before.
+  const invoiceFiles = await ClaimInvoiceFile.findAll({ where: { claimId: claim.id } });
+  for (const invoiceFile of invoiceFiles) {
+    await deleteInvoiceFile(invoiceFile.storedPath);
+  }
+  await Expense.destroy({ where: { claimId: claim.id } });
+  await ClaimInvoiceFile.destroy({ where: { claimId: claim.id } });
+
+  const tripId = claim.tripId;
   await claim.destroy();
+  if (tripId) await recomputeTripFromLinkedClaims(tripId);
   res.status(200).json({ message: "Claim deleted." });
 }
 

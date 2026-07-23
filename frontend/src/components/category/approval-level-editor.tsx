@@ -1,9 +1,11 @@
 "use client";
 
+import Box from "@mui/material/Box";
+import Stack from "@mui/material/Stack";
+import Typography from "@mui/material/Typography";
 import { PlusIcon, TrashIcon } from "@phosphor-icons/react";
 import { SelectField } from "@/components/select-field";
 import { Button } from "@/components/ui/button";
-import { Label } from "@/components/ui/label";
 import { Switch } from "@/components/ui/switch";
 import { MAX_APPROVERS_PER_STAGE } from "@/utils/constants/category.constant";
 import type { CategoryApprovalLevel, CategoryApprovalStage } from "@/types/category.type";
@@ -61,46 +63,54 @@ export function ApprovalLevelEditor({ title, level, employees, onChange, onRemov
   }
 
   return (
-    <div className="space-y-3 rounded-md border border-border p-3">
-      <div className="flex items-center justify-between">
-        <p className="text-sm font-semibold">{title}</p>
-        <div className="flex items-center gap-3">
-          <Label className="flex items-center gap-2 text-xs font-normal">
+    <Stack spacing={1.5} sx={{ borderRadius: 1.5, border: 1, borderColor: "divider", p: 1.5 }}>
+      <Stack direction="row" sx={{ alignItems: "center", justifyContent: "space-between" }}>
+        <Typography variant="body2" sx={{ fontWeight: 600 }}>
+          {title}
+        </Typography>
+        <Stack direction="row" spacing={1.5} sx={{ alignItems: "center" }}>
+          <Box component="label" sx={{ display: "flex", alignItems: "center", gap: 1, fontSize: "0.75rem", fontWeight: 400 }}>
             Auto Approve
             <Switch checked={level.autoApprove} onCheckedChange={(checked) => onChange({ ...level, autoApprove: checked })} />
-          </Label>
+          </Box>
           {onRemove ? (
             <Button type="button" variant="ghost" size="icon" aria-label={`Remove ${title}`} onClick={onRemove}>
-              <TrashIcon size={14} className="text-destructive" />
+              <Box component="span" sx={{ color: "error.main", display: "flex" }}>
+                <TrashIcon size={14} />
+              </Box>
             </Button>
           ) : null}
-        </div>
-      </div>
+        </Stack>
+      </Stack>
 
       {!level.autoApprove ? (
-        <div className="space-y-2">
+        <Stack spacing={1}>
           {level.stages.map((stage, stageIndex) => {
             const slots = slotsFromStage(stage);
             const nextLogicGroup = Math.max(-1, ...slots.map((slot) => slot.logicGroup)) + 1;
             return (
-              <div key={stageIndex} className="space-y-2 rounded-md bg-muted/40 p-2">
-                <div className="flex items-center justify-between">
-                  <p className="text-xs font-semibold text-muted-foreground">Stage {stage.stageNumber}</p>
+              <Stack spacing={1} key={stageIndex} sx={{ borderRadius: 1.5, bgcolor: "action.hover", p: 1 }}>
+                <Stack direction="row" sx={{ alignItems: "center", justifyContent: "space-between" }}>
+                  <Typography variant="caption" color="text.secondary" sx={{ fontWeight: 600 }}>
+                    Stage {stage.stageNumber}
+                  </Typography>
                   {level.stages.length > 1 ? (
                     <Button type="button" variant="ghost" size="icon" aria-label={`Remove stage ${stage.stageNumber}`} onClick={() => removeStage(stageIndex)}>
-                      <TrashIcon size={12} className="text-destructive" />
+                      <Box component="span" sx={{ color: "error.main", display: "flex" }}>
+                        <TrashIcon size={12} />
+                      </Box>
                     </Button>
                   ) : null}
-                </div>
-                <div className="space-y-1">
+                </Stack>
+                <Stack spacing={0.5}>
                   {slots.map((slot, slotIndex) => (
-                    <div key={slotIndex} className="flex items-center gap-2">
+                    <Stack direction="row" key={slotIndex} spacing={1} sx={{ alignItems: "center" }}>
                       {slotIndex > 0 ? (
-                        <span className="w-8 text-xs font-medium text-muted-foreground">
+                        <Typography variant="caption" sx={{ width: 32, fontWeight: 500 }} color="text.secondary">
                           {slots[slotIndex - 1]!.logicGroup === slot.logicGroup ? "OR" : "AND"}
-                        </span>
+                        </Typography>
                       ) : (
-                        <span className="w-8" />
+                        <Box sx={{ width: 32 }} />
                       )}
                       <SelectField
                         value={slot.employeeId?.toString() ?? ""}
@@ -111,7 +121,7 @@ export function ApprovalLevelEditor({ title, level, employees, onChange, onRemov
                           )
                         }
                         placeholder="Select approver…"
-                        className="flex-1"
+                        sx={{ flex: 1 }}
                         options={employees.map((employee) => ({ value: String(employee.id), label: `${employee.firstName} ${employee.lastName}` }))}
                       />
                       <Button
@@ -121,12 +131,14 @@ export function ApprovalLevelEditor({ title, level, employees, onChange, onRemov
                         aria-label="Remove approver"
                         onClick={() => updateStage(stageIndex, slots.filter((_, i) => i !== slotIndex))}
                       >
-                        <TrashIcon size={12} className="text-destructive" />
+                        <Box component="span" sx={{ color: "error.main", display: "flex" }}>
+                          <TrashIcon size={12} />
+                        </Box>
                       </Button>
-                    </div>
+                    </Stack>
                   ))}
-                </div>
-                <div className="flex gap-2">
+                </Stack>
+                <Stack direction="row" spacing={1}>
                   <Button
                     type="button"
                     variant="outline"
@@ -145,15 +157,15 @@ export function ApprovalLevelEditor({ title, level, employees, onChange, onRemov
                   >
                     +AND
                   </Button>
-                </div>
-              </div>
+                </Stack>
+              </Stack>
             );
           })}
-          <Button type="button" variant="outline" size="sm" onClick={addStage}>
+          <Button type="button" variant="outline" size="sm" onClick={addStage} sx={{ alignSelf: "flex-start" }}>
             <PlusIcon size={12} /> Add Stage
           </Button>
-        </div>
+        </Stack>
       ) : null}
-    </div>
+    </Stack>
   );
 }
