@@ -8,6 +8,16 @@ export type ExpenseSummaryRow = {
   totalAmount: number;
 };
 
+export type ClaimCostRow = {
+  claimId: number;
+  claimName: string | null;
+  employeeName: string | null;
+  claimType: string;
+  status: string;
+  createdAt: string;
+  totalAmount: number;
+};
+
 export type TripCostRow = {
   tripId: number;
   tripName: string;

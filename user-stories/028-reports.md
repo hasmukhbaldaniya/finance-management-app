@@ -5,7 +5,7 @@
 
 ## Overview
 
-Originally scoped as the "Reports" nav destination (`frontend/src/app/(private)/reports/page.tsx`, a bare `<ComingSoon title="Reports" />` per [003-header-navigation.md](./003-header-navigation.md)) — three read-only, organization-wide reports a Company Administrator uses to see spend and trip activity across every employee, not just their own. This is Phase 5 of `docs/PLANS/microservices-plan.md`, built as a new `reports-service` with no database of its own, aggregating over `auth-service`'s and `claim-service`'s own APIs (`docs/PLANS/microservices-frontend-integration-plan.md` section 1.1/1.4e).
+Originally scoped as the "Reports" nav destination (`frontend/src/app/(private)/reports/page.tsx`, a bare `<ComingSoon title="Reports" />` per [003-header-navigation.md](./003-header-navigation.md)) — four read-only, organization-wide reports a Company Administrator uses to see spend, claim, and trip activity across every employee, not just their own. This is Phase 5 of `docs/PLANS/microservices-plan.md`, built as a new `reports-service` with no database of its own, aggregating over `auth-service`'s and `claim-service`'s own APIs (`docs/PLANS/microservices-frontend-integration-plan.md` section 1.1/1.4e). **Claim Cost was added after the other three first shipped** (explicit request, same day) — same shape and same `claims/org` prerequisite endpoint as Trip Cost, just the Claim-side counterpart.
 
 **Relocated after first shipping** (explicit request, same day): the standalone `/reports` route and its "Reports" nav item are gone — these three reports now render directly on the Home/Dashboard page (`frontend/src/app/(private)/dashboard/page.tsx`), below the existing welcome/organization header. The nav's "Home" label was renamed to "Dashboard" at the same time. `ROUTES.REPORTS`, the `/reports/:path*` proxy matcher, and the `(private)/reports/` directory were all removed — nothing else in this doc changes (same `reports-service` API, same components, just a different page hosting them).
 
@@ -65,6 +65,40 @@ Originally scoped as the "Reports" nav destination (`frontend/src/app/(private)/
 | Scenario | Message |
 |----------|---------|
 | Report fails to load | "Something went wrong loading this report. Please try again." (matches `apiManager.ts`'s `GENERIC_ERROR_MESSAGE` convention) |
+
+---
+
+## Story: Claim Cost Report
+
+**As a** Company Administrator
+**I want** every claim's total amount, by status and date range
+**So that** I can see claim spend across the organization without opening every claim individually
+
+### Screens & Fields
+
+| Screen | Field | Type | Required |
+|--------|-------|------|----------|
+| Dashboard > Claim Cost | Date range (by `createdAt`) | date range picker | No (defaults to the rolling 1-year window, see below) |
+| Dashboard > Claim Cost | Status filter | dropdown (`CLAIM_STATUS_OPTIONS`) | No |
+| Dashboard > Claim Cost | Claim list | table: Claim, Employee, Created, Status, Total Amount | — |
+
+### Flow
+
+1. Table lists every claim in the org matching the filters, one row per claim (a detail list, same shape as Trip Cost, not aggregated).
+2. A trip-linked claim has no `name` of its own (`claim.model.ts`'s own doc comment — the trip's name normally stands in for it, per `formatClaimName`'s existing convention elsewhere in this app) — this report doesn't resolve the linked trip's name (out of scope, would need an extra join), so it falls back to `#<claimId>` instead, matching the same fallback pattern already used by the Red-Flagged Expenses report's Claim column.
+
+### Validation Rules
+
+Same date-range rule as Expense Summary above.
+
+### Acceptance Criteria
+
+- **Given** the default date range, **when** the report loads, **then** every claim in range appears once, sorted by Total Amount descending.
+- **Given** a trip-linked claim with no `name`, **when** it appears in this report, **then** its Claim column shows `#<claimId>`, not a blank cell or "Untitled Claim".
+
+### Error / Toast Messages
+
+Same generic message as above.
 
 ---
 
@@ -163,4 +197,10 @@ Built exactly as scoped, plus the prerequisite section — `requireOwner` (readi
 
 Verified end-to-end: real cross-employee data in all three reports (not just the caller's own records), a non-owner caller's request correctly 403s with `claim-service`'s own `requireOwner` message (not a generic error, confirming `UpstreamError` status/message propagation works), and a real browser session — login → Reports page → switch tabs — rendered all three reports with live data, `tsc`/`eslint` clean on every new file, no console errors beyond two confirmed pre-existing, unrelated issues (a hydration warning already present on `/dashboard`, and a transient 401 during the login redirect itself).
 
-**Post-relocation re-verification** (same day, see the relocation note above): confirmed `/reports` now 404s, `/dashboard` renders the welcome header + organization card + all three report tabs together with live data, the nav shows "Dashboard" not "Home" with no separate "Reports" item, `tsc`/`eslint` clean on every changed file (`dashboard/page.tsx`, `header.tsx`, `proxy.ts`, `route.constant.ts`), and a stale `.next/types/validator.ts` reference to the deleted route (a build-cache artifact, not a real error) cleared itself after removing `.next`.
+**Post-relocation re-verification** (same day, see the relocation note above): confirmed `/reports` now 404s, `/dashboard` rendered the welcome header + organization card + all three report tabs together with live data at the time, the nav shows "Dashboard" not "Home" with no separate "Reports" item, `tsc`/`eslint` clean on every changed file (`dashboard/page.tsx`, `header.tsx`, `proxy.ts`, `route.constant.ts`), and a stale `.next/types/validator.ts` reference to the deleted route (a build-cache artifact, not a real error) cleared itself after removing `.next`.
+
+**Further changes, same day:**
+- **Field height fix**: MUI X `DatePicker`'s inner input has its own ~40px minimum (driven by its calendar icon button) that didn't shrink to match a `height: 32` override, so a date field could render visibly taller than an adjacent `Select` even though both containers measured 32px — fixed the shared `date-picker.tsx` component itself (`.MuiPickersInputBase-root { height: inherit }`, so it now picks up whatever height its own FormControl resolves to) and bumped all report filter rows to `height: 40`/`width: 200` so nothing clips. Benefits every other page using this shared component too, not just Reports.
+- **Default date range**: all filters now default to a rolling trailing-365-day window ending today (`getDefaultReportDateRange()` in `format.helper.ts`) rather than empty — recomputed fresh on every mount, so it advances day by day on its own, per explicit request (verified: today 2026-07-24 → From 2025-07-25, To 2026-07-24).
+- **Claim Cost report added** (this doc's new story above) — the Claim-side counterpart of Trip Cost, reusing the same `claims/org` prerequisite endpoint and `fetchAllEmployees` name-resolution helper already built for the other three reports. No new prerequisite work needed. Verified with real cross-employee data (5 claims across 2 employees, correct `#<claimId>` fallback for the one trip-linked claim with no name) and `tsc`/`eslint` clean on every new/changed file (`reports-service`'s `reports.controller.ts`/`reports.routes.ts`/`claim-service.client.ts`, frontend's `claim-cost-report.tsx`/`claimCost.api.ts`/`report.type.ts`/`dashboard/page.tsx`).
+- The dashboard's welcome header/organization card block was removed from `dashboard/page.tsx` independently of this story — Reports now occupies the full page there.

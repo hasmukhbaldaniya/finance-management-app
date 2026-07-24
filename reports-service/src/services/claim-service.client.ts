@@ -40,7 +40,10 @@ export type CategorySummary = {
   isEnabled: boolean;
 };
 
-export function fetchOrgClaims(cookie: string, params: { from?: string; to?: string }): Promise<ClaimSummary[]> {
+export function fetchOrgClaims(
+  cookie: string,
+  params: { from?: string; to?: string; status?: string }
+): Promise<ClaimSummary[]> {
   return fetchAllPages<ClaimSummary>(env.claimServiceUrl, "/api/claims/org", "claims", cookie, params);
 }
 

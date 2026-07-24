@@ -1,6 +1,6 @@
 import type { Request, Response } from "express";
 import { fetchAllEmployees } from "../services/auth-service.client";
-import { fetchAllCategories, fetchOrgExpenses, fetchOrgTrips } from "../services/claim-service.client";
+import { fetchAllCategories, fetchOrgClaims, fetchOrgExpenses, fetchOrgTrips } from "../services/claim-service.client";
 
 const NOT_AUTHENTICATED_MESSAGE = "Not authenticated.";
 
@@ -61,6 +61,41 @@ export async function getExpenseSummary(req: Request, res: Response): Promise<vo
         categoryName: category.name,
         expenseCount: totals.count,
         totalAmount: totals.totalAmount,
+      };
+    })
+    .sort((a, b) => b.totalAmount - a.totalAmount);
+
+  res.status(200).json({ rows });
+}
+
+// GET /api/reports/claim-cost?from=&to=&status=
+// 028-reports.md's "Claim Cost Report" — the Claim-side counterpart of Trip
+// Cost below, same shape (a detail list, org-wide, `createdAt` date range +
+// status filter, sorted by amount descending).
+export async function getClaimCostReport(req: Request, res: Response): Promise<void> {
+  const cookie = getCookie(req);
+  if (!cookie) {
+    res.status(401).json({ error: NOT_AUTHENTICATED_MESSAGE });
+    return;
+  }
+
+  const from = optionalString(req.query.from);
+  const to = optionalString(req.query.to);
+  const status = optionalString(req.query.status);
+
+  const [claims, employeesById] = await Promise.all([fetchOrgClaims(cookie, { from, to, status }), fetchAllEmployees(cookie)]);
+
+  const rows = claims
+    .map((claim) => {
+      const employee = employeesById.get(claim.employeeId);
+      return {
+        claimId: claim.id,
+        claimName: claim.name,
+        employeeName: employee ? `${employee.firstName} ${employee.lastName}` : null,
+        claimType: claim.claimType,
+        status: claim.status,
+        createdAt: claim.createdAt,
+        totalAmount: Number(claim.totalAmount),
       };
     })
     .sort((a, b) => b.totalAmount - a.totalAmount);
