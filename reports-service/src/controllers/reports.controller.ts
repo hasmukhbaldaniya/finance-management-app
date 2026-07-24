@@ -1,13 +1,7 @@
-import type { Request, Response } from "express";
+import type { Response } from "express";
+import type { AuthenticatedRequest } from "../middleware/require-auth";
 import { fetchAllEmployees } from "../services/auth-service.client";
 import { fetchAllCategories, fetchOrgClaims, fetchOrgExpenses, fetchOrgTrips } from "../services/claim-service.client";
-
-const NOT_AUTHENTICATED_MESSAGE = "Not authenticated.";
-
-function getCookie(req: Request): string | null {
-  const cookie = req.headers.cookie;
-  return typeof cookie === "string" && cookie ? cookie : null;
-}
 
 function optionalString(value: unknown): string | undefined {
   return typeof value === "string" && value ? value : undefined;
@@ -17,31 +11,26 @@ function optionalString(value: unknown): string | undefined {
 // 028-reports.md's "Expense Summary by Category" — one row per *enabled*
 // category (even ones with zero matching expenses, per that story's own
 // "don't silently omit" rule), org-wide, for a date range.
-export async function getExpenseSummary(req: Request, res: Response): Promise<void> {
-  const cookie = getCookie(req);
-  if (!cookie) {
-    res.status(401).json({ error: NOT_AUTHENTICATED_MESSAGE });
-    return;
-  }
-
+export async function getExpenseSummary(req: AuthenticatedRequest, res: Response): Promise<void> {
+  const cookie = req.cookieHeader ?? "";
   const from = optionalString(req.query.from);
   const to = optionalString(req.query.to);
   const department = optionalString(req.query.department);
 
-  const [categories, expenses, employeesById] = await Promise.all([
+  const [categoriesResult, expensesResult, employees] = await Promise.all([
     fetchAllCategories(cookie),
     fetchOrgExpenses(cookie, { from, to }),
     // Only fetched when actually needed — the department join is the one
     // place this report has to cross into auth-service's data at all.
-    department ? fetchAllEmployees(cookie) : Promise.resolve(new Map()),
+    department ? fetchAllEmployees(cookie) : Promise.resolve({ byId: new Map(), truncated: false }),
   ]);
 
   const relevantExpenses = department
-    ? expenses.filter((expense) => {
-        const employee = expense.employeeId ? employeesById.get(expense.employeeId) : undefined;
+    ? expensesResult.items.filter((expense) => {
+        const employee = expense.employeeId ? employees.byId.get(expense.employeeId) : undefined;
         return employee?.department === department;
       })
-    : expenses;
+    : expensesResult.items;
 
   const totalsByCategoryId = new Map<number, { count: number; totalAmount: number }>();
   for (const expense of relevantExpenses) {
@@ -52,7 +41,7 @@ export async function getExpenseSummary(req: Request, res: Response): Promise<vo
     totalsByCategoryId.set(expense.categoryId, current);
   }
 
-  const rows = categories
+  const rows = categoriesResult.items
     .filter((category) => category.isEnabled)
     .map((category) => {
       const totals = totalsByCategoryId.get(category.id) ?? { count: 0, totalAmount: 0 };
@@ -65,29 +54,24 @@ export async function getExpenseSummary(req: Request, res: Response): Promise<vo
     })
     .sort((a, b) => b.totalAmount - a.totalAmount);
 
-  res.status(200).json({ rows });
+  res.status(200).json({ rows, truncated: categoriesResult.truncated || expensesResult.truncated || employees.truncated });
 }
 
 // GET /api/reports/claim-cost?from=&to=&status=
 // 028-reports.md's "Claim Cost Report" — the Claim-side counterpart of Trip
 // Cost below, same shape (a detail list, org-wide, `createdAt` date range +
 // status filter, sorted by amount descending).
-export async function getClaimCostReport(req: Request, res: Response): Promise<void> {
-  const cookie = getCookie(req);
-  if (!cookie) {
-    res.status(401).json({ error: NOT_AUTHENTICATED_MESSAGE });
-    return;
-  }
-
+export async function getClaimCostReport(req: AuthenticatedRequest, res: Response): Promise<void> {
+  const cookie = req.cookieHeader ?? "";
   const from = optionalString(req.query.from);
   const to = optionalString(req.query.to);
   const status = optionalString(req.query.status);
 
-  const [claims, employeesById] = await Promise.all([fetchOrgClaims(cookie, { from, to, status }), fetchAllEmployees(cookie)]);
+  const [claimsResult, employees] = await Promise.all([fetchOrgClaims(cookie, { from, to, status }), fetchAllEmployees(cookie)]);
 
-  const rows = claims
+  const rows = claimsResult.items
     .map((claim) => {
-      const employee = employeesById.get(claim.employeeId);
+      const employee = employees.byId.get(claim.employeeId);
       return {
         claimId: claim.id,
         claimName: claim.name,
@@ -100,29 +84,24 @@ export async function getClaimCostReport(req: Request, res: Response): Promise<v
     })
     .sort((a, b) => b.totalAmount - a.totalAmount);
 
-  res.status(200).json({ rows });
+  res.status(200).json({ rows, truncated: claimsResult.truncated || employees.truncated });
 }
 
 // GET /api/reports/trip-cost?from=&to=&status=
 // 028-reports.md's "Trip Cost Report" — a detail list (not aggregated),
 // deliberately without Approved Amount/Variance (see that story's own note
 // on why — the Approvals epic that would populate it is on hold).
-export async function getTripCostReport(req: Request, res: Response): Promise<void> {
-  const cookie = getCookie(req);
-  if (!cookie) {
-    res.status(401).json({ error: NOT_AUTHENTICATED_MESSAGE });
-    return;
-  }
-
+export async function getTripCostReport(req: AuthenticatedRequest, res: Response): Promise<void> {
+  const cookie = req.cookieHeader ?? "";
   const from = optionalString(req.query.from);
   const to = optionalString(req.query.to);
   const status = optionalString(req.query.status);
 
-  const [trips, employeesById] = await Promise.all([fetchOrgTrips(cookie, { from, to, status }), fetchAllEmployees(cookie)]);
+  const [tripsResult, employees] = await Promise.all([fetchOrgTrips(cookie, { from, to, status }), fetchAllEmployees(cookie)]);
 
-  const rows = trips
+  const rows = tripsResult.items
     .map((trip) => {
-      const employee = employeesById.get(trip.employeeId);
+      const employee = employees.byId.get(trip.employeeId);
       return {
         tripId: trip.id,
         tripName: trip.name,
@@ -135,27 +114,22 @@ export async function getTripCostReport(req: Request, res: Response): Promise<vo
     })
     .sort((a, b) => b.totalAmount - a.totalAmount);
 
-  res.status(200).json({ rows });
+  res.status(200).json({ rows, truncated: tripsResult.truncated || employees.truncated });
 }
 
 // GET /api/reports/red-flagged-expenses?from=&to=
-export async function getRedFlaggedExpensesReport(req: Request, res: Response): Promise<void> {
-  const cookie = getCookie(req);
-  if (!cookie) {
-    res.status(401).json({ error: NOT_AUTHENTICATED_MESSAGE });
-    return;
-  }
-
+export async function getRedFlaggedExpensesReport(req: AuthenticatedRequest, res: Response): Promise<void> {
+  const cookie = req.cookieHeader ?? "";
   const from = optionalString(req.query.from);
   const to = optionalString(req.query.to);
 
-  const [expenses, employeesById] = await Promise.all([
+  const [expensesResult, employees] = await Promise.all([
     fetchOrgExpenses(cookie, { from, to, isRedFlagged: "true" }),
     fetchAllEmployees(cookie),
   ]);
 
-  const rows = expenses.map((expense) => {
-    const employee = expense.employeeId ? employeesById.get(expense.employeeId) : undefined;
+  const rows = expensesResult.items.map((expense) => {
+    const employee = expense.employeeId ? employees.byId.get(expense.employeeId) : undefined;
     return {
       expenseId: expense.id,
       employeeName: employee ? `${employee.firstName} ${employee.lastName}` : null,
@@ -167,5 +141,5 @@ export async function getRedFlaggedExpensesReport(req: Request, res: Response): 
     };
   });
 
-  res.status(200).json({ rows });
+  res.status(200).json({ rows, truncated: expensesResult.truncated || employees.truncated });
 }

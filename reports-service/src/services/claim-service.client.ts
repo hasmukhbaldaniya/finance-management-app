@@ -1,5 +1,5 @@
 import { env } from "../config/env";
-import { fetchAllPages } from "./upstream-client";
+import { fetchAllPages, type PagedResult } from "./upstream-client";
 
 export type ClaimSummary = {
   id: number;
@@ -43,26 +43,26 @@ export type CategorySummary = {
 export function fetchOrgClaims(
   cookie: string,
   params: { from?: string; to?: string; status?: string }
-): Promise<ClaimSummary[]> {
+): Promise<PagedResult<ClaimSummary>> {
   return fetchAllPages<ClaimSummary>(env.claimServiceUrl, "/api/claims/org", "claims", cookie, params);
 }
 
 export function fetchOrgTrips(
   cookie: string,
   params: { from?: string; to?: string; status?: string }
-): Promise<TripSummary[]> {
+): Promise<PagedResult<TripSummary>> {
   return fetchAllPages<TripSummary>(env.claimServiceUrl, "/api/trips/org", "trips", cookie, params);
 }
 
 export function fetchOrgExpenses(
   cookie: string,
   params: { from?: string; to?: string; isRedFlagged?: string; categoryId?: string }
-): Promise<ExpenseSummary[]> {
+): Promise<PagedResult<ExpenseSummary>> {
   return fetchAllPages<ExpenseSummary>(env.claimServiceUrl, "/api/expenses/org", "expenses", cookie, params);
 }
 
 // Categories are already org-wide (not per-employee) on claim-service — no
 // new endpoint needed, just a plain forward of the existing one.
-export function fetchAllCategories(cookie: string): Promise<CategorySummary[]> {
+export function fetchAllCategories(cookie: string): Promise<PagedResult<CategorySummary>> {
   return fetchAllPages<CategorySummary>(env.claimServiceUrl, "/api/categories", "categories", cookie);
 }

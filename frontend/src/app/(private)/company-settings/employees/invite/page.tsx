@@ -55,11 +55,13 @@ const STEPS: StepNavItem[] = [
 ];
 
 type FfRow = {
+  id: string;
   airlineId: string;
   ffNumber: string;
 };
 
 type ApproverRow = {
+  id: string;
   level: number;
   approverEmployeeId: string;
 };
@@ -81,7 +83,7 @@ type FieldErrors = {
 };
 
 function createEmptyFfRow(): FfRow {
-  return { airlineId: "", ffNumber: "" };
+  return { id: crypto.randomUUID(), airlineId: "", ffNumber: "" };
 }
 
 function FieldError({ message }: { message?: string }) {
@@ -126,7 +128,7 @@ export default function InviteEmployeePage() {
 
   // Access & Approval
   const [employees, setEmployees] = useState<EmployeePickerOption[]>([]);
-  const [approverRows, setApproverRows] = useState<ApproverRow[]>([{ level: 1, approverEmployeeId: "" }]);
+  const [approverRows, setApproverRows] = useState<ApproverRow[]>([{ id: crypto.randomUUID(), level: 1, approverEmployeeId: "" }]);
 
   const [employeeId, setEmployeeId] = useState<number | null>(null);
   const [isLoadingOptions, setIsLoadingOptions] = useState(true);
@@ -203,31 +205,29 @@ export default function InviteEmployeePage() {
     }
   }
 
-  function updateFfRow(index: number, patch: Partial<FfRow>): void {
-    setFfRows((current) => current.map((row, rowIndex) => (rowIndex === index ? { ...row, ...patch } : row)));
+  function updateFfRow(id: string, patch: Partial<FfRow>): void {
+    setFfRows((current) => current.map((row) => (row.id === id ? { ...row, ...patch } : row)));
   }
 
   function addFfRow(): void {
     setFfRows((current) => [...current, createEmptyFfRow()]);
   }
 
-  function removeFfRow(index: number): void {
-    setFfRows((current) => current.filter((_, rowIndex) => rowIndex !== index));
+  function removeFfRow(id: string): void {
+    setFfRows((current) => current.filter((row) => row.id !== id));
   }
 
-  function updateApprover(index: number, approverEmployeeId: string): void {
-    setApproverRows((current) =>
-      current.map((row, rowIndex) => (rowIndex === index ? { ...row, approverEmployeeId } : row))
-    );
+  function updateApprover(id: string, approverEmployeeId: string): void {
+    setApproverRows((current) => current.map((row) => (row.id === id ? { ...row, approverEmployeeId } : row)));
   }
 
   function addApproverLevel(): void {
-    setApproverRows((current) => [...current, { level: current.length + 1, approverEmployeeId: "" }]);
+    setApproverRows((current) => [...current, { id: crypto.randomUUID(), level: current.length + 1, approverEmployeeId: "" }]);
   }
 
-  function removeApproverLevel(index: number): void {
+  function removeApproverLevel(id: string): void {
     setApproverRows((current) =>
-      current.filter((_, rowIndex) => rowIndex !== index).map((row, rowIndex) => ({ ...row, level: rowIndex + 1 }))
+      current.filter((row) => row.id !== id).map((row, rowIndex) => ({ ...row, level: rowIndex + 1 }))
     );
   }
 
@@ -524,13 +524,13 @@ export default function InviteEmployeePage() {
             <SectionCard id="ff-numbers" title="Frequent Flyer Numbers" description="Optionally add the employee's airline frequent flyer numbers.">
               <Stack spacing={2}>
                 {ffRows.map((row, index) => (
-                  <Stack direction="row" key={index} spacing={1} sx={{ alignItems: "flex-start" }}>
+                  <Stack direction="row" key={row.id} spacing={1} sx={{ alignItems: "flex-start" }}>
                     <Stack spacing={0.75} sx={{ width: "50%" }}>
                       <Label htmlFor={`airline-${index}`}>Airline</Label>
                       <SelectField
                         id={`airline-${index}`}
                         value={row.airlineId}
-                        onValueChange={(value) => updateFfRow(index, { airlineId: value })}
+                        onValueChange={(value) => updateFfRow(row.id, { airlineId: value })}
                         hasError={Boolean(errors.ffRows?.[index])}
                         placeholder="Select"
                         options={airlines.map((airline) => ({ value: String(airline.id), label: airline.name }))}
@@ -538,10 +538,10 @@ export default function InviteEmployeePage() {
                     </Stack>
                     <Stack spacing={0.75} sx={{ width: "50%" }}>
                       <Label htmlFor={`ff-number-${index}`}>FF Number</Label>
-                      <Input id={`ff-number-${index}`} value={row.ffNumber} onChange={(e) => updateFfRow(index, { ffNumber: e.target.value })} aria-invalid={Boolean(errors.ffRows?.[index])} />
+                      <Input id={`ff-number-${index}`} value={row.ffNumber} onChange={(e) => updateFfRow(row.id, { ffNumber: e.target.value })} aria-invalid={Boolean(errors.ffRows?.[index])} />
                     </Stack>
                     {ffRows.length > 1 ? (
-                      <Button type="button" variant="ghost" size="icon" sx={{ mt: 3 }} aria-label="Remove row" onClick={() => removeFfRow(index)}>
+                      <Button type="button" variant="ghost" size="icon" sx={{ mt: 3 }} aria-label="Remove row" onClick={() => removeFfRow(row.id)}>
                         <XIcon size={16} />
                       </Button>
                     ) : null}
@@ -561,7 +561,7 @@ export default function InviteEmployeePage() {
                 <Stack spacing={1.5}>
                   <Label>Approval Chain</Label>
                   {approverRows.map((row, index) => (
-                    <Stack direction="row" key={index} spacing={1} sx={{ alignItems: "flex-end" }}>
+                    <Stack direction="row" key={row.id} spacing={1} sx={{ alignItems: "flex-end" }}>
                       <Stack spacing={0.75} sx={{ flex: 1 }}>
                         <Label htmlFor={`approver-${index}`}>
                           Level {row.level} Approver{row.level === 1 ? "" : " (optional)"}
@@ -569,7 +569,7 @@ export default function InviteEmployeePage() {
                         <SelectField
                           id={`approver-${index}`}
                           value={row.approverEmployeeId}
-                          onValueChange={(value) => updateApprover(index, value)}
+                          onValueChange={(value) => updateApprover(row.id, value)}
                           placeholder="Select"
                           options={employees
                             .filter((employee) => employee.id !== employeeId)
@@ -577,7 +577,7 @@ export default function InviteEmployeePage() {
                         />
                       </Stack>
                       {index > 0 ? (
-                        <Button type="button" variant="ghost" size="icon" aria-label="Remove level" onClick={() => removeApproverLevel(index)}>
+                        <Button type="button" variant="ghost" size="icon" aria-label="Remove level" onClick={() => removeApproverLevel(row.id)}>
                           <XIcon size={16} />
                         </Button>
                       ) : null}
