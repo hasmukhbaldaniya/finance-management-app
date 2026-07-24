@@ -41,6 +41,22 @@ export function formatClaimName(claim: { name: string | null; tripName: string |
   return claim.name ?? claim.tripName ?? "Untitled Claim";
 }
 
+// 028-reports.md's default filter window — a rolling trailing 365 days
+// ending today (not a fixed calendar range), per explicit request: today
+// 2026-07-24 → from 2025-07-25 to 2026-07-24, recomputed fresh every time a
+// report mounts so the window advances with "today" on its own, day by day.
+export function getDefaultReportDateRange(): { from: string; to: string } {
+  const pad = (num: number): string => String(num).padStart(2, "0");
+  const toDateOnly = (date: Date): string => `${date.getFullYear()}-${pad(date.getMonth() + 1)}-${pad(date.getDate())}`;
+
+  const to = new Date();
+  const from = new Date(to);
+  from.setFullYear(from.getFullYear() - 1);
+  from.setDate(from.getDate() + 1);
+
+  return { from: toDateOnly(from), to: toDateOnly(to) };
+}
+
 // ISO alpha-2 country code → flag emoji, via Unicode regional indicator
 // symbols (each letter maps to U+1F1E6 + offset from 'A'). Standard,
 // widely-used technique — no external flag-icon library needed since every

@@ -29,12 +29,11 @@ type HeaderProps = {
 const COMPANY_SETTINGS_BASE_PATH = "/company-settings";
 
 const NAV_LINKS = [
-  { label: "Home", href: ROUTES.DASHBOARD },
+  { label: "Dashboard", href: ROUTES.DASHBOARD },
   { label: "Trips", href: ROUTES.TRIPS },
   { label: "Claims", href: ROUTES.CLAIMS },
   { label: "Approvals", href: ROUTES.APPROVALS },
   { label: "Finance", href: ROUTES.FINANCE },
-  { label: "Reports", href: ROUTES.REPORTS },
   { label: "Company Settings", href: ROUTES.COMPANY_SETTINGS.EMPLOYEES, activeMatch: COMPANY_SETTINGS_BASE_PATH },
   { label: "Help", href: ROUTES.HELP },
 ];

@@ -11,12 +11,12 @@ import { Table, TableBody, TableCell, TableHead, TableHeader, TableRow } from "@
 import { getRedFlaggedExpensesReport } from "@/apis/reports";
 import type { RedFlaggedExpenseRow } from "@/types/report.type";
 import { ApiError, GENERIC_ERROR_MESSAGE } from "@/utils/apiManager/apiManager";
-import { formatInr } from "@/utils/helpers/format.helper";
+import { formatInr, getDefaultReportDateRange } from "@/utils/helpers/format.helper";
 import { format } from "date-fns";
 
 export function RedFlaggedExpensesReport() {
-  const [from, setFrom] = useState("");
-  const [to, setTo] = useState("");
+  const [from, setFrom] = useState(() => getDefaultReportDateRange().from);
+  const [to, setTo] = useState(() => getDefaultReportDateRange().to);
 
   const [rows, setRows] = useState<RedFlaggedExpenseRow[]>([]);
   const [isLoading, setIsLoading] = useState(true);
@@ -48,11 +48,11 @@ export function RedFlaggedExpensesReport() {
       <Stack direction="row" spacing={2} sx={{ flexWrap: "wrap", alignItems: "flex-end" }}>
         <Stack spacing={1}>
           <Label htmlFor="red-flagged-from">From</Label>
-          <DatePicker id="red-flagged-from" value={from} onChange={setFrom} sx={{ height: 32, width: 176 }} />
+          <DatePicker id="red-flagged-from" value={from} onChange={setFrom} sx={{ height: 40, width: 200 }} />
         </Stack>
         <Stack spacing={1}>
           <Label htmlFor="red-flagged-to">To</Label>
-          <DatePicker id="red-flagged-to" value={to} onChange={setTo} sx={{ height: 32, width: 176 }} />
+          <DatePicker id="red-flagged-to" value={to} onChange={setTo} sx={{ height: 40, width: 200 }} />
         </Stack>
       </Stack>
 

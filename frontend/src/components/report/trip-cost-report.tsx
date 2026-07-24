@@ -14,12 +14,12 @@ import type { TripCostRow } from "@/types/report.type";
 import type { TripStatus } from "@/types/trip.type";
 import { TRIP_STATUS_OPTIONS } from "@/utils/constants/trip.constant";
 import { ApiError, GENERIC_ERROR_MESSAGE } from "@/utils/apiManager/apiManager";
-import { formatInr } from "@/utils/helpers/format.helper";
+import { formatInr, getDefaultReportDateRange } from "@/utils/helpers/format.helper";
 import { format } from "date-fns";
 
 export function TripCostReport() {
-  const [from, setFrom] = useState("");
-  const [to, setTo] = useState("");
+  const [from, setFrom] = useState(() => getDefaultReportDateRange().from);
+  const [to, setTo] = useState(() => getDefaultReportDateRange().to);
   const [status, setStatus] = useState<TripStatus | "">("");
 
   const [rows, setRows] = useState<TripCostRow[]>([]);
@@ -52,11 +52,11 @@ export function TripCostReport() {
       <Stack direction="row" spacing={2} sx={{ flexWrap: "wrap", alignItems: "flex-end" }}>
         <Stack spacing={1}>
           <Label htmlFor="trip-cost-from">From (Trip Start)</Label>
-          <DatePicker id="trip-cost-from" value={from} onChange={setFrom} sx={{ height: 32, width: 176 }} />
+          <DatePicker id="trip-cost-from" value={from} onChange={setFrom} sx={{ height: 40, width: 200 }} />
         </Stack>
         <Stack spacing={1}>
           <Label htmlFor="trip-cost-to">To (Trip Start)</Label>
-          <DatePicker id="trip-cost-to" value={to} onChange={setTo} sx={{ height: 32, width: 176 }} />
+          <DatePicker id="trip-cost-to" value={to} onChange={setTo} sx={{ height: 40, width: 200 }} />
         </Stack>
         <Stack spacing={1}>
           <Label htmlFor="trip-cost-status">Status</Label>
@@ -66,7 +66,7 @@ export function TripCostReport() {
             onValueChange={(value) => setStatus(value as TripStatus | "")}
             placeholder="All"
             options={[{ value: "", label: "All" }, ...TRIP_STATUS_OPTIONS.map((option) => ({ value: option.value, label: option.label }))]}
-            sx={{ height: 32, width: 208 }}
+            sx={{ height: 40, width: 208 }}
           />
         </Stack>
       </Stack>

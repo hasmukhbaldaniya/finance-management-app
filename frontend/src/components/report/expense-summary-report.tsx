@@ -13,11 +13,11 @@ import { getExpenseSummaryReport } from "@/apis/reports";
 import { getDepartments } from "@/apis/department";
 import type { ExpenseSummaryRow } from "@/types/report.type";
 import { ApiError, GENERIC_ERROR_MESSAGE } from "@/utils/apiManager/apiManager";
-import { formatInr } from "@/utils/helpers/format.helper";
+import { formatInr, getDefaultReportDateRange } from "@/utils/helpers/format.helper";
 
 export function ExpenseSummaryReport() {
-  const [from, setFrom] = useState("");
-  const [to, setTo] = useState("");
+  const [from, setFrom] = useState(() => getDefaultReportDateRange().from);
+  const [to, setTo] = useState(() => getDefaultReportDateRange().to);
   const [department, setDepartment] = useState("");
   const [departmentOptions, setDepartmentOptions] = useState<{ value: string; label: string }[]>([]);
 
@@ -57,11 +57,11 @@ export function ExpenseSummaryReport() {
       <Stack direction="row" spacing={2} sx={{ flexWrap: "wrap", alignItems: "flex-end" }}>
         <Stack spacing={1}>
           <Label htmlFor="expense-summary-from">From</Label>
-          <DatePicker id="expense-summary-from" value={from} onChange={setFrom} sx={{ height: 32, width: 176 }} />
+          <DatePicker id="expense-summary-from" value={from} onChange={setFrom} sx={{ height: 40, width: 200 }} />
         </Stack>
         <Stack spacing={1}>
           <Label htmlFor="expense-summary-to">To</Label>
-          <DatePicker id="expense-summary-to" value={to} onChange={setTo} sx={{ height: 32, width: 176 }} />
+          <DatePicker id="expense-summary-to" value={to} onChange={setTo} sx={{ height: 40, width: 200 }} />
         </Stack>
         <Stack spacing={1}>
           <Label htmlFor="expense-summary-department">Department</Label>
@@ -71,7 +71,7 @@ export function ExpenseSummaryReport() {
             onValueChange={setDepartment}
             placeholder="All"
             options={[{ value: "", label: "All" }, ...departmentOptions]}
-            sx={{ height: 32, width: 208 }}
+            sx={{ height: 40, width: 208 }}
           />
         </Stack>
       </Stack>
