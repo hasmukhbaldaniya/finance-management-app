@@ -8,12 +8,14 @@ export type ClaimCostParams = {
   status?: ClaimStatus | "";
 };
 
-export function getClaimCostReport(params: ClaimCostParams = {}): Promise<{ rows: ClaimCostRow[] }> {
+export function getClaimCostReport(params: ClaimCostParams = {}): Promise<{ rows: ClaimCostRow[]; truncated: boolean }> {
   const query = new URLSearchParams();
   if (params.from) query.set("from", params.from);
   if (params.to) query.set("to", params.to);
   if (params.status) query.set("status", params.status);
 
   const queryString = query.toString();
-  return apiCall<{ rows: ClaimCostRow[] }>(`/reports/claim-cost${queryString ? `?${queryString}` : ""}`, { method: "GET" });
+  return apiCall<{ rows: ClaimCostRow[]; truncated: boolean }>(`/reports/claim-cost${queryString ? `?${queryString}` : ""}`, {
+    method: "GET",
+  });
 }

@@ -1,3 +1,4 @@
+import cookieParser from "cookie-parser";
 import cors from "cors";
 import express, { type Application } from "express";
 import helmet from "helmet";
@@ -13,6 +14,7 @@ export function createApp(): Application {
   app.use(helmet());
   app.use(cors({ origin: env.corsOrigin, credentials: true }));
   app.use(morgan(env.nodeEnv === "development" ? "dev" : "combined"));
+  app.use(cookieParser());
 
   app.use("/health", healthRouter);
   app.use("/api/reports", reportsRouter);

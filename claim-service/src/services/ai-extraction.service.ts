@@ -49,6 +49,17 @@ function authHeaders(): Record<string, string> {
   return env.aiService.internalApiKey ? { "X-Internal-Api-Key": env.aiService.internalApiKey } : {};
 }
 
+// No retry/circuit-breaker sits in front of this call — a wedged ai-service
+// must not be able to hang a claim-service request forever. Extraction gets
+// a longer budget than the log lookup since it's a real vision-model call,
+// not a simple DB read.
+const EXTRACTION_TIMEOUT_MS = 30_000;
+const LOG_LOOKUP_TIMEOUT_MS = 10_000;
+
+function isTimeout(err: unknown): boolean {
+  return err instanceof Error && err.name === "TimeoutError";
+}
+
 // `documentBase64` is either a single-page/whole-image or a standalone PDF
 // (one page, or several merged pages — see claim-ai.controller.ts's
 // Merge/Unmerge) built via pdf-lib, never rasterized to an image ourselves
@@ -69,8 +80,10 @@ export async function extractInvoiceData(params: {
       method: "POST",
       headers: { "Content-Type": "application/json", ...authHeaders() },
       body: JSON.stringify(params),
+      signal: AbortSignal.timeout(EXTRACTION_TIMEOUT_MS),
     });
   } catch (err) {
+    if (isTimeout(err)) return { error: "The AI/ML service took too long to respond." };
     return { error: `Couldn't reach the AI/ML service — ${err instanceof Error ? err.message : "connection failed"}.` };
   }
 
@@ -100,8 +113,10 @@ export async function listExtractionLogs(claimInvoiceFileIds: number[]): Promise
   try {
     response = await fetch(`${env.aiService.url}/api/extraction-logs?claimInvoiceFileIds=${claimInvoiceFileIds.join(",")}`, {
       headers: authHeaders(),
+      signal: AbortSignal.timeout(LOG_LOOKUP_TIMEOUT_MS),
     });
   } catch (err) {
+    if (isTimeout(err)) throw new Error("The AI/ML service took too long to respond.");
     throw new Error(`Couldn't reach the AI/ML service — ${err instanceof Error ? err.message : "connection failed"}.`);
   }
 

@@ -1,6 +1,7 @@
 "use client";
 
 import { useEffect, useState } from "react";
+import Alert from "@mui/material/Alert";
 import Box from "@mui/material/Box";
 import Stack from "@mui/material/Stack";
 import Typography from "@mui/material/Typography";
@@ -19,6 +20,7 @@ export function RedFlaggedExpensesReport() {
   const [to, setTo] = useState(() => getDefaultReportDateRange().to);
 
   const [rows, setRows] = useState<RedFlaggedExpenseRow[]>([]);
+  const [isTruncated, setIsTruncated] = useState(false);
   const [isLoading, setIsLoading] = useState(true);
   const [loadError, setLoadError] = useState<string | undefined>();
 
@@ -28,8 +30,11 @@ export function RedFlaggedExpensesReport() {
     setLoadError(undefined);
 
     getRedFlaggedExpensesReport({ from: from || undefined, to: to || undefined })
-      .then(({ rows: fetched }) => {
-        if (isMounted) setRows(fetched);
+      .then(({ rows: fetched, truncated }) => {
+        if (isMounted) {
+          setRows(fetched);
+          setIsTruncated(truncated);
+        }
       })
       .catch((error: unknown) => {
         if (isMounted) setLoadError(error instanceof ApiError ? error.message : GENERIC_ERROR_MESSAGE);
@@ -55,6 +60,12 @@ export function RedFlaggedExpensesReport() {
           <DatePicker id="red-flagged-to" value={to} onChange={setTo} sx={{ height: 40, width: 200 }} />
         </Stack>
       </Stack>
+
+      {isTruncated && !isLoading && !loadError ? (
+        <Alert severity="warning">
+          This report only covers the first 2,000 matching rows per source. Narrow the date range to see a complete result.
+        </Alert>
+      ) : null}
 
       {isLoading ? (
         <Box sx={{ display: "flex", justifyContent: "center", py: 8 }}>

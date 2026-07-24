@@ -14,6 +14,10 @@ function isErrorBody(value: unknown): value is { error: string } {
   return typeof value === "object" && value !== null && typeof (value as { error?: unknown }).error === "string";
 }
 
+// No retry/circuit-breaker sits in front of this call — a wedged
+// communications-service must not be able to hang this request forever.
+const REQUEST_TIMEOUT_MS = 10_000;
+
 async function postNotification(path: string, body: Record<string, unknown>): Promise<void> {
   let response: Response;
   try {
@@ -24,8 +28,12 @@ async function postNotification(path: string, body: Record<string, unknown>): Pr
         ...(env.communicationsService.internalApiKey ? { "X-Internal-Api-Key": env.communicationsService.internalApiKey } : {}),
       },
       body: JSON.stringify(body),
+      signal: AbortSignal.timeout(REQUEST_TIMEOUT_MS),
     });
   } catch (err) {
+    if (err instanceof Error && err.name === "TimeoutError") {
+      throw new Error("communications-service took too long to respond.");
+    }
     throw new Error(`Couldn't reach communications-service — ${err instanceof Error ? err.message : "connection failed"}.`);
   }
 

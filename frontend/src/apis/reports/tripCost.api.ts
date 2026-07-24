@@ -8,12 +8,14 @@ export type TripCostParams = {
   status?: TripStatus | "";
 };
 
-export function getTripCostReport(params: TripCostParams = {}): Promise<{ rows: TripCostRow[] }> {
+export function getTripCostReport(params: TripCostParams = {}): Promise<{ rows: TripCostRow[]; truncated: boolean }> {
   const query = new URLSearchParams();
   if (params.from) query.set("from", params.from);
   if (params.to) query.set("to", params.to);
   if (params.status) query.set("status", params.status);
 
   const queryString = query.toString();
-  return apiCall<{ rows: TripCostRow[] }>(`/reports/trip-cost${queryString ? `?${queryString}` : ""}`, { method: "GET" });
+  return apiCall<{ rows: TripCostRow[]; truncated: boolean }>(`/reports/trip-cost${queryString ? `?${queryString}` : ""}`, {
+    method: "GET",
+  });
 }
