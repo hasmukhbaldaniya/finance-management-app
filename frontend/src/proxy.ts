@@ -52,7 +52,6 @@ export const config = {
     "/claims/:path*",
     "/approvals/:path*",
     "/finance/:path*",
-    "/reports/:path*",
     "/help/:path*",
     "/profile/:path*",
     "/company-settings/:path*",

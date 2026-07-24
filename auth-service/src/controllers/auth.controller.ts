@@ -43,7 +43,7 @@ export async function login(req: Request, res: Response): Promise<void> {
     return;
   }
 
-  const token = signAccessToken(employee.id, employee.organizationId);
+  const token = signAccessToken(employee.id, employee.organizationId, employee.isOwner);
   const refreshToken = signRefreshToken(employee.id);
   res.cookie(env.auth.cookieName, token, accessTokenCookieOptions());
   res.cookie(env.auth.refreshCookieName, refreshToken, refreshTokenCookieOptions());
@@ -85,7 +85,7 @@ export async function refresh(req: Request, res: Response): Promise<void> {
     return;
   }
 
-  const accessToken = signAccessToken(employee.id, employee.organizationId);
+  const accessToken = signAccessToken(employee.id, employee.organizationId, employee.isOwner);
   res.cookie(env.auth.cookieName, accessToken, accessTokenCookieOptions());
   res.status(200).json({ message: "Session refreshed." });
 }

@@ -258,7 +258,7 @@ export async function completeOnboarding(req: Request, res: Response): Promise<v
   employee.invitationStatus = "registered";
   await employee.save();
 
-  const accessToken = signAccessToken(employee.id, employee.organizationId);
+  const accessToken = signAccessToken(employee.id, employee.organizationId, employee.isOwner);
   const refreshToken = signRefreshToken(employee.id);
   res.cookie(env.auth.cookieName, accessToken, accessTokenCookieOptions());
   res.cookie(env.auth.refreshCookieName, refreshToken, refreshTokenCookieOptions());

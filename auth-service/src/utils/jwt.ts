@@ -11,10 +11,17 @@ import { env } from "../config/env";
 // docs/PLANS/microservices-plan.md's Phase 3 identified (getActiveOrganizationId,
 // called on nearly every claim/category/trip request) collapses into a plain
 // JWT-claim read.
+// isOwner is embedded for the same reason organizationId is (see below) —
+// it's the only access-control check that exists anywhere in this codebase
+// today (requireOwner's Employee.isOwner lookup), and Reports (028) needs
+// every other service to check it statelessly too, not just auth-service.
+// Same trade-off as organizationId: a suspend/role-change doesn't take
+// effect until the token naturally expires.
 export type AccessTokenPayload = {
   type: "access";
   sub: number;
   organizationId: number;
+  isOwner: boolean;
 };
 
 export type ResetTokenPayload = {
@@ -45,8 +52,8 @@ export type OnboardingTokenPayload = {
   sentAt: number;
 };
 
-export function signAccessToken(userId: number, organizationId: number): string {
-  const payload: AccessTokenPayload = { type: "access", sub: userId, organizationId };
+export function signAccessToken(userId: number, organizationId: number, isOwner: boolean): string {
+  const payload: AccessTokenPayload = { type: "access", sub: userId, organizationId, isOwner };
   return jwt.sign(payload, env.auth.jwtSecret, { expiresIn: env.auth.accessTokenExpiresIn } as jwt.SignOptions);
 }
 

@@ -71,7 +71,7 @@ export function TripSelect({ value, onChange, placeholder }: TripSelectProps) {
               onChange={(event) => setSearch(event.target.value)}
               onKeyDown={(event) => event.stopPropagation()}
               placeholder="Search trip..."
-              sx={{ height: 32, fontSize: "0.875rem" }}
+              sx={{ height: 40, fontSize: "0.875rem" }}
               startAdornment={
                 <InputAdornment position="start">
                   <MagnifyingGlassIcon size={14} />
@@ -80,7 +80,7 @@ export function TripSelect({ value, onChange, placeholder }: TripSelectProps) {
             />
           </Box>
           <Box onKeyDown={(event) => event.stopPropagation()}>
-            <DatePicker value={tripStartDate} onChange={setTripStartDate} placeholder="Filter by Start Date" sx={{ height: 32, fontSize: "0.875rem" }} />
+            <DatePicker value={tripStartDate} onChange={setTripStartDate} placeholder="Filter by Start Date" sx={{ height: 40, fontSize: "0.875rem" }} />
           </Box>
         </Stack>
         <Box sx={{ maxHeight: 240, overflowY: "auto" }}>

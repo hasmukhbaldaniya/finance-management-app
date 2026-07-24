@@ -62,11 +62,11 @@ API Gateway  ──────────────────────�
   |  /api/projects*, /api/airlines*, /api/organizations*
   ├────────────────────────────────────────►  auth-service (Postgres)
   |
-  |  /api/claims*, /api/categories*, /api/trips*,
-  |  /api/countries*, /api/cities*, /api/split-requests*
+  |  /api/claims*, /api/categories*, /api/trips*, /api/countries*,
+  |  /api/cities*, /api/split-requests*, /api/expenses*
   ├────────────────────────────────────────►  claim-service (Postgres)
   |
-  |  /api/reports* (future)
+  |  /api/reports*
   └────────────────────────────────────────►  reports-service (no DB)
 
 Internal-only, never reached directly by the browser:
@@ -100,8 +100,8 @@ staying simple. Everything in section 2 below follows from it.
 | `/api/projects*`, `/api/airlines*`, `/api/organizations*` | auth-service |
 | `/api/claims*`, `/api/split-requests*` | claim-service |
 | `/api/categories*` | claim-service |
-| `/api/trips*`, `/api/countries*`, `/api/cities*` | claim-service |
-| `/api/reports*` | reports-service (once built) |
+| `/api/trips*`, `/api/countries*`, `/api/cities*`, `/api/expenses*` | claim-service |
+| `/api/reports*` | reports-service |
 
 None of these paths change — the gateway routes by the same prefixes the frontend already calls
 today. This is deliberate: see section 2.1 for why that's the whole point.
@@ -204,10 +204,11 @@ extraction-order Phase 4 for why.
 returns once the DB write completes (the email send doesn't block the response today; same posture
 carries over).
 
-**e) Reports** (future, once built) — Browser → Gateway → reports-service → reports-service calls
-auth-service's and claim-service's own read APIs → aggregates in memory → responds. **This is the
-one flow where a single frontend request can trigger three services round-tripping** — flag it as
-the one place to watch latency once Reports is actually built.
+**e) Reports** (done — `user-stories/028-reports.md`) — Browser → Gateway → reports-service →
+reports-service calls auth-service's and claim-service's own org-wide read endpoints → aggregates in
+memory → responds. This is the one flow where a single frontend request triggers three services
+round-tripping; not an issue at this codebase's current data volume, but the one place to watch
+latency if that changes (see that story's own Open Questions on pagination/max-range caps).
 
 ## 2. What changes on the frontend
 
@@ -234,14 +235,15 @@ error handling silently, with no compile-time signal.
    match **auth-service's** issuing secret/cookie name going forward, since `Employee`/session
    issuance moved there in Phase 3. Same two env vars, same file — this is a "coordinate the secret with a
    different service" step, not a code change. `proxy.ts` itself needs no edits.
-3. **Local dev workflow** (not frontend code) — `docker-compose`/dev scripts now run a gateway + 4
+3. **Local dev workflow** (not frontend code) — `docker-compose`/dev scripts now run a gateway + 5
    services instead of 1 backend process; `.env.local`'s `NEXT_PUBLIC_API_BASE_URL` points at the
-   gateway's local port.
-4. **A new `src/apis/reports/` domain folder**, only once reports-service is actually built —
-   genuinely new code, not a migration, since Reports has no existing frontend implementation to
-   carry over (`(private)/reports/page.tsx` is still a placeholder today).
+   gateway's local port. (Real gotcha hit building this: Next.js loads `.env.local` with higher
+   priority than `.env` — both files needed the same update, not just one.)
+4. **`src/apis/reports/` domain folder** — done, genuinely new code, not a migration, since Reports
+   had no existing frontend implementation to carry over. `(private)/reports/page.tsx` is a real
+   tabbed page now, not a placeholder.
 5. **No changes needed to**: `apiManager.ts` itself, `SessionContext`, any existing `.api.ts` file,
-   any page/component, any route in `src/app/`.
+   any other page/component, any other route in `src/app/`. Confirmed true.
 
 ### 2.3 Things that must not drift, or the "no code change" claim breaks
 
@@ -278,7 +280,15 @@ error handling silently, with no compile-time signal.
 
 ## Completion notes
 
-Built as `gateway-service/` (own `CLAUDE.md` there — routing table, adding-a-new-prefix instructions), following section 1.0's recommended implementation option 1 exactly: a small Express app on `http-proxy-middleware`, no database, no business logic. Runs on `http://localhost:4400`. Section 1.2's routing table was copied in as two plain arrays (`AUTH_SERVICE_PATHS`/`CLAIM_SERVICE_PATHS` in `gateway-service/src/routes/proxy-routes.ts`) — `/api/reports*` isn't wired up yet since `reports-service` doesn't exist; add a third array + `createProxyMiddleware` instance for it when Phase 5 lands.
+Built as `gateway-service/` (own `CLAUDE.md` there — routing table, adding-a-new-prefix instructions), following section 1.0's recommended implementation option 1 exactly: a small Express app on `http-proxy-middleware`, no database, no business logic. Runs on `http://localhost:4400`. Section 1.2's routing table was copied in as plain arrays (`AUTH_SERVICE_PATHS`/`CLAIM_SERVICE_PATHS`/`REPORTS_SERVICE_PATHS` in `gateway-service/src/routes/proxy-routes.ts`).
+
+### Phase 5 (`reports-service`) completion notes
+
+Built per `user-stories/028-reports.md` — no database, forwards the caller's own session cookie (not a service-to-service internal-API-key call, since every report is scoped to what *that specific caller* is allowed to see) to two new prerequisite endpoints added to `claim-service` (`GET /api/claims/org`, `/api/trips/org`, and a genuinely new `/api/expenses/org` — there was no standalone expense listing anywhere in the codebase before this), all three gated by a new `requireOwner` middleware there that reads `isOwner` off the JWT (embedded at issue time in `auth-service`, alongside `organizationId`, the same "stateless, no DB lookup" pattern section 1.3 already established for `organizationId`).
+
+`src/services/upstream-client.ts`'s `fetchAllPages` is the one shared piece every report uses — a safety-bounded pagination loop (20 pages × 100/page per source, per 028's own Open Questions on this) forwarding the cookie and query params to whichever upstream endpoint owns the data, plus an `UpstreamError` class that preserves the real status/message from the upstream 403/500 rather than collapsing everything to a generic error.
+
+Verified end-to-end, not just per-service: real cross-employee data returned (a claim/trip/expense belonging to a *different* employee than the caller appeared correctly in all three reports), a non-owner caller got the same 403 `claim-service`'s `requireOwner` itself returns (confirming `UpstreamError` propagation works, not just the happy path), and a real browser session (login → Reports page → switch tabs) rendered all three reports with live data and no console errors beyond two confirmed pre-existing, unrelated issues (a hydration warning that already fires on `/dashboard`, and a transient 401 from `/api/auth/me` during the login redirect itself).
 
 One deviation from a literal reading of section 1.2: rather than `app.use(prefix, createProxyMiddleware(...))` per prefix, all proxying is mounted at the app root and dispatched via a manual `req.path` prefix check (`app.ts`'s `matchesPrefix`). Express strips the mount prefix from `req.url` before a `app.use(prefix, ...)` middleware sees it, which would have silently altered every proxied path — mounting at root sidesteps that entirely, which matters here since section 2.1's whole "no frontend code changes" claim depends on paths staying byte-identical.
 

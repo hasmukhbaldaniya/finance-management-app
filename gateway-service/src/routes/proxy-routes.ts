@@ -24,4 +24,9 @@ export const CLAIM_SERVICE_PATHS = [
   "/api/trips",
   "/api/countries",
   "/api/cities",
+  "/api/expenses",
 ];
+
+// 028-reports.md's Phase 5 — reports-service, no DB, aggregates over the
+// two prefix groups above.
+export const REPORTS_SERVICE_PATHS = ["/api/reports"];

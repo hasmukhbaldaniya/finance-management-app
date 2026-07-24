@@ -35,13 +35,13 @@ export function TripFilters({ filters, onChange }: TripFiltersProps) {
           id="filter-trip-start-date"
           value={filters.tripStartDate}
           onChange={(value) => onChange({ ...filters, tripStartDate: value })}
-          sx={{ height: 32 }}
+          sx={{ height: 40 }}
         />
       </Stack>
 
       <Stack spacing={1}>
         <Label htmlFor="filter-created-date">Created Date</Label>
-        <DatePicker id="filter-created-date" value={filters.createdDate} onChange={(value) => onChange({ ...filters, createdDate: value })} sx={{ height: 32 }} />
+        <DatePicker id="filter-created-date" value={filters.createdDate} onChange={(value) => onChange({ ...filters, createdDate: value })} sx={{ height: 40 }} />
       </Stack>
 
       <Stack spacing={1}>

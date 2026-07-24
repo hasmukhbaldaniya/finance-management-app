@@ -16,7 +16,6 @@ export const ROUTES = {
   splitRequestDetails: (splitRequestId: number) => `/claims/split-requests/${splitRequestId}`,
   APPROVALS: "/approvals",
   FINANCE: "/finance",
-  REPORTS: "/reports",
   HELP: "/help",
   PROFILE: "/profile",
   COMPANY_SETTINGS: {

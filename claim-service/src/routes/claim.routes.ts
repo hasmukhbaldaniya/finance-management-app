@@ -21,14 +21,22 @@ import {
   splitExpense,
   updateClaim,
 } from "../controllers/claim.controller";
+import { listClaimsForOrg } from "../controllers/org-reports.controller";
 import { createSplitRequest } from "../controllers/split-request.controller";
 import { requireAuth } from "../middleware/require-auth";
+import { requireOwner } from "../middleware/require-owner";
 
 export const claimRouter = Router();
 
 // No requireOwner gate — a claim is every employee's own record, the same
 // posture Trip Management (018) already established.
 claimRouter.use(requireAuth);
+
+// 028-reports.md's org-wide read endpoint — requireOwner-gated, unlike every
+// other route in this file. Registered before GET "/:id" so a request to
+// "/org" matches this exact route, not the "/:id" pattern with id="org"
+// (same reasoning as employee.routes.ts's "/approvers").
+claimRouter.get("/org", requireOwner, listClaimsForOrg);
 
 claimRouter.get("/", listClaims);
 claimRouter.post("/", createClaim);
