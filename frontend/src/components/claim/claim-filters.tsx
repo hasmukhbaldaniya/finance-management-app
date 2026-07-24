@@ -29,7 +29,7 @@ export function ClaimFilters({ filters, onChange }: ClaimFiltersProps) {
 
       <Stack spacing={1}>
         <Label htmlFor="filter-created-date">Created Date</Label>
-        <DatePicker id="filter-created-date" value={filters.createdDate} onChange={(value) => onChange({ ...filters, createdDate: value })} sx={{ height: 32 }} />
+        <DatePicker id="filter-created-date" value={filters.createdDate} onChange={(value) => onChange({ ...filters, createdDate: value })} sx={{ height: 40 }} />
       </Stack>
 
       <Stack spacing={1}>

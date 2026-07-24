@@ -50,13 +50,14 @@ export function DatePicker({ value, onChange, placeholder = "Select date", id, c
           id,
           className,
           // A caller's `height` (every filter row in this codebase passes
-          // `sx={{ height: 32 }}` to line this field up with adjacent
-          // Selects/Inputs) only reaches the outer MuiFormControl-root —
-          // MUI X's PickersInputBase renders its own ~40px box regardless,
-          // so without this it silently doesn't match a same-row Select at
-          // the same height. `height: inherit` makes it pick up whatever
-          // the FormControl above actually resolved to, instead of hardcoding
-          // a second copy of the caller's height here.
+          // `sx={{ height: 40 }}` to line this field up with adjacent
+          // Selects/Inputs, since MUI's small-size default is ~40px) only
+          // reaches the outer MuiFormControl-root — MUI X's PickersInputBase
+          // renders its own box regardless, so without this it silently
+          // doesn't match a same-row Select at the same height. `height:
+          // inherit` makes it pick up whatever the FormControl above
+          // actually resolved to, instead of hardcoding a second copy of
+          // the caller's height here.
           sx: [{ "& .MuiPickersInputBase-root": { height: "inherit" } }, ...(Array.isArray(sx) ? sx : sx ? [sx] : [])],
           fullWidth: true,
           size: "small",

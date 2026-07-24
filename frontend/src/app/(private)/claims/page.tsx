@@ -173,7 +173,7 @@ export default function ClaimsPage() {
           </Typography>
           <Stack spacing={1}>
             <Label htmlFor="filter-requested-on">Requested On</Label>
-            <DatePicker id="filter-requested-on" value={requestedOn} onChange={setRequestedOn} sx={{ height: 32 }} />
+            <DatePicker id="filter-requested-on" value={requestedOn} onChange={setRequestedOn} sx={{ height: 40 }} />
           </Stack>
         </Stack>
       )}
