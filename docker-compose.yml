@@ -1,4 +1,8 @@
 services:
+  # The original monolith's database — still running, still holds every
+  # auth-domain table (now unused code-wise, kept per the microservices
+  # plan's "keep old tables un-dropped for one release cycle" rollback
+  # safety net) plus whatever claim-domain rows haven't been migrated yet.
   postgres:
     image: postgres:16-alpine
     container_name: finance-management-db
@@ -12,5 +16,72 @@ services:
     volumes:
       - finance_management_pgdata:/var/lib/postgresql/data
 
+  # auth-service's own database (docs/PLANS/microservices-plan.md's Phase 3)
+  # — a separate Postgres instance/container, not just a second logical
+  # database on the shared `postgres` service above, for real per-service
+  # isolation (own backups, own connection pool, own blast radius).
+  postgres-auth:
+    image: postgres:16-alpine
+    container_name: finance-management-auth-db
+    restart: unless-stopped
+    environment:
+      POSTGRES_USER: postgres
+      POSTGRES_PASSWORD: postgres
+      POSTGRES_DB: auth_service
+    ports:
+      - "5433:5432"
+    volumes:
+      - finance_management_auth_pgdata:/var/lib/postgresql/data
+
+  # claim-service's own database (Phase 4) — Category/Trip/Claim/
+  # Split-Claim tables. Cross-service FK constraints into `organizations`/
+  # `employees` (now auth-service's tables) were stripped from the
+  # migrations that create this schema — see claim-service/CLAUDE.md.
+  postgres-claim:
+    image: postgres:16-alpine
+    container_name: finance-management-claim-db
+    restart: unless-stopped
+    environment:
+      POSTGRES_USER: postgres
+      POSTGRES_PASSWORD: postgres
+      POSTGRES_DB: claim_service
+    ports:
+      - "5434:5432"
+    volumes:
+      - finance_management_claim_pgdata:/var/lib/postgresql/data
+
+  # ai-service's own database (Phase 4) — holds only AiExtractionLog, moved
+  # here from the monolith's Postgres per docs/PLANS/microservices-plan.md's
+  # "AiExtractionLog migrates sideways into ai-service's MySQL" design.
+  mysql-ai:
+    image: mysql:8
+    container_name: finance-management-ai-mysql
+    restart: unless-stopped
+    environment:
+      MYSQL_ROOT_PASSWORD: root
+      MYSQL_DATABASE: ai_service
+      MYSQL_USER: ai_service
+      MYSQL_PASSWORD: ai_service
+    ports:
+      - "3307:3306"
+    volumes:
+      - finance_management_ai_mysqldata:/var/lib/mysql
+
+  # communications-service's own database (docs/PLANS/microservices-plan.md's
+  # Phase 1) — holds only NotificationLog, nothing else in this repo talks to
+  # this instance directly.
+  mongo:
+    image: mongo:7
+    container_name: finance-management-mongo
+    restart: unless-stopped
+    ports:
+      - "27017:27017"
+    volumes:
+      - finance_management_mongodata:/data/db
+
 volumes:
   finance_management_pgdata:
+  finance_management_auth_pgdata:
+  finance_management_claim_pgdata:
+  finance_management_ai_mysqldata:
+  finance_management_mongodata:

@@ -31,6 +31,20 @@ class ExtractRequestBody(BaseModel):
     documentBase64: str
     mediaType: Literal["application/pdf", "image/jpeg", "image/png"]
     categories: list[CategoryForExtraction]
+    # Phase 4 of docs/PLANS/microservices-plan.md — this service now writes
+    # its own AiExtractionLog row (it owns the table), so it needs these two
+    # correlation keys from the caller instead of just being handed a
+    # document to extract. `pageNumber` is the first page of the group for a
+    # merged multi-page extraction, matching claim-service's own
+    # runSourceExtraction semantics.
+    claimInvoiceFileId: int
+    pageNumber: int | None = None
+
+
+class ExtractionLogEntry(BaseModel):
+    claimInvoiceFileId: int
+    pageNumber: int | None
+    status: str
 
 
 class ExtractionRedFlag(BaseModel):
