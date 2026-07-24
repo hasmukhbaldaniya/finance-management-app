@@ -4,7 +4,7 @@ from fastapi.middleware.cors import CORSMiddleware
 from fastapi.responses import JSONResponse
 
 from app.config import settings
-from app.routers import extraction, health
+from app.routers import extraction, health, logs
 
 app = FastAPI(title="ai-service")
 
@@ -40,3 +40,4 @@ async def unhandled_exception_handler(_request: Request, exc: Exception) -> JSON
 
 app.include_router(health.router, prefix="/api")
 app.include_router(extraction.router, prefix="/api")
+app.include_router(logs.router, prefix="/api")

@@ -1,8 +1,12 @@
 # Microservices Runtime Integration & Frontend Changes
 
-Status: proposed, not started. Companion to `docs/PLANS/microservices-plan.md` (service
-boundaries, database choices, extraction order) — this doc covers how the split services actually
-talk to each other and to the browser at runtime, and exactly what changes in `frontend/`.
+Status: `auth-service` and `claim-service` (the renamed original `backend/`) are both real, running
+services, and the gateway this doc centers on is **now built** as `gateway-service/` — see
+"Completion notes" at the end of this document for what actually shipped versus what changed from
+the plan below. Everywhere `backend` is named as the thing that "does X today," read that as
+historical framing for why the gateway/JWT design was chosen, not a claim about the current
+`claim-service` codebase (which no longer has the auth code being described). Companion to
+`docs/PLANS/microservices-plan.md` (service boundaries, database choices, extraction order).
 
 ## 1. Runtime architecture
 
@@ -164,11 +168,12 @@ of the auth design, and the more important one once there are 4 services instead
 **In short, applied to this system:**
 
 - Login, registration-complete, and onboarding-complete all happen against **auth-service**, which
-  issues the access-token JWT and sets it as the httpOnly session cookie, exactly as `backend` does
-  today (`accessTokenCookieOptions()`).
+  issues the access-token JWT and sets it as the httpOnly session cookie (`accessTokenCookieOptions()`,
+  now in `auth-service/src/utils/auth.ts` — moved there in Phase 3, along with everything else that
+  issues tokens).
 - Because the browser only ever talks to the **gateway's** single origin, the cookie's domain is
   the gateway's domain — every service behind it can read the same cookie via the `Cookie` header
-  the gateway forwards. No cross-origin cookie problem, despite the backend now being four separate
+  the gateway forwards. No cross-origin cookie problem, despite the backend now being five separate
   processes.
 - Every service (auth-service, claim-service, reports-service) verifies that same JWT independently,
   using the shared `JWT_SECRET` — none of them call auth-service to do it.
@@ -223,10 +228,11 @@ error handling silently, with no compile-time signal.
 ### 2.2 Concrete changes required
 
 1. **`NEXT_PUBLIC_API_BASE_URL`** — points at the gateway's origin instead of directly at
-   `backend`'s `:4000`. One env var change, no code change.
+   `claim-service`'s `:4000` (the frontend's own env var name is unchanged from when it pointed at
+   the original `backend`). One env var change, no code change.
 2. **`.env.local`/`.env.example`'s `JWT_SECRET`/`AUTH_COOKIE_NAME`** (read by `src/proxy.ts`) must
    match **auth-service's** issuing secret/cookie name going forward, since `Employee`/session
-   issuance moves there. Same two env vars, same file — this is a "coordinate the secret with a
+   issuance moved there in Phase 3. Same two env vars, same file — this is a "coordinate the secret with a
    different service" step, not a code change. `proxy.ts` itself needs no edits.
 3. **Local dev workflow** (not frontend code) — `docker-compose`/dev scripts now run a gateway + 4
    services instead of 1 backend process; `.env.local`'s `NEXT_PUBLIC_API_BASE_URL` points at the
@@ -269,3 +275,20 @@ error handling silently, with no compile-time signal.
   after the split — every service, not just auth-service, must independently enforce the
   `requireAuth`-equivalent check on its own endpoints. Not a new risk, just now spread across three
   services' worth of routes instead of one.
+
+## Completion notes
+
+Built as `gateway-service/` (own `CLAUDE.md` there — routing table, adding-a-new-prefix instructions), following section 1.0's recommended implementation option 1 exactly: a small Express app on `http-proxy-middleware`, no database, no business logic. Runs on `http://localhost:4400`. Section 1.2's routing table was copied in as two plain arrays (`AUTH_SERVICE_PATHS`/`CLAIM_SERVICE_PATHS` in `gateway-service/src/routes/proxy-routes.ts`) — `/api/reports*` isn't wired up yet since `reports-service` doesn't exist; add a third array + `createProxyMiddleware` instance for it when Phase 5 lands.
+
+One deviation from a literal reading of section 1.2: rather than `app.use(prefix, createProxyMiddleware(...))` per prefix, all proxying is mounted at the app root and dispatched via a manual `req.path` prefix check (`app.ts`'s `matchesPrefix`). Express strips the mount prefix from `req.url` before a `app.use(prefix, ...)` middleware sees it, which would have silently altered every proxied path — mounting at root sidesteps that entirely, which matters here since section 2.1's whole "no frontend code changes" claim depends on paths staying byte-identical.
+
+Deliberately does **not** parse the request body (no `express.json()`) before proxying, per section 1.0's "thin routing layer" framing — parsing would consume the body stream before the proxy could forward it; each service parses its own body exactly as it did when called directly.
+
+Section 2.2's concrete changes, as actually done:
+1. `frontend/.env` **and** `frontend/.env.local`'s `NEXT_PUBLIC_API_BASE_URL` both had to be updated to `http://localhost:4400/api` — Next.js loads `.env.local` with higher priority than `.env`, and `.env.local` already had the old direct-to-claim-service URL, so editing only `.env` silently did nothing on the first attempt. Worth remembering for the next env-var change to this project: check for a `.env.local` override before assuming `.env`/`.env.example` are the whole picture.
+2. `JWT_SECRET`/`AUTH_COOKIE_NAME` were already correct (previously set to match auth-service) — no change needed.
+3. No `docker-compose.yml`/dev-script change was needed — this repo already runs every app service (frontend/claim-service/auth-service/communications-service/ai-service) as a local process via `npm run dev`/`uv run`, not in Docker (only the databases are containerized), so `gateway-service` follows the same existing pattern (`npm run dev` on port 4400) rather than introducing a new Docker service.
+4. `src/apis/reports/` — still not needed, Reports still isn't built.
+5. Confirmed true: zero changes to `apiManager.ts`, `SessionContext`, any `.api.ts` file, or any page/route.
+
+Verified end-to-end, not just per-service: real browser login (Playwright) through `http://localhost:3000/login` → `POST http://localhost:4400/api/auth/login` (200, cookie set) → redirected to `/dashboard` with real user/org data rendered — and a claim-service route (`GET /api/countries`) authenticated with that same cookie through the same gateway, confirming both halves of the routing table and the cross-service cookie flow described in section 1.3 actually work together, not just individually.
