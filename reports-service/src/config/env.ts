@@ -12,9 +12,8 @@ function requireEnv(key: string, fallback?: string): string {
 
 export const env = {
   nodeEnv: requireEnv("NODE_ENV", "development"),
-  port: Number(requireEnv("PORT", "4400")),
+  port: Number(requireEnv("PORT", "4500")),
   corsOrigin: requireEnv("CORS_ORIGIN", "http://localhost:3000"),
   authServiceUrl: requireEnv("AUTH_SERVICE_URL", "http://localhost:4300"),
   claimServiceUrl: requireEnv("CLAIM_SERVICE_URL", "http://localhost:4000"),
-  reportsServiceUrl: requireEnv("REPORTS_SERVICE_URL", "http://localhost:4500"),
 };

@@ -1,13 +1,16 @@
 # Microservices Extraction Plan
 
-Status: Phases 1-4 are all built — `communications-service`, `POST /api/auth/refresh`,
+Status: All 5 phases are built — `communications-service`, `POST /api/auth/refresh`,
 `auth-service`, and `claim-service` (own `CLAUDE.md` each; the original `backend/` directory no
 longer exists — it was renamed in place once every other domain had moved out of it). The API
-gateway is also now built (`gateway-service/`, own `CLAUDE.md`) — the frontend calls it as one
-shared base URL (`http://localhost:4400/api`), which forwards to `auth-service` (`:4300`) or
-`claim-service` (`:4000`) by path prefix; the browser never talks to either origin directly anymore.
-Only Phase 5 (`reports-service`) remains. See `docs/PLANS/microservices-frontend-integration-plan.md`
-for the gateway's routing table and completion notes.
+gateway is also built (`gateway-service/`, own `CLAUDE.md`) — the frontend calls it as one
+shared base URL (`http://localhost:4400/api`), which forwards to `auth-service` (`:4300`),
+`claim-service` (`:4000`), or `reports-service` (`:4500`) by path prefix; the browser never talks to
+any of those three origins directly. Phase 5 (`reports-service`, own `CLAUDE.md`) is done too —
+three read-only org-wide reports (`user-stories/028-reports.md`), still with no database of its own,
+gated by `isOwner` embedded in the access-token JWT the same way `organizationId` already was. See
+`docs/PLANS/microservices-frontend-integration-plan.md` for the gateway's routing table and
+completion notes.
 
 ## Why
 
@@ -194,8 +197,9 @@ no benefit.
    it correctly read (migrated) extraction-log data from ai-service's MySQL database instead of a
    local table, and confirmed ai-service's `/api/extract` writes and finalizes its own log row on a
    real (unconfigured-key) call.
-5. **reports-service**, built fresh once auth-service and claim-service have stable, documented read
-   APIs.
+5. **reports-service** — **done**. Built fresh (no data migration, per this step's own framing —
+   see `user-stories/028-reports.md` for the full story and completion notes), calling
+   auth-service's and claim-service's stable read APIs rather than owning any data itself.
 
 Each numbered step is its own migration: stand up the new service + DB, do a one-time data copy,
 point a gateway route at the new service, verify, then remove the migrated tables/code from the old
@@ -247,11 +251,11 @@ or monitoring dashboards you're running.
 - **An API gateway / reverse proxy** in front of all four services, so the frontend keeps hitting
   one origin — **now done** (`gateway-service/`, `http://localhost:4400`): `/api/auth/*` (+ grades/
   departments/roles/associated-organizations/employees/projects/airlines) → auth-service,
-  `/api/claims/*` + `/api/categories/*` + `/api/trips/*` + `/api/countries/*` + `/api/cities/*` →
-  claim-service, `/api/reports/*` → reports-service (routed once that service exists). This also
-  solves the httpOnly-cookie-across-services problem for free, since the browser only ever talks to
-  the gateway's own domain — see `docs/PLANS/microservices-frontend-integration-plan.md`'s
-  completion notes for how it was built.
+  `/api/claims/*` + `/api/categories/*` + `/api/trips/*` + `/api/countries/*` + `/api/cities/*` +
+  `/api/expenses/*` → claim-service, `/api/reports/*` → reports-service. This also solves the
+  httpOnly-cookie-across-services problem for free, since the browser only ever talks to the
+  gateway's own domain — see `docs/PLANS/microservices-frontend-integration-plan.md`'s completion
+  notes for how it was built.
 - **Three Postgres databases now in `docker-compose.yml` — all done**: `postgres` (the original,
   now retired-in-place, kept as a rollback safety net), `postgres-auth` (`5433`), `postgres-claim`
   (`5434`). Plus one MongoDB instance for communications-service and one MySQL instance for

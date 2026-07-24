@@ -6,7 +6,7 @@ import morgan from "morgan";
 import { env } from "./config/env";
 import { errorHandler, notFoundHandler } from "./middleware/error-handler";
 import { healthRouter } from "./routes/health.routes";
-import { AUTH_SERVICE_PATHS, CLAIM_SERVICE_PATHS } from "./routes/proxy-routes";
+import { AUTH_SERVICE_PATHS, CLAIM_SERVICE_PATHS, REPORTS_SERVICE_PATHS } from "./routes/proxy-routes";
 
 // Exact-prefix match (not a plain startsWith) so "/api/employees" doesn't
 // also swallow a hypothetical "/api/employees-export" route.
@@ -34,6 +34,7 @@ export function createApp(): Application {
   // sees it — the whole point of this gateway is that paths never change.
   const authProxy = createProxyMiddleware({ target: env.authServiceUrl, changeOrigin: true });
   const claimProxy = createProxyMiddleware({ target: env.claimServiceUrl, changeOrigin: true });
+  const reportsProxy = createProxyMiddleware({ target: env.reportsServiceUrl, changeOrigin: true });
 
   app.use((req, res, next) => {
     if (matchesPrefix(req.path, AUTH_SERVICE_PATHS)) {
@@ -42,6 +43,10 @@ export function createApp(): Application {
     }
     if (matchesPrefix(req.path, CLAIM_SERVICE_PATHS)) {
       claimProxy(req, res, next);
+      return;
+    }
+    if (matchesPrefix(req.path, REPORTS_SERVICE_PATHS)) {
+      reportsProxy(req, res, next);
       return;
     }
     next();

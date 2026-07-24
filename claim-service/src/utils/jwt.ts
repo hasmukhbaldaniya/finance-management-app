@@ -17,6 +17,9 @@ export type AccessTokenPayload = {
   type: "access";
   sub: number;
   organizationId: number;
+  // Added for 028-reports.md's org-wide read endpoints — see auth-service's
+  // jwt.ts for why this is embedded rather than looked up per request.
+  isOwner: boolean;
 };
 
 function isAccessTokenPayload(value: unknown): value is AccessTokenPayload {
