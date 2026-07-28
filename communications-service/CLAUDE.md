@@ -81,6 +81,13 @@ every request is allowed through; set the same value here and as the calling ser
 secret env var before running this service anywhere reachable beyond localhost. There is exactly one
 kind of legitimate caller (another internal service), never a browser.
 
+**`GET /api/notifications/latest?to=&channel=`** (`getLatestNotification`, same `requireInternalAuth`
+gate as the two send routes) is test-support only, added for the Cypress E2E suite
+(`docs/PLANS/cypress-e2e-testing-plan.md`) — it returns the most recent `NotificationLog` document's
+`subject`/`body` for a recipient, since that's the only place a real OTP/invite-link ever exists in
+plaintext (`Otp.otpHash` in `auth-service` is a one-way bcrypt hash and can't be reversed for tests).
+No real app flow calls this — `NotificationLog` is otherwise a write-only audit trail.
+
 ## Conventions
 
 Global rules in `~/.claude/CLAUDE.md` apply (TypeScript strictness, security). See root `CLAUDE.md`

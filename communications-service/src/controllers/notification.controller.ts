@@ -48,6 +48,36 @@ export async function sendEmailNotification(req: Request, res: Response): Promis
   }
 }
 
+// Test-support only — lets Cypress read back a delivered OTP/invite-link body
+// without a real inbox (see docs/PLANS/cypress-e2e-testing-plan.md). Not
+// called by any real app flow: NotificationLog is otherwise a write-only
+// audit trail. Gated by requireInternalAuth same as every other route here.
+export async function getLatestNotification(req: Request, res: Response): Promise<void> {
+  const { to, channel } = req.query as { to?: unknown; channel?: unknown };
+  if (!isNonEmptyString(to)) {
+    res.status(400).json({ error: "to is required." });
+    return;
+  }
+
+  const filter: { to: string; channel?: "email" | "whatsapp" } = { to };
+  if (channel === "email" || channel === "whatsapp") {
+    filter.channel = channel;
+  }
+
+  const latest = await NotificationLog.findOne(filter).sort({ createdAt: -1 });
+  if (!latest) {
+    res.status(404).json({ error: "No notification found for this recipient." });
+    return;
+  }
+
+  res.json({
+    channel: latest.channel,
+    subject: latest.subject,
+    body: latest.body,
+    createdAt: latest.createdAt,
+  });
+}
+
 // Always logs `status: "stubbed"` until a real WhatsApp provider is wired
 // into services/whatsapp.service.ts — never "sent", so a NotificationLog
 // listing can't be misread as real delivery history.
