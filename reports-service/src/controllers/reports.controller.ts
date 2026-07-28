@@ -17,12 +17,13 @@ export async function getExpenseSummary(req: AuthenticatedRequest, res: Response
   const to = optionalString(req.query.to);
   const department = optionalString(req.query.department);
 
+  // Always fetched now (not only when a department filter is set) — the
+  // By Employee view needs employee names for every expense regardless of
+  // whether the caller is also filtering by department.
   const [categoriesResult, expensesResult, employees] = await Promise.all([
     fetchAllCategories(cookie, req.requestId),
     fetchOrgExpenses(cookie, { from, to }, req.requestId),
-    // Only fetched when actually needed — the department join is the one
-    // place this report has to cross into auth-service's data at all.
-    department ? fetchAllEmployees(cookie, req.requestId) : Promise.resolve({ byId: new Map(), truncated: false }),
+    fetchAllEmployees(cookie, req.requestId),
   ]);
 
   const relevantExpenses = department
@@ -33,12 +34,21 @@ export async function getExpenseSummary(req: AuthenticatedRequest, res: Response
     : expensesResult.items;
 
   const totalsByCategoryId = new Map<number, { count: number; totalAmount: number }>();
+  const totalsByEmployeeName = new Map<string, { count: number; totalAmount: number }>();
   for (const expense of relevantExpenses) {
-    if (expense.categoryId === null) continue;
-    const current = totalsByCategoryId.get(expense.categoryId) ?? { count: 0, totalAmount: 0 };
-    current.count += 1;
-    current.totalAmount += Number(expense.amount);
-    totalsByCategoryId.set(expense.categoryId, current);
+    if (expense.categoryId !== null) {
+      const current = totalsByCategoryId.get(expense.categoryId) ?? { count: 0, totalAmount: 0 };
+      current.count += 1;
+      current.totalAmount += Number(expense.amount);
+      totalsByCategoryId.set(expense.categoryId, current);
+    }
+
+    const employee = expense.employeeId ? employees.byId.get(expense.employeeId) : undefined;
+    const employeeName = employee ? `${employee.firstName} ${employee.lastName}` : "Unknown";
+    const employeeTotals = totalsByEmployeeName.get(employeeName) ?? { count: 0, totalAmount: 0 };
+    employeeTotals.count += 1;
+    employeeTotals.totalAmount += Number(expense.amount);
+    totalsByEmployeeName.set(employeeName, employeeTotals);
   }
 
   const rows = categoriesResult.items
@@ -54,7 +64,11 @@ export async function getExpenseSummary(req: AuthenticatedRequest, res: Response
     })
     .sort((a, b) => b.totalAmount - a.totalAmount);
 
-  res.status(200).json({ rows, truncated: categoriesResult.truncated || expensesResult.truncated || employees.truncated });
+  const byEmployeeRows = Array.from(totalsByEmployeeName.entries())
+    .map(([employeeName, totals]) => ({ employeeName, count: totals.count, totalAmount: totals.totalAmount }))
+    .sort((a, b) => b.totalAmount - a.totalAmount);
+
+  res.status(200).json({ rows, byEmployeeRows, truncated: categoriesResult.truncated || expensesResult.truncated || employees.truncated });
 }
 
 // GET /api/reports/claim-cost?from=&to=&status=

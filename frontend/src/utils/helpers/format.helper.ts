@@ -57,6 +57,29 @@ export function getDefaultReportDateRange(): { from: string; to: string } {
   return { from: toDateOnly(from), to: toDateOnly(to) };
 }
 
+export type EmployeeSummaryRow = {
+  employeeName: string;
+  count: number;
+  totalAmount: number;
+};
+
+// Shared "By Employee" grouping for the four Dashboard reports — reduces
+// the already-fetched detail rows into one row per employee, client-side,
+// so the Detail/By Employee toggle is instant and needs no extra API call.
+export function groupByEmployee<T>(rows: T[], getEmployeeName: (row: T) => string | null, getAmount: (row: T) => number): EmployeeSummaryRow[] {
+  const totals = new Map<string, { count: number; totalAmount: number }>();
+  for (const row of rows) {
+    const employeeName = getEmployeeName(row) ?? "Unknown";
+    const current = totals.get(employeeName) ?? { count: 0, totalAmount: 0 };
+    current.count += 1;
+    current.totalAmount += getAmount(row);
+    totals.set(employeeName, current);
+  }
+  return Array.from(totals.entries())
+    .map(([employeeName, current]) => ({ employeeName, ...current }))
+    .sort((a, b) => b.totalAmount - a.totalAmount);
+}
+
 // ISO alpha-2 country code → flag emoji, via Unicode regional indicator
 // symbols (each letter maps to U+1F1E6 + offset from 'A'). Standard,
 // widely-used technique — no external flag-icon library needed since every

@@ -1,9 +1,11 @@
 "use client";
 
-import { useEffect, useState } from "react";
+import { useEffect, useMemo, useState } from "react";
 import Alert from "@mui/material/Alert";
 import Box from "@mui/material/Box";
 import Stack from "@mui/material/Stack";
+import ToggleButton from "@mui/material/ToggleButton";
+import ToggleButtonGroup from "@mui/material/ToggleButtonGroup";
 import Typography from "@mui/material/Typography";
 import { DatePicker } from "@/components/date-picker";
 import { SelectField } from "@/components/select-field";
@@ -15,18 +17,26 @@ import type { ClaimCostRow } from "@/types/report.type";
 import type { ClaimStatus } from "@/types/claim.type";
 import { CLAIM_STATUS_OPTIONS } from "@/utils/constants/claim.constant";
 import { ApiError, GENERIC_ERROR_MESSAGE } from "@/utils/apiManager/apiManager";
-import { formatInr, getDefaultReportDateRange } from "@/utils/helpers/format.helper";
+import { formatInr, getDefaultReportDateRange, groupByEmployee } from "@/utils/helpers/format.helper";
 import { format } from "date-fns";
+
+type ReportView = "detail" | "byEmployee";
 
 export function ClaimCostReport() {
   const [from, setFrom] = useState(() => getDefaultReportDateRange().from);
   const [to, setTo] = useState(() => getDefaultReportDateRange().to);
   const [status, setStatus] = useState<ClaimStatus | "">("");
+  const [view, setView] = useState<ReportView>("detail");
 
   const [rows, setRows] = useState<ClaimCostRow[]>([]);
   const [isTruncated, setIsTruncated] = useState(false);
   const [isLoading, setIsLoading] = useState(true);
   const [loadError, setLoadError] = useState<string | undefined>();
+
+  const byEmployeeRows = useMemo(
+    () => groupByEmployee(rows, (row) => row.employeeName, (row) => row.totalAmount),
+    [rows]
+  );
 
   useEffect(() => {
     let isMounted = true;
@@ -54,26 +64,42 @@ export function ClaimCostReport() {
 
   return (
     <Stack spacing={3}>
-      <Stack direction="row" spacing={2} sx={{ flexWrap: "wrap", alignItems: "flex-end" }}>
-        <Stack spacing={1}>
-          <Label htmlFor="claim-cost-from">From (Created)</Label>
-          <DatePicker id="claim-cost-from" value={from} onChange={setFrom} sx={{ height: 40, width: 200 }} />
+      <Stack direction="row" spacing={2} sx={{ flexWrap: "wrap", alignItems: "flex-end", justifyContent: "space-between" }}>
+        <Stack direction="row" spacing={2} sx={{ flexWrap: "wrap", alignItems: "flex-end" }}>
+          <Stack spacing={1}>
+            <Label htmlFor="claim-cost-from">From (Created)</Label>
+            <DatePicker id="claim-cost-from" value={from} onChange={setFrom} sx={{ height: 40, width: 200 }} />
+          </Stack>
+          <Stack spacing={1}>
+            <Label htmlFor="claim-cost-to">To (Created)</Label>
+            <DatePicker id="claim-cost-to" value={to} onChange={setTo} sx={{ height: 40, width: 200 }} />
+          </Stack>
+          <Stack spacing={1}>
+            <Label htmlFor="claim-cost-status">Status</Label>
+            <SelectField
+              id="claim-cost-status"
+              value={status}
+              onValueChange={(value) => setStatus(value as ClaimStatus | "")}
+              placeholder="All"
+              options={[{ value: "", label: "All" }, ...CLAIM_STATUS_OPTIONS.map((option) => ({ value: option.value, label: option.label }))]}
+              sx={{ height: 40, width: 208 }}
+            />
+          </Stack>
         </Stack>
-        <Stack spacing={1}>
-          <Label htmlFor="claim-cost-to">To (Created)</Label>
-          <DatePicker id="claim-cost-to" value={to} onChange={setTo} sx={{ height: 40, width: 200 }} />
-        </Stack>
-        <Stack spacing={1}>
-          <Label htmlFor="claim-cost-status">Status</Label>
-          <SelectField
-            id="claim-cost-status"
-            value={status}
-            onValueChange={(value) => setStatus(value as ClaimStatus | "")}
-            placeholder="All"
-            options={[{ value: "", label: "All" }, ...CLAIM_STATUS_OPTIONS.map((option) => ({ value: option.value, label: option.label }))]}
-            sx={{ height: 40, width: 208 }}
-          />
-        </Stack>
+        <ToggleButtonGroup
+          value={view}
+          exclusive
+          onChange={(_event, value: ReportView | null) => value && setView(value)}
+          size="small"
+          aria-label="Report view"
+        >
+          <ToggleButton value="detail" aria-label="Detail view">
+            Detail
+          </ToggleButton>
+          <ToggleButton value="byEmployee" aria-label="By employee view">
+            By Employee
+          </ToggleButton>
+        </ToggleButtonGroup>
       </Stack>
 
       {isTruncated && !isLoading && !loadError ? (
@@ -94,6 +120,25 @@ export function ClaimCostReport() {
         <Typography variant="body2" color="text.secondary" sx={{ py: 8, textAlign: "center" }}>
           No claims match these filters.
         </Typography>
+      ) : view === "byEmployee" ? (
+        <Table>
+          <TableHeader>
+            <TableRow>
+              <TableHead>Employee</TableHead>
+              <TableHead align="right">Claim Count</TableHead>
+              <TableHead align="right">Total Amount</TableHead>
+            </TableRow>
+          </TableHeader>
+          <TableBody>
+            {byEmployeeRows.map((row) => (
+              <TableRow key={row.employeeName}>
+                <TableCell>{row.employeeName}</TableCell>
+                <TableCell align="right">{row.count}</TableCell>
+                <TableCell align="right">{formatInr(row.totalAmount)}</TableCell>
+              </TableRow>
+            ))}
+          </TableBody>
+        </Table>
       ) : (
         <Table>
           <TableHeader>
