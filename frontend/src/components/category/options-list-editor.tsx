@@ -5,6 +5,7 @@ import Stack from "@mui/material/Stack";
 import { PlusIcon, TrashIcon } from "@phosphor-icons/react";
 import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
+import { useStableListKeys } from "@/hooks/useStableListKeys";
 
 type OptionsListEditorProps = {
   options: string[];
@@ -15,11 +16,14 @@ type OptionsListEditorProps = {
 // add/edit/delete-per-option pattern for both, per 013's Field-specific
 // configuration table.
 export function OptionsListEditor({ options, onChange }: OptionsListEditorProps) {
+  const stableKeys = useStableListKeys();
+
   function updateOption(index: number, value: string): void {
     onChange(options.map((option, i) => (i === index ? value : option)));
   }
 
   function removeOption(index: number): void {
+    stableKeys.removeAt(index);
     onChange(options.filter((_, i) => i !== index));
   }
 
@@ -27,10 +31,12 @@ export function OptionsListEditor({ options, onChange }: OptionsListEditorProps)
     onChange([...options, ""]);
   }
 
+  const keys = stableKeys.keys(options.length);
+
   return (
     <Stack spacing={1}>
       {options.map((option, index) => (
-        <Stack direction="row" key={index} spacing={1} sx={{ alignItems: "center" }}>
+        <Stack direction="row" key={keys[index]} spacing={1} sx={{ alignItems: "center" }}>
           <Input value={option} onChange={(event) => updateOption(index, event.target.value)} placeholder={`Option ${index + 1}`} />
           <Button type="button" variant="ghost" size="icon" aria-label={`Remove option ${index + 1}`} onClick={() => removeOption(index)}>
             <Box component="span" sx={{ color: "error.main", display: "flex" }}>

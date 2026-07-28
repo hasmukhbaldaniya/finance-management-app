@@ -18,7 +18,7 @@ function isErrorBody(value: unknown): value is { error: string } {
 // communications-service must not be able to hang this request forever.
 const REQUEST_TIMEOUT_MS = 10_000;
 
-async function postNotification(path: string, body: Record<string, unknown>): Promise<void> {
+async function postNotification(path: string, body: Record<string, unknown>, requestId?: string): Promise<void> {
   let response: Response;
   try {
     response = await fetch(`${env.communicationsService.url}${path}`, {
@@ -26,6 +26,7 @@ async function postNotification(path: string, body: Record<string, unknown>): Pr
       headers: {
         "Content-Type": "application/json",
         ...(env.communicationsService.internalApiKey ? { "X-Internal-Api-Key": env.communicationsService.internalApiKey } : {}),
+        ...(requestId ? { "X-Request-Id": requestId } : {}),
       },
       body: JSON.stringify(body),
       signal: AbortSignal.timeout(REQUEST_TIMEOUT_MS),
@@ -43,10 +44,10 @@ async function postNotification(path: string, body: Record<string, unknown>): Pr
   }
 }
 
-export async function sendEmail(params: { to: string; subject: string; text: string }): Promise<void> {
-  await postNotification("/api/notifications/email", params);
+export async function sendEmail(params: { to: string; subject: string; text: string }, requestId?: string): Promise<void> {
+  await postNotification("/api/notifications/email", params, requestId);
 }
 
-export async function sendWhatsApp(params: { to: string; message: string }): Promise<void> {
-  await postNotification("/api/notifications/whatsapp", params);
+export async function sendWhatsApp(params: { to: string; message: string }, requestId?: string): Promise<void> {
+  await postNotification("/api/notifications/whatsapp", params, requestId);
 }

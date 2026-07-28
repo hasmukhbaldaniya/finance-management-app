@@ -13,6 +13,7 @@ import { getEmployees, getEmployeesForPicker } from "@/apis/employee";
 import { getGrades } from "@/apis/grade";
 import { getProjects } from "@/apis/project";
 import { useCategoryWizard } from "@/contexts/CategoryWizardContext";
+import { useStableListKeys } from "@/hooks/useStableListKeys";
 import { ApiError, GENERIC_ERROR_MESSAGE } from "@/utils/apiManager/apiManager";
 import { CATEGORY_STEP_SEGMENTS, MAX_CLAIM_POLICIES, MAX_EXCEPTION_POLICIES } from "@/utils/constants/category.constant";
 import { ROUTES } from "@/utils/constants/route.constant";
@@ -39,6 +40,8 @@ export function PoliciesAndApprovalsForm({ categoryId }: PoliciesAndApprovalsFor
   const [formError, setFormError] = useState<string | null>(null);
   const [isSavingDraft, setIsSavingDraft] = useState(false);
   const [isSavingContinue, setIsSavingContinue] = useState(false);
+  const claimPolicyKeys = useStableListKeys();
+  const exceptionPolicyKeys = useStableListKeys();
 
   const showSaveAsDraft = wizard.status !== "active";
 
@@ -101,10 +104,12 @@ export function PoliciesAndApprovalsForm({ categoryId }: PoliciesAndApprovalsFor
       wizard.setClaimPolicies([createBlankPolicy([])]);
       return;
     }
+    claimPolicyKeys.removeAt(index);
     wizard.setClaimPolicies(wizard.claimPolicies.filter((_, i) => i !== index));
   }
 
   function deleteExceptionPolicy(index: number): void {
+    exceptionPolicyKeys.removeAt(index);
     wizard.setExceptionPolicies(wizard.exceptionPolicies.filter((_, i) => i !== index));
   }
 
@@ -159,6 +164,9 @@ export function PoliciesAndApprovalsForm({ categoryId }: PoliciesAndApprovalsFor
     );
   }
 
+  const claimPolicyKeyList = claimPolicyKeys.keys(wizard.claimPolicies.length);
+  const exceptionPolicyKeyList = exceptionPolicyKeys.keys(wizard.exceptionPolicies.length);
+
   return (
     <Stack spacing={3}>
       {formError ? (
@@ -183,7 +191,7 @@ export function PoliciesAndApprovalsForm({ categoryId }: PoliciesAndApprovalsFor
         <Stack spacing={1.5}>
           {wizard.claimPolicies.map((policy, index) => (
             <PolicyCard
-              key={index}
+              key={claimPolicyKeyList[index]}
               policy={policy}
               policyKind="claim"
               fields={wizard.fields}
@@ -211,7 +219,7 @@ export function PoliciesAndApprovalsForm({ categoryId }: PoliciesAndApprovalsFor
         <Stack spacing={1.5}>
           {wizard.exceptionPolicies.map((policy, index) => (
             <PolicyCard
-              key={index}
+              key={exceptionPolicyKeyList[index]}
               policy={policy}
               policyKind="exception"
               fields={wizard.fields}

@@ -7,7 +7,7 @@ import { verifyAccessToken } from "../utils/jwt";
 // it's immutable per employee. Every claim/category/trip controller that
 // used to call getActiveOrganizationId(req.userId) now just reads
 // req.organizationId directly.
-export type AuthenticatedRequest = Request & { userId?: number; organizationId?: number; isOwner?: boolean };
+export type AuthenticatedRequest = Request & { userId?: number; organizationId?: number; isOwner?: boolean; requestId?: string };
 
 export function requireAuth(req: AuthenticatedRequest, res: Response, next: NextFunction): void {
   const token: unknown = req.cookies?.[env.auth.cookieName];

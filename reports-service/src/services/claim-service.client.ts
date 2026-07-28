@@ -42,27 +42,30 @@ export type CategorySummary = {
 
 export function fetchOrgClaims(
   cookie: string,
-  params: { from?: string; to?: string; status?: string }
+  params: { from?: string; to?: string; status?: string },
+  requestId?: string
 ): Promise<PagedResult<ClaimSummary>> {
-  return fetchAllPages<ClaimSummary>(env.claimServiceUrl, "/api/claims/org", "claims", cookie, params);
+  return fetchAllPages<ClaimSummary>(env.claimServiceUrl, "/api/claims/org", "claims", cookie, params, requestId);
 }
 
 export function fetchOrgTrips(
   cookie: string,
-  params: { from?: string; to?: string; status?: string }
+  params: { from?: string; to?: string; status?: string },
+  requestId?: string
 ): Promise<PagedResult<TripSummary>> {
-  return fetchAllPages<TripSummary>(env.claimServiceUrl, "/api/trips/org", "trips", cookie, params);
+  return fetchAllPages<TripSummary>(env.claimServiceUrl, "/api/trips/org", "trips", cookie, params, requestId);
 }
 
 export function fetchOrgExpenses(
   cookie: string,
-  params: { from?: string; to?: string; isRedFlagged?: string; categoryId?: string }
+  params: { from?: string; to?: string; isRedFlagged?: string; categoryId?: string },
+  requestId?: string
 ): Promise<PagedResult<ExpenseSummary>> {
-  return fetchAllPages<ExpenseSummary>(env.claimServiceUrl, "/api/expenses/org", "expenses", cookie, params);
+  return fetchAllPages<ExpenseSummary>(env.claimServiceUrl, "/api/expenses/org", "expenses", cookie, params, requestId);
 }
 
 // Categories are already org-wide (not per-employee) on claim-service — no
 // new endpoint needed, just a plain forward of the existing one.
-export function fetchAllCategories(cookie: string): Promise<PagedResult<CategorySummary>> {
-  return fetchAllPages<CategorySummary>(env.claimServiceUrl, "/api/categories", "categories", cookie);
+export function fetchAllCategories(cookie: string, requestId?: string): Promise<PagedResult<CategorySummary>> {
+  return fetchAllPages<CategorySummary>(env.claimServiceUrl, "/api/categories", "categories", cookie, {}, requestId);
 }

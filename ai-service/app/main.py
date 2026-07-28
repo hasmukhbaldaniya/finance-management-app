@@ -1,3 +1,6 @@
+import time
+import uuid
+
 from fastapi import FastAPI, Request
 from fastapi.exceptions import HTTPException, RequestValidationError
 from fastapi.middleware.cors import CORSMiddleware
@@ -17,6 +20,26 @@ app.add_middleware(
 )
 
 
+# This is a leaf service (its only outbound call is the external Anthropic
+# API, not another internal service), so it just needs to reuse whichever
+# request-id claim-service forwarded — or mint one if called directly — and
+# put it in this service's own access log, so a slow/failed extraction can
+# be traced back to the same chain claim-service's own logs show.
+@app.middleware("http")
+async def request_id_middleware(request: Request, call_next):
+    incoming = request.headers.get("x-request-id")
+    request_id = incoming if incoming and incoming.strip() else str(uuid.uuid4())
+    request.state.request_id = request_id
+
+    start = time.monotonic()
+    response = await call_next(request)
+    duration_ms = round((time.monotonic() - start) * 1000, 1)
+
+    response.headers["x-request-id"] = request_id
+    print(f"{request_id} {request.method} {request.url.path} {response.status_code} {duration_ms}ms")
+    return response
+
+
 # Every error response across this app (and the main Node.js backend) uses
 # a flat { "error": string } JSON shape — these three handlers replace
 # FastAPI's own default shapes (a bare "detail" string/array) so this
@@ -33,8 +56,9 @@ async def validation_exception_handler(_request: Request, _exc: RequestValidatio
 
 
 @app.exception_handler(Exception)
-async def unhandled_exception_handler(_request: Request, exc: Exception) -> JSONResponse:
-    print(f"Unhandled error: {exc}")
+async def unhandled_exception_handler(request: Request, exc: Exception) -> JSONResponse:
+    request_id = getattr(request.state, "request_id", "-")
+    print(f"{request_id} Unhandled error: {exc}")
     return JSONResponse(status_code=500, content={"error": "Something went wrong. Please try again."})
 
 

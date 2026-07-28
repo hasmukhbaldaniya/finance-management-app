@@ -45,8 +45,11 @@ function isErrorBody(value: unknown): value is { error: string } {
   return typeof value === "object" && value !== null && typeof (value as { error?: unknown }).error === "string";
 }
 
-function authHeaders(): Record<string, string> {
-  return env.aiService.internalApiKey ? { "X-Internal-Api-Key": env.aiService.internalApiKey } : {};
+function authHeaders(requestId?: string): Record<string, string> {
+  return {
+    ...(env.aiService.internalApiKey ? { "X-Internal-Api-Key": env.aiService.internalApiKey } : {}),
+    ...(requestId ? { "X-Request-Id": requestId } : {}),
+  };
 }
 
 // No retry/circuit-breaker sits in front of this call — a wedged ai-service
@@ -67,18 +70,21 @@ function isTimeout(err: unknown): boolean {
 // natively. `claimInvoiceFileId`/`pageNumber` let ai-service write its own
 // audit-log row keyed the same way claim-service itself correlates a
 // resulting Expense back to its source (sourceInvoiceFileId/sourcePageNumber).
-export async function extractInvoiceData(params: {
-  documentBase64: string;
-  mediaType: "application/pdf" | "image/jpeg" | "image/png";
-  categories: CategoryForExtraction[];
-  claimInvoiceFileId: number;
-  pageNumber: number | null;
-}): Promise<AiExtractionResult> {
+export async function extractInvoiceData(
+  params: {
+    documentBase64: string;
+    mediaType: "application/pdf" | "image/jpeg" | "image/png";
+    categories: CategoryForExtraction[];
+    claimInvoiceFileId: number;
+    pageNumber: number | null;
+  },
+  requestId?: string
+): Promise<AiExtractionResult> {
   let response: Response;
   try {
     response = await fetch(`${env.aiService.url}/api/extract`, {
       method: "POST",
-      headers: { "Content-Type": "application/json", ...authHeaders() },
+      headers: { "Content-Type": "application/json", ...authHeaders(requestId) },
       body: JSON.stringify(params),
       signal: AbortSignal.timeout(EXTRACTION_TIMEOUT_MS),
     });
@@ -106,13 +112,13 @@ export async function extractInvoiceData(params: {
 // claim-ai.controller.ts uses this both to skip invoice files that already
 // have a logged extraction attempt (runExtractionForClaim's dedup) and to
 // report processing completion (getProcessingStatus's poll).
-export async function listExtractionLogs(claimInvoiceFileIds: number[]): Promise<ExtractionLogEntry[]> {
+export async function listExtractionLogs(claimInvoiceFileIds: number[], requestId?: string): Promise<ExtractionLogEntry[]> {
   if (claimInvoiceFileIds.length === 0) return [];
 
   let response: Response;
   try {
     response = await fetch(`${env.aiService.url}/api/extraction-logs?claimInvoiceFileIds=${claimInvoiceFileIds.join(",")}`, {
-      headers: authHeaders(),
+      headers: authHeaders(requestId),
       signal: AbortSignal.timeout(LOG_LOOKUP_TIMEOUT_MS),
     });
   } catch (err) {

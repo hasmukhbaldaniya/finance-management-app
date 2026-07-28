@@ -54,7 +54,7 @@ export async function getValidAirlineIds(): Promise<Set<number>> {
   return cachedAirlineIds;
 }
 
-export async function lookupEmployees(ids: number[]): Promise<EmployeeLookupResult[]> {
+export async function lookupEmployees(ids: number[], requestId?: string): Promise<EmployeeLookupResult[]> {
   if (ids.length === 0) return [];
 
   let response: Response;
@@ -64,6 +64,7 @@ export async function lookupEmployees(ids: number[]): Promise<EmployeeLookupResu
       headers: {
         "Content-Type": "application/json",
         ...(env.authService.internalApiKey ? { "X-Internal-Api-Key": env.authService.internalApiKey } : {}),
+        ...(requestId ? { "X-Request-Id": requestId } : {}),
       },
       body: JSON.stringify({ ids }),
       signal: AbortSignal.timeout(REQUEST_TIMEOUT_MS),

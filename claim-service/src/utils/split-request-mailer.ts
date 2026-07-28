@@ -6,18 +6,24 @@ import { sendEmail } from "../services/communications.service";
 // itself from being created (025's own posture, matching how OTP/invite
 // emails already aren't transactional with the action they notify about in
 // this codebase).
-export async function sendSplitRequestEmail(params: {
-  email: string;
-  recipientFirstName: string;
-  requesterName: string;
-  categoryName: string;
-  amount: string;
-  inboxLink: string;
-}): Promise<void> {
+export async function sendSplitRequestEmail(
+  params: {
+    email: string;
+    recipientFirstName: string;
+    requesterName: string;
+    categoryName: string;
+    amount: string;
+    inboxLink: string;
+  },
+  requestId?: string
+): Promise<void> {
   const { email, recipientFirstName, requesterName, categoryName, amount, inboxLink } = params;
-  await sendEmail({
-    to: email,
-    subject: `${requesterName} wants to split an expense with you`,
-    text: `Hi ${recipientFirstName},\n\n${requesterName} has asked you to cover a ₹${amount} share of a ${categoryName} expense. Review and respond here:\n\n${inboxLink}`,
-  });
+  await sendEmail(
+    {
+      to: email,
+      subject: `${requesterName} wants to split an expense with you`,
+      text: `Hi ${recipientFirstName},\n\n${requesterName} has asked you to cover a ₹${amount} share of a ${categoryName} expense. Review and respond here:\n\n${inboxLink}`,
+    },
+    requestId
+  );
 }

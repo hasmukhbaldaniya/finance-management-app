@@ -19,11 +19,11 @@ export type EmployeeLookup = {
 // caller's own expenses/trips from a department breakdown. Fetched
 // separately via GET /employees/me and merged in here so every report
 // caller sees their own records too, not just everyone else's.
-export async function fetchAllEmployees(cookie: string): Promise<EmployeeLookup> {
+export async function fetchAllEmployees(cookie: string, requestId?: string): Promise<EmployeeLookup> {
   const [others, me] = await Promise.all([
-    fetchAllPages<EmployeeSummary>(env.authServiceUrl, "/api/employees", "employees", cookie),
+    fetchAllPages<EmployeeSummary>(env.authServiceUrl, "/api/employees", "employees", cookie, {}, requestId),
     fetch(new URL("/api/employees/me", env.authServiceUrl), {
-      headers: { Cookie: cookie },
+      headers: { Cookie: cookie, ...(requestId ? { "X-Request-Id": requestId } : {}) },
       signal: AbortSignal.timeout(UPSTREAM_TIMEOUT_MS),
     }).then(async (response) => {
       if (!response.ok) throw new UpstreamError(response.status, "Couldn't load the caller's own profile.");

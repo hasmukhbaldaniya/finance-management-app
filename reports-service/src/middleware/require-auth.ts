@@ -15,6 +15,7 @@ export type AuthenticatedRequest = Request & {
   organizationId?: number;
   isOwner?: boolean;
   cookieHeader?: string;
+  requestId?: string;
 };
 
 export function requireAuth(req: AuthenticatedRequest, res: Response, next: NextFunction): void {

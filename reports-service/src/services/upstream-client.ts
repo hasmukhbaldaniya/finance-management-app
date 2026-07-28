@@ -29,10 +29,13 @@ const PAGE_SIZE = 100;
 // indefinitely.
 export const UPSTREAM_TIMEOUT_MS = 10_000;
 
-async function fetchJson(url: URL, cookie: string): Promise<Record<string, unknown>> {
+async function fetchJson(url: URL, cookie: string, requestId?: string): Promise<Record<string, unknown>> {
   let response: Response;
   try {
-    response = await fetch(url, { headers: { Cookie: cookie }, signal: AbortSignal.timeout(UPSTREAM_TIMEOUT_MS) });
+    response = await fetch(url, {
+      headers: { Cookie: cookie, ...(requestId ? { "X-Request-Id": requestId } : {}) },
+      signal: AbortSignal.timeout(UPSTREAM_TIMEOUT_MS),
+    });
   } catch (err) {
     if (err instanceof Error && err.name === "TimeoutError") {
       throw new UpstreamError(504, `${url.hostname} took too long to respond.`);
@@ -67,7 +70,8 @@ export async function fetchAllPages<T>(
   path: string,
   itemsKey: string,
   cookie: string,
-  params: Record<string, string | undefined> = {}
+  params: Record<string, string | undefined> = {},
+  requestId?: string
 ): Promise<PagedResult<T>> {
   const items: T[] = [];
   let truncated = false;
@@ -78,7 +82,7 @@ export async function fetchAllPages<T>(
     for (const [key, value] of Object.entries(params)) {
       if (value !== undefined) url.searchParams.set(key, value);
     }
-    const body = await fetchJson(url, cookie);
+    const body = await fetchJson(url, cookie, requestId);
     const pageItems = Array.isArray(body[itemsKey]) ? (body[itemsKey] as T[]) : [];
     items.push(...pageItems);
     if (!body.hasMore) break;

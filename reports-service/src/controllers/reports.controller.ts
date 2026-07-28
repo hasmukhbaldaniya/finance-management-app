@@ -18,11 +18,11 @@ export async function getExpenseSummary(req: AuthenticatedRequest, res: Response
   const department = optionalString(req.query.department);
 
   const [categoriesResult, expensesResult, employees] = await Promise.all([
-    fetchAllCategories(cookie),
-    fetchOrgExpenses(cookie, { from, to }),
+    fetchAllCategories(cookie, req.requestId),
+    fetchOrgExpenses(cookie, { from, to }, req.requestId),
     // Only fetched when actually needed — the department join is the one
     // place this report has to cross into auth-service's data at all.
-    department ? fetchAllEmployees(cookie) : Promise.resolve({ byId: new Map(), truncated: false }),
+    department ? fetchAllEmployees(cookie, req.requestId) : Promise.resolve({ byId: new Map(), truncated: false }),
   ]);
 
   const relevantExpenses = department
@@ -67,7 +67,10 @@ export async function getClaimCostReport(req: AuthenticatedRequest, res: Respons
   const to = optionalString(req.query.to);
   const status = optionalString(req.query.status);
 
-  const [claimsResult, employees] = await Promise.all([fetchOrgClaims(cookie, { from, to, status }), fetchAllEmployees(cookie)]);
+  const [claimsResult, employees] = await Promise.all([
+    fetchOrgClaims(cookie, { from, to, status }, req.requestId),
+    fetchAllEmployees(cookie, req.requestId),
+  ]);
 
   const rows = claimsResult.items
     .map((claim) => {
@@ -97,7 +100,10 @@ export async function getTripCostReport(req: AuthenticatedRequest, res: Response
   const to = optionalString(req.query.to);
   const status = optionalString(req.query.status);
 
-  const [tripsResult, employees] = await Promise.all([fetchOrgTrips(cookie, { from, to, status }), fetchAllEmployees(cookie)]);
+  const [tripsResult, employees] = await Promise.all([
+    fetchOrgTrips(cookie, { from, to, status }, req.requestId),
+    fetchAllEmployees(cookie, req.requestId),
+  ]);
 
   const rows = tripsResult.items
     .map((trip) => {
@@ -124,8 +130,8 @@ export async function getRedFlaggedExpensesReport(req: AuthenticatedRequest, res
   const to = optionalString(req.query.to);
 
   const [expensesResult, employees] = await Promise.all([
-    fetchOrgExpenses(cookie, { from, to, isRedFlagged: "true" }),
-    fetchAllEmployees(cookie),
+    fetchOrgExpenses(cookie, { from, to, isRedFlagged: "true" }, req.requestId),
+    fetchAllEmployees(cookie, req.requestId),
   ]);
 
   const rows = expensesResult.items.map((expense) => {
