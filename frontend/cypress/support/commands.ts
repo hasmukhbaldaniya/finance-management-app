@@ -17,6 +17,31 @@ export type LatestNotification = {
   createdAt: string;
 };
 
+// Every dropdown in this app is src/components/select-field.tsx (a MUI
+// `Select`). Two accessibility gaps make the usual findByLabelText/findByRole
+// approach fail on it, confirmed against MUI's own SelectInput source:
+//   1. Its visible, interactive part is a `role="combobox"` <div> — not a
+//      labelable element per the HTML spec — so a `<label htmlFor>` pointing
+//      at it (which select-field.tsx's callers all do, matching every other
+//      field in this app) is simply invalid HTML; findByLabelText refuses it.
+//   2. select-field.tsx never passes MUI's `labelId`/`label`/`aria-label`
+//      props, so that combobox <div> has no accessible name via ARIA either
+//      — the `id` it IS given lands on a hidden native <input> instead (MUI's
+//      own a11y escape hatch for a real <label for>, which this codebase
+//      doesn't use). Net effect: this component currently has no accessible
+//      name at all, a real gap against the global "every interactive element
+//      needs the ARIA attributes its role requires" rule — flagged, not
+//      fixed here (out of scope for adding tests; would need a select-field.tsx
+//      change plus a design call on which prop to wire).
+// Until that's fixed, locate the combobox by DOM proximity to its sibling
+// <label> instead. Reused across every module with a SelectField (Employee
+// Invitation, Category/Trip/Claim forms, ...), not just Employee Management.
+Cypress.Commands.add("selectMuiOption", (labelText: string | RegExp, optionText: string | RegExp) => {
+  const labelMatcher = typeof labelText === "string" ? new RegExp(`^${labelText}$`) : labelText;
+  cy.contains("label", labelMatcher).parent().find('[role="combobox"]').click();
+  return cy.findByRole("option", { name: optionText }).click();
+});
+
 const GATEWAY_URL = Cypress.env("gatewayUrl") as string;
 const COMMUNICATIONS_SERVICE_URL = Cypress.env("communicationsServiceUrl") as string;
 const COMMUNICATIONS_INTERNAL_API_KEY = Cypress.env("communicationsInternalApiKey") as string;
@@ -63,6 +88,17 @@ Cypress.Commands.add("extractOtp", { prevSubject: true } as const, (notification
     throw new Error(`No 6-digit OTP found in notification body: ${notification.body}`);
   }
   return cy.wrap(match[0]);
+});
+
+// The employee-invite email links to `<frontend origin>/onboarding?token=<jwt>`
+// (auth-service/src/utils/employee-invite-mailer.ts) — pulls just the token
+// out of that URL.
+Cypress.Commands.add("extractToken", { prevSubject: true } as const, (notification: LatestNotification) => {
+  const match = notification.body.match(/\?token=(\S+)/);
+  if (!match) {
+    throw new Error(`No onboarding token found in notification body: ${notification.body}`);
+  }
+  return cy.wrap(match[1]);
 });
 
 // Creates a brand-new organization by calling the real registration
@@ -121,14 +157,179 @@ Cypress.Commands.add("apiRegisterOrganization", (overrides: Partial<RegisteredOr
     });
 });
 
+export type InvitedEmployee = {
+  employeeId: number;
+  email: string;
+  password: string;
+  firstName: string;
+  lastName: string;
+  roleId: number;
+  departmentId: number;
+  gradeId: number;
+  /** true once the onboarding chain has actually run — false means only the invite (008) half happened, e.g. for testing Employee Listing's "pending invitation"/Resend Invite state. */
+  onboarded: boolean;
+};
+
+export type InviteAndOnboardOverrides = {
+  roleName?: string; // "Company Admin" | "Members" (both always seeded, see auth-service's createRegistration) or a custom role name
+  password?: string;
+  /** Set false to stop after sending the invite (008) — skips 011's onboarding chain entirely, leaving the employee in "Pending Invitation" status. Defaults true. */
+  onboard?: boolean;
+};
+
+// Invites a brand-new employee (008's 5-call sequence) and immediately
+// accepts that invite (011's onboarding chain) via direct API calls — the
+// Phase 2 counterpart to cy.apiRegisterOrganization. Must run as an
+// already-authenticated owner/Company-Admin (i.e. after cy.apiRegisterOrganization
+// in the same test), since it reads the caller's own id off GET /auth/me to
+// use as the new employee's Level 1 approver.
+//
+// A freshly-registered org has the two seeded Roles but zero Departments/
+// Grades, so this also creates one throwaway Department + Grade to satisfy
+// Company Access's required fields — real endpoint calls, not fixtures.
+//
+// Ends with the SAME chain onboarding/mobile/page.tsx's own "Skip" button
+// takes (mobile number saved, OTP verification skipped) and leaves the
+// browser holding a valid session cookie for the NEW EMPLOYEE, not the
+// owner who called this — cy.loginAs(ownerEmail, ownerPassword) afterward
+// to switch back if a test still needs to act as the owner.
+Cypress.Commands.add("apiInviteAndOnboardEmployee", (overrides: InviteAndOnboardOverrides = {}) => {
+  const unique = `${Date.now()}${Cypress._.random(100, 999)}`;
+  const email = `cypress-employee-${unique}@example.com`;
+  const password = overrides.password ?? "Cypress@123";
+  const firstName = "Cypress";
+  const lastName = "Employee";
+  const roleName = overrides.roleName ?? "Members";
+  const inviteContactNumber = `9${unique.slice(-9)}`;
+  const onboardingContactNumber = `8${unique.slice(-9)}`;
+
+  type Ctx = { ownerId: number; roleId: number; departmentId: number; gradeId: number; employeeId: number; token: string };
+
+  return cy
+    .request("GET", `${GATEWAY_URL}/auth/me`)
+    .then(({ body }) => (body as { user: { id: number } }).user.id)
+    .then((ownerId) =>
+      cy.request("GET", `${GATEWAY_URL}/roles`).then(({ body }) => {
+        const role = (body as { roles: { id: number; name: string }[] }).roles.find((r) => r.name === roleName);
+        if (!role) {
+          throw new Error(`Role "${roleName}" not found — was the organization registered via cy.apiRegisterOrganization()?`);
+        }
+        return { ownerId, roleId: role.id };
+      })
+    )
+    .then(({ ownerId, roleId }) =>
+      cy
+        .request("POST", `${GATEWAY_URL}/departments`, { name: `Cypress Dept ${unique}` })
+        .then(({ body }) => ({ ownerId, roleId, departmentId: (body as { department: { id: number } }).department.id }))
+    )
+    .then(({ ownerId, roleId, departmentId }) =>
+      cy
+        .request("POST", `${GATEWAY_URL}/grades`, { name: `Cypress Grade ${unique}` })
+        .then(({ body }) => ({ ownerId, roleId, departmentId, gradeId: (body as { grade: { id: number } }).grade.id }))
+    )
+    .then(({ ownerId, roleId, departmentId, gradeId }) =>
+      cy
+        .request("POST", `${GATEWAY_URL}/employees`, {
+          title: "Mr",
+          firstName,
+          lastName,
+          email,
+          countryCode: "+91",
+          contactNumber: inviteContactNumber,
+          gender: "Male",
+        })
+        .then(({ body }) => ({ ownerId, roleId, departmentId, gradeId, employeeId: (body as { id: number }).id }))
+    )
+    .then((ctx) =>
+      cy
+        .request("PUT", `${GATEWAY_URL}/employees/${ctx.employeeId}/company-access`, {
+          roleId: ctx.roleId,
+          departmentId: ctx.departmentId,
+          gradeId: ctx.gradeId,
+          projectIds: [],
+        })
+        .then(() => ctx)
+    )
+    .then((ctx) =>
+      cy.request("POST", `${GATEWAY_URL}/employees/${ctx.employeeId}/ff-numbers`, { ffNumbers: [] }).then(() => ctx)
+    )
+    .then((ctx) =>
+      cy
+        .request("POST", `${GATEWAY_URL}/employees/${ctx.employeeId}/approvals`, {
+          approvers: [{ level: 1, approverEmployeeId: ctx.ownerId }],
+        })
+        .then(() => ctx)
+    )
+    .then((ctx) => cy.request("POST", `${GATEWAY_URL}/employees/${ctx.employeeId}/invitations`).then(() => ctx))
+    .then((ctx) => {
+      if (overrides.onboard === false) {
+        const result: InvitedEmployee = {
+          employeeId: ctx.employeeId,
+          email,
+          password,
+          firstName,
+          lastName,
+          roleId: ctx.roleId,
+          departmentId: ctx.departmentId,
+          gradeId: ctx.gradeId,
+          onboarded: false,
+        };
+        return cy.wrap(result);
+      }
+
+      return cy
+        .getLatestNotification(email, "email")
+        .extractToken()
+        .then((token) => ({ ...ctx, token }) as Ctx)
+        .then((c) =>
+          cy.request("POST", `${GATEWAY_URL}/employee-onboarding/verify-token`, { token: c.token }).then(() => c)
+        )
+        .then((c) =>
+          cy.request("POST", `${GATEWAY_URL}/employee-onboarding/password`, { token: c.token, password }).then(() => c)
+        )
+        .then((c) =>
+          cy
+            .request("POST", `${GATEWAY_URL}/employee-onboarding/profile`, { token: c.token, title: "Mr", firstName, lastName })
+            .then(() => c)
+        )
+        .then((c) =>
+          cy
+            .request("PUT", `${GATEWAY_URL}/employee-onboarding/mobile`, {
+              token: c.token,
+              countryCode: "+91",
+              contactNumber: onboardingContactNumber,
+            })
+            .then(() => c)
+        )
+        .then((c) => cy.request("POST", `${GATEWAY_URL}/employee-onboarding/complete`, { token: c.token }).then(() => c))
+        .then((c) => {
+          const result: InvitedEmployee = {
+            employeeId: c.employeeId,
+            email,
+            password,
+            firstName,
+            lastName,
+            roleId: c.roleId,
+            departmentId: c.departmentId,
+            gradeId: c.gradeId,
+            onboarded: true,
+          };
+          return result;
+        });
+    });
+});
+
 declare global {
   // eslint-disable-next-line @typescript-eslint/no-namespace
   namespace Cypress {
     interface Chainable {
       loginAs(identifier: string, password: string): Chainable<null>;
+      selectMuiOption(labelText: string | RegExp, optionText: string | RegExp): Chainable<JQuery<HTMLElement>>;
       getLatestNotification(to: string, channel?: "email" | "whatsapp"): Chainable<LatestNotification>;
       extractOtp(): Chainable<string>;
+      extractToken(): Chainable<string>;
       apiRegisterOrganization(overrides?: Partial<RegisteredOrganization>): Chainable<RegisteredOrganization>;
+      apiInviteAndOnboardEmployee(overrides?: InviteAndOnboardOverrides): Chainable<InvitedEmployee>;
     }
   }
 }

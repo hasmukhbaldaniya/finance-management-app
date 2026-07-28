@@ -202,21 +202,30 @@ doubles as a cheap accessibility regression check; a `data-cy="<kebab-name>"` at
 component only when a query is genuinely ambiguous (e.g. picking one row out of a dynamic table),
 added in the same PR as the test that needs it.
 
-**`cypress/support/commands.ts`** holds three commands every module's spec relies on: `cy.loginAs`
+**`cypress/support/commands.ts`** holds the commands every module's spec relies on: `cy.loginAs`
 (session-cached login via a direct `POST /auth/login`, not the UI — only `001-authentication`'s own
 spec drives the real login form), `cy.apiRegisterOrganization` (creates a brand-new org via the real
 registration endpoints, called through the gateway, for every module to run its tests inside — no
-module's tests mutate the shared demo org), and `cy.getLatestNotification` (reads a delivered
-OTP/invite-link body back from `communications-service`'s `NotificationLog` directly, bypassing the
-gateway — the one deliberate exception to "tests only call the gateway", since there's no real inbox
-in this loop and `auth-service` only ever stores a one-way hash of the OTP, never the plaintext).
+module's tests mutate the shared demo org), `cy.apiInviteAndOnboardEmployee` (008's invite chain +
+011's onboarding chain via direct API calls, with an `onboard: false` option to stop after just the
+invite — e.g. for testing Employee Listing's Pending/Resend state), `cy.getLatestNotification` (reads
+a delivered OTP/invite-link body back from `communications-service`'s `NotificationLog` directly,
+bypassing the gateway — the one deliberate exception to "tests only call the gateway", since there's
+no real inbox in this loop and `auth-service` only ever stores a one-way hash of the OTP, never the
+plaintext), and `cy.selectMuiOption` (opens/picks a `select-field.tsx` `SelectField` dropdown by its
+sibling `<label>` text — necessary because that component currently has no accessible name at all,
+a real a11y gap; see the plan doc's "Implementation notes from Phase 2" for the full writeup and two
+further gaps found the same way: filter-row `Input`s with only a shared, non-unique
+`placeholder="Search"`, and MUI's `Switch` putting a passed `aria-label` on the wrong DOM node).
 `communications-service`'s `INTERNAL_API_KEY` must be copied into `frontend/cypress.env.json`
 (gitignored — see `cypress.env.json.example`) for `cy.getLatestNotification` to authenticate.
 
 Every module past `001`/`002` bootstraps its own organization in a `before` hook via
 `cy.apiRegisterOrganization()` rather than sharing one fixture — this keeps spec files independent
-of each other's run order. See the plan doc's phasing table for which stories are covered and in
-what order they're being built out.
+of each other's run order (test isolation clears cookies before every test regardless, so a
+`beforeEach` calling `cy.loginAs(...)` is still needed to re-establish the session even when the org
+itself was only created once in a `before`). See the plan doc's phasing table for which stories are
+covered and in what order they're being built out.
 
 **Truncation**: `reports-service` caps each upstream source at 2,000 rows (`MAX_PAGES`/`PAGE_SIZE` in its own `upstream-client.ts`) and returns `truncated: boolean` alongside `rows` — every report component shows an `Alert severity="warning"` when true, telling the admin to narrow the date range for a complete result.
 

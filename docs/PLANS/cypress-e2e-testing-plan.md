@@ -1,13 +1,21 @@
 # Cypress End-to-End Testing Plan
 
-Status: **Phase 1 (Authentication + Organization Signup) is built and green — 11/11 tests passing
-against the real stack.** `frontend/cypress/` now holds the suite (`cypress.config.ts`,
-`cypress/support/commands.ts`'s `cy.loginAs`/`cy.apiRegisterOrganization`/`cy.getLatestNotification`,
-specs under `cypress/e2e/001-authentication/` and `cypress/e2e/002-organization-signup/`) — see
-"Implementation notes from Phase 1" near the end of this doc for the real environment gotchas hit
+Status: **Phases 1 and 2 are built and green — 32/32 tests passing across all 9 spec files against
+the real stack** (Authentication, Organization Signup, Header Navigation, Employee Invitation,
+Employee Listing, Bulk Invite, Employee Onboarding, Employee Profile). `frontend/cypress/` holds the
+suite (`cypress.config.ts`, `cypress/support/commands.ts`'s `cy.loginAs`/`cy.apiRegisterOrganization`/
+`cy.apiInviteAndOnboardEmployee`/`cy.getLatestNotification`/`cy.selectMuiOption`, specs under
+`cypress/e2e/001-authentication/`, `cypress/e2e/002-organization-signup/`,
+`cypress/e2e/003-header-navigation/`, `cypress/e2e/008-011-employee-management/`, and
+`cypress/e2e/012-employee-profile/`) — see "Implementation notes from Phase 1" and "Implementation
+notes from Phase 2" near the end of this doc for the real environment gotchas and a11y gaps hit
 along the way. Every later phase (see "Phasing" below) proceeds the same way: its own PR, updating
 `frontend/CLAUDE.md` per the global rule that whoever introduces a new top-level convention
 documents it in the same PR (Phase 1 already did this for the `cypress/` convention itself).
+
+A full `cypress run` across all 9 spec files takes ~2 minutes once services are warm — real SMTP
+round-trips (~2-4s each) dominate individual OTP-dependent tests, but the suite as a whole is not
+slow enough to need splitting up.
 
 ## Why Cypress, and why it lives in `frontend/`
 
@@ -297,10 +305,75 @@ before writing Phase 2+:
   synchronously before responding; the `cy.location(...).should(...)` right after each uses an
   explicit `{ timeout: 15000 }`.
 
+## Implementation notes from Phase 2
+
+Phase 2 added `cy.apiInviteAndOnboardEmployee()` (008's invite chain + 011's onboarding chain,
+with an `onboard: false` escape hatch for tests that need a still-pending invite) and
+`cy.selectMuiOption()`, then covered Header Navigation (003), Employee Invitation/Listing/Bulk
+Invite/Onboarding (008-011), and Employee Profile (012). Several real, pre-existing accessibility
+gaps and MUI quirks surfaced — all worth knowing before Phase 3 (Grade/Department/Roles &
+Privileges/Associated Organizations), since every one of those screens reuses the same primitives:
+
+- **`select-field.tsx`'s MUI `Select` has no accessible name at all** — a real gap against the
+  global "every interactive element needs the ARIA attributes its role requires" rule. Its visible
+  `role="combobox"` element is a `<div>`, which per the HTML spec can't be the target of a
+  `<label for>` (every call site pairs one anyway, matching every other field in this app), and
+  `select-field.tsx` never passes MUI's `labelId`/`label`/`aria-label` prop either — the `id` a
+  caller passes lands on a hidden native `<input>` instead. Net effect: `findByLabelText`/
+  `findByRole(..., {name})` cannot find it by name at all. `cy.selectMuiOption(labelText, optionText)`
+  works around this via DOM proximity (`cy.contains("label", labelText).parent().find('[role="combobox"]')`)
+  — reuse it for every future `SelectField`, don't re-derive this. Flagged, not fixed — fixing
+  `select-field.tsx` itself is a real app change with its own design call, out of scope for adding
+  tests.
+- **Filter-row `Input`s on list screens (e.g. Employee Listing) have no label at all**, not even a
+  broken one — just a shared, non-unique `placeholder="Search"` across every column. Targeted by
+  the filter row's known column order instead (`cy.get("thead tr").eq(1).find("th").eq(N)`) — see
+  employee-listing.cy.ts's own header comment for the exact column mapping on that screen; re-derive
+  the mapping per screen from its own `SORTABLE_COLUMNS`-equivalent rather than assuming it matches.
+- **MUI's `MenuItem` always sets `role="menuitem"`**, overriding whatever the underlying tag's own
+  implicit role would be — `header.tsx`'s "View Profile" item renders as a real `<a href="/profile">`
+  (`component={Link}`) but `findByRole("link", ...)` never matches it; use `findByRole("menuitem", ...)`
+  instead, and the href assertion still works since the tag itself is a real anchor.
+- **MUI's `Switch` puts a passed `aria-label` on the `SwitchBase` root `<span>`, not the inner
+  `role="switch"` `<input>`** — so that label doesn't count as the input's accessible name either
+  (ancestor `aria-label` isn't inherited by a descendant's name computation). Employee Listing's
+  Suspend/Activate toggle is targeted via `[aria-label="Suspend"]`/`[aria-label="Activate"]`
+  attribute selectors directly, not `findByRole("switch", {name})`.
+- **Chaining two testing-library `find*` queries inside one `cy.within()` block intermittently threw
+  "Expected container to be an Element...but got undefined"** once the scoped row had already
+  re-rendered between the two queries (observed after Employee Invitation's redirect-then-filter
+  flow). Fixed by aliasing the row (`cy.contains(...).as("row")`) and using plain jQuery-style
+  `cy.get("@row").find(...)` for subsequent assertions instead of nesting `findBy*` calls inside
+  `.within()`.
+- **The Zoho SalesIQ chat bubble (fixed, bottom-right) can visually overlap a real, functional button**
+  (e.g. Employee Edit's "Save Changes") without that being any kind of bug — assert `.should("exist")`
+  rather than `.should("be.visible")` in these cases, or the test fails on an unrelated third-party
+  widget's z-index.
+- **A brand-new organization has zero Departments/Grades** (only the two seeded Roles) — any test
+  touching Employee Invitation, Bulk Invite, or `cy.apiInviteAndOnboardEmployee` needs to create at
+  least one of each first via direct `POST /departments`/`POST /grades` calls (exactly what
+  `cy.apiInviteAndOnboardEmployee` now does internally).
+- **Bulk Invite's CSV upload needs no binary XLSX fixture** — `csv-parse/sync` accepts a plain CSV
+  string built inline (`Cypress.Buffer.from(csvString)` via `selectFile`), matching
+  `BULK_COLUMNS` in `auth-service/src/utils/constants/bulk-invite.constant.ts` exactly (header text,
+  order, and which columns are required) — "Company" must equal the org's real name, "Role"/
+  "Department"/"Grade" must already exist by exact name.
+- **Test isolation clears cookies before every single test, even ones inside the same `describe`
+  block whose data was seeded once in a `before` hook** — any spec using `before()` for
+  `cy.apiRegisterOrganization()`/`cy.apiInviteAndOnboardEmployee()` still needs `cy.loginAs(...)` in
+  a `beforeEach` to re-establish the session before each test (cheap: `cy.session` caches it, so
+  this doesn't re-hit the login endpoint every time).
+- **A locally-run full suite (`cypress run` with no `--spec` filter) is dominated by real SMTP
+  latency**, not test logic — 94 real email sends across the 9 Phase 1+2 spec files, at ~2-4s each,
+  account for most of the ~2 minute total run time. A slow individual `cypress run` invocation is not
+  by itself evidence of a hang; check the target service's own request log (e.g.
+  `communications-service`'s access log) for continuous, healthy activity before concluding
+  otherwise.
+
 ## Next step
 
-Phase 1 is done (see Status above). Phase 2 (Header Navigation + Employee Management + Employee
-Profile) is next: extend `cypress/support/commands.ts` with `cy.apiInviteAndOnboardEmployee()` (the
-Employee Invitation + Onboarding endpoints, chained the same way `cy.apiRegisterOrganization()`
-chains registration's), then write specs under `cypress/e2e/003-header-navigation/` and
-`cypress/e2e/008-011-employee-management/` per the folder convention above.
+Phases 1 and 2 are done (see Status above). Phase 3 (Grade `004`, Department `005`, Roles &
+Privileges `006`, Associated Organizations `007`) is next — all four are org-scoped CRUD screens
+reusing the same `SelectField`/dialog/status-toggle primitives Phase 2 already worked around, so no
+new custom commands should be needed, just specs under `cypress/e2e/004-grade-management/` (etc.)
+per the folder convention above.
