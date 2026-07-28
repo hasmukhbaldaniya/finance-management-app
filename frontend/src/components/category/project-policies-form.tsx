@@ -12,6 +12,7 @@ import { getCategoryDetail, saveCategoryProjectPolicies } from "@/apis/category"
 import { getEmployeesForPicker } from "@/apis/employee";
 import { getProjects } from "@/apis/project";
 import { useCategoryWizard } from "@/contexts/CategoryWizardContext";
+import { useStableListKeys } from "@/hooks/useStableListKeys";
 import { ApiError, GENERIC_ERROR_MESSAGE } from "@/utils/apiManager/apiManager";
 import { MAX_PROJECT_POLICIES } from "@/utils/constants/category.constant";
 import { ROUTES } from "@/utils/constants/route.constant";
@@ -34,6 +35,7 @@ export function ProjectPoliciesForm({ categoryId }: ProjectPoliciesFormProps) {
   const [formError, setFormError] = useState<string | null>(null);
   const [isSavingDraft, setIsSavingDraft] = useState(false);
   const [isSavingSubmit, setIsSavingSubmit] = useState(false);
+  const policyKeys = useStableListKeys();
 
   const showSaveAsDraft = wizard.status !== "active";
 
@@ -73,6 +75,7 @@ export function ProjectPoliciesForm({ categoryId }: ProjectPoliciesFormProps) {
       wizard.setProjectPolicies([createBlankPolicy([])]);
       return;
     }
+    policyKeys.removeAt(index);
     wizard.setProjectPolicies(wizard.projectPolicies.filter((_, i) => i !== index));
   }
 
@@ -130,6 +133,8 @@ export function ProjectPoliciesForm({ categoryId }: ProjectPoliciesFormProps) {
     );
   }
 
+  const policyKeyList = policyKeys.keys(wizard.projectPolicies.length);
+
   return (
     <Stack spacing={3}>
       {formError ? (
@@ -171,7 +176,7 @@ export function ProjectPoliciesForm({ categoryId }: ProjectPoliciesFormProps) {
           <Stack spacing={1.5}>
             {wizard.projectPolicies.map((policy, index) => (
               <PolicyCard
-                key={index}
+                key={policyKeyList[index]}
                 policy={policy}
                 policyKind="project"
                 fields={wizard.fields}

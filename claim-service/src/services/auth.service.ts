@@ -1,5 +1,13 @@
 import { env } from "../config/env";
 
+// No retry/circuit-breaker sits in front of this call — a wedged
+// auth-service must not be able to hang a claim-service request forever.
+const REQUEST_TIMEOUT_MS = 10_000;
+
+function isTimeout(err: unknown): boolean {
+  return err instanceof Error && err.name === "TimeoutError";
+}
+
 // A thin HTTP client for auth-service's one internal read this backend
 // (soon to be claim-service) still needs — real employee names/emails for
 // display, now that Employee itself lives in auth-service's own database.
@@ -30,8 +38,10 @@ export async function getValidAirlineIds(): Promise<Set<number>> {
   try {
     response = await fetch(`${env.authService.url}/api/internal/airlines`, {
       headers: env.authService.internalApiKey ? { "X-Internal-Api-Key": env.authService.internalApiKey } : {},
+      signal: AbortSignal.timeout(REQUEST_TIMEOUT_MS),
     });
   } catch (err) {
+    if (isTimeout(err)) throw new Error("auth-service took too long to respond.");
     throw new Error(`Couldn't reach auth-service — ${err instanceof Error ? err.message : "connection failed"}.`);
   }
 
@@ -44,7 +54,7 @@ export async function getValidAirlineIds(): Promise<Set<number>> {
   return cachedAirlineIds;
 }
 
-export async function lookupEmployees(ids: number[]): Promise<EmployeeLookupResult[]> {
+export async function lookupEmployees(ids: number[], requestId?: string): Promise<EmployeeLookupResult[]> {
   if (ids.length === 0) return [];
 
   let response: Response;
@@ -54,10 +64,13 @@ export async function lookupEmployees(ids: number[]): Promise<EmployeeLookupResu
       headers: {
         "Content-Type": "application/json",
         ...(env.authService.internalApiKey ? { "X-Internal-Api-Key": env.authService.internalApiKey } : {}),
+        ...(requestId ? { "X-Request-Id": requestId } : {}),
       },
       body: JSON.stringify({ ids }),
+      signal: AbortSignal.timeout(REQUEST_TIMEOUT_MS),
     });
   } catch (err) {
+    if (isTimeout(err)) throw new Error("auth-service took too long to respond.");
     throw new Error(`Couldn't reach auth-service — ${err instanceof Error ? err.message : "connection failed"}.`);
   }
 

@@ -199,13 +199,16 @@ async function loadCategoriesForExtraction(organizationId: number): Promise<Cate
 // docs/PLANS/microservices-plan.md's Phase 4) — this function no longer
 // creates or updates one itself, just passes the correlation keys
 // (claimInvoiceFileId/pageNumber) that let it do so.
-async function runSourceExtraction(params: {
-  claim: Claim;
-  invoiceFile: ClaimInvoiceFile;
-  pageNumbers: number[] | null;
-  categories: CategoryForExtraction[];
-  position: number;
-}): Promise<void> {
+async function runSourceExtraction(
+  params: {
+    claim: Claim;
+    invoiceFile: ClaimInvoiceFile;
+    pageNumbers: number[] | null;
+    categories: CategoryForExtraction[];
+    position: number;
+  },
+  requestId?: string
+): Promise<void> {
   const { claim, invoiceFile, pageNumbers, categories, position } = params;
 
   let categoryId: number | null = null;
@@ -218,13 +221,16 @@ async function runSourceExtraction(params: {
     const mediaType = EXTENSION_TO_MEDIA_TYPE[invoiceFile.fileType];
     const documentBuffer = invoiceFile.fileType === "pdf" && pageNumbers ? await extractPdfPages(fileBuffer, pageNumbers) : fileBuffer;
 
-    const result = await extractInvoiceData({
-      documentBase64: documentBuffer.toString("base64"),
-      mediaType,
-      categories,
-      claimInvoiceFileId: invoiceFile.id,
-      pageNumber: pageNumbers ? pageNumbers[0] : null,
-    });
+    const result = await extractInvoiceData(
+      {
+        documentBase64: documentBuffer.toString("base64"),
+        mediaType,
+        categories,
+        claimInvoiceFileId: invoiceFile.id,
+        pageNumber: pageNumbers ? pageNumbers[0] : null,
+      },
+      requestId
+    );
 
     if (!("error" in result)) {
       categoryId = result.suggestedCategoryId;
@@ -271,12 +277,12 @@ async function runSourceExtraction(params: {
 // single-process limitation employee-bulk-invite's own in-memory Map
 // already documents), so "start async work, poll for status" is the
 // simplest thing that satisfies 023's own visible multi-source pipeline.
-async function runExtractionForClaim(claimId: number): Promise<void> {
+async function runExtractionForClaim(claimId: number, requestId?: string): Promise<void> {
   const claim = await Claim.findByPk(claimId);
   if (!claim) return;
 
   const invoiceFiles = await ClaimInvoiceFile.findAll({ where: { claimId } });
-  const alreadyLogged = await listExtractionLogs(invoiceFiles.map((file) => file.id));
+  const alreadyLogged = await listExtractionLogs(invoiceFiles.map((file) => file.id), requestId);
   const loggedFileIds = new Set(alreadyLogged.map((log) => log.claimInvoiceFileId));
 
   const categories = await loadCategoriesForExtraction(claim.organizationId);
@@ -288,7 +294,7 @@ async function runExtractionForClaim(claimId: number): Promise<void> {
     for (let page = 1; page <= pageCount; page++) {
       const pageNumbers = file.fileType === "pdf" ? [page] : null;
       try {
-        await runSourceExtraction({ claim, invoiceFile: file, pageNumbers, categories, position });
+        await runSourceExtraction({ claim, invoiceFile: file, pageNumbers, categories, position }, requestId);
         position += 1;
       } catch (err) {
         console.error(`AI extraction failed for claim invoice file ${file.id}, page ${page}:`, err);
@@ -315,7 +321,7 @@ export async function processInvoiceFiles(req: AuthenticatedRequest, res: Respon
     return;
   }
 
-  void runExtractionForClaim(claim.id).catch((err) => console.error(`AI processing pipeline failed for claim ${claim.id}:`, err));
+  void runExtractionForClaim(claim.id, req.requestId).catch((err) => console.error(`AI processing pipeline failed for claim ${claim.id}:`, err));
 
   res.status(202).json({ message: "Processing started." });
 }
@@ -335,7 +341,7 @@ export async function getProcessingStatus(req: AuthenticatedRequest, res: Respon
   }
 
   const invoiceFiles = await ClaimInvoiceFile.findAll({ where: { claimId: claim.id } });
-  const logs = await listExtractionLogs(invoiceFiles.map((file) => file.id));
+  const logs = await listExtractionLogs(invoiceFiles.map((file) => file.id), req.requestId);
   const expenses = await Expense.findAll({ where: { claimId: claim.id } });
 
   const totalSources = invoiceFiles.reduce((total, file) => total + (file.pageCount ?? 1), 0);
@@ -389,7 +395,7 @@ export async function mergeInvoicePages(req: AuthenticatedRequest, res: Response
   const position = Math.min(...originals.map((expense) => expense.position));
 
   try {
-    await runSourceExtraction({ claim, invoiceFile, pageNumbers, categories, position });
+    await runSourceExtraction({ claim, invoiceFile, pageNumbers, categories, position }, req.requestId);
   } catch {
     res.status(500).json({ error: "Couldn't merge these pages — please try again or fill them in manually." });
     return;
@@ -437,7 +443,7 @@ export async function unmergeInvoicePages(req: AuthenticatedRequest, res: Respon
   await expense.destroy();
 
   for (const pageNumber of pageNumbers) {
-    await runSourceExtraction({ claim, invoiceFile, pageNumbers: [pageNumber], categories, position });
+    await runSourceExtraction({ claim, invoiceFile, pageNumbers: [pageNumber], categories, position }, req.requestId);
   }
 
   const expenses = await Expense.findAll({ where: { claimId: claim.id } });

@@ -1,7 +1,20 @@
 // Exported so callers that need a raw URL (not a fetch call) — e.g. an
 // <img>/<iframe> src for an authenticated file-serving endpoint — can build
-// one without duplicating this fallback.
-export const API_BASE_URL = process.env.NEXT_PUBLIC_API_BASE_URL ?? "http://localhost:4000/api";
+// one without duplicating this lookup. Fails fast if unset instead of
+// silently falling back to a hardcoded URL — this used to default to
+// claim-service's own old direct port (4000), a stale leftover from before
+// gateway-service existed; a silent wrong-service fallback here is worse
+// than a clear build-time error, since every backend service already
+// fails the same way via requireEnv.
+function requireApiBaseUrl(): string {
+  const value = process.env.NEXT_PUBLIC_API_BASE_URL;
+  if (!value) {
+    throw new Error("Missing required environment variable: NEXT_PUBLIC_API_BASE_URL");
+  }
+  return value;
+}
+
+export const API_BASE_URL = requireApiBaseUrl();
 
 export const GENERIC_ERROR_MESSAGE = "Something went wrong. Please try again.";
 

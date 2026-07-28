@@ -7,7 +7,7 @@ import { verifyAccessToken } from "../utils/jwt";
 // per employee. getActiveOrganizationId (utils/auth.ts) is kept only for
 // the few call sites that still need it as an async-shaped helper during
 // this migration; new/updated code should read req.organizationId directly.
-export type AuthenticatedRequest = Request & { userId?: number; organizationId?: number };
+export type AuthenticatedRequest = Request & { userId?: number; organizationId?: number; requestId?: string };
 
 export function requireAuth(req: AuthenticatedRequest, res: Response, next: NextFunction): void {
   const token: unknown = req.cookies?.[env.auth.cookieName];

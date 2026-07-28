@@ -269,7 +269,7 @@ export async function listCategoryVersions(req: AuthenticatedRequest, res: Respo
   });
 
   const createdByIds = Array.from(new Set(versions.map((version) => version.createdBy).filter((id): id is number => id !== null)));
-  const employees = await lookupEmployees(createdByIds);
+  const employees = await lookupEmployees(createdByIds, req.requestId);
   const employeeById = new Map(employees.map((employee) => [employee.id, employee]));
 
   res.status(200).json({

@@ -75,7 +75,7 @@ export async function createSplitRequest(req: AuthenticatedRequest, res: Respons
     return;
   }
 
-  const colleagues = (await lookupEmployees(colleagueIds)).filter((employee) => employee.organizationId === organizationId);
+  const colleagues = (await lookupEmployees(colleagueIds, req.requestId)).filter((employee) => employee.organizationId === organizationId);
   if (colleagues.length !== colleagueIds.length) {
     res.status(400).json({ error: "Select colleagues from your own organization." });
     return;
@@ -126,7 +126,7 @@ export async function createSplitRequest(req: AuthenticatedRequest, res: Respons
     resultingExpenseId: null,
   });
 
-  const [requester] = await lookupEmployees([req.userId]);
+  const [requester] = await lookupEmployees([req.userId], req.requestId);
   const category = await Category.findByPk(expense.categoryId);
   await Promise.all(
     memberAmounts
@@ -146,14 +146,17 @@ export async function createSplitRequest(req: AuthenticatedRequest, res: Respons
         const colleague = colleagues.find((candidate) => candidate.id === member.employeeId);
         if (!colleague) return;
         try {
-          await sendSplitRequestEmail({
-            email: colleague.email,
-            recipientFirstName: colleague.firstName,
-            requesterName: requester ? `${requester.firstName} ${requester.lastName}`.trim() : "A colleague",
-            categoryName: category?.name ?? "expense",
-            amount: member.amount.toFixed(2),
-            inboxLink: `${env.corsOrigin}/claims/split-requests`,
-          });
+          await sendSplitRequestEmail(
+            {
+              email: colleague.email,
+              recipientFirstName: colleague.firstName,
+              requesterName: requester ? `${requester.firstName} ${requester.lastName}`.trim() : "A colleague",
+              categoryName: category?.name ?? "expense",
+              amount: member.amount.toFixed(2),
+              inboxLink: `${env.corsOrigin}/claims/split-requests`,
+            },
+            req.requestId
+          );
         } catch (err) {
           console.error(`Failed to send split request email to employee ${member.employeeId}:`, err);
         }
@@ -233,7 +236,7 @@ export async function listSplitRequests(req: AuthenticatedRequest, res: Response
 
   const allMatching = await ExpenseSplitRequest.findAll({ where: { [Op.and]: requestConditions }, order: [["createdAt", "DESC"]] });
   const requesterIds = Array.from(new Set(allMatching.map((row) => row.requestedByEmployeeId)));
-  const requesters = await lookupEmployees(requesterIds);
+  const requesters = await lookupEmployees(requesterIds, req.requestId);
   const requesterById = new Map(requesters.map((employee) => [employee.id, employee]));
 
   const filtered = search
@@ -263,7 +266,7 @@ export async function listSplitRequests(req: AuthenticatedRequest, res: Response
   });
 }
 
-async function buildSplitRequestDetail(splitRequest: ExpenseSplitRequest, viewerId: number) {
+async function buildSplitRequestDetail(splitRequest: ExpenseSplitRequest, viewerId: number, requestId?: string) {
   const [expense, members] = await Promise.all([
     Expense.findByPk(splitRequest.expenseId),
     ExpenseSplitRequestMember.findAll({ where: { splitRequestId: splitRequest.id } }),
@@ -274,7 +277,7 @@ async function buildSplitRequestDetail(splitRequest: ExpenseSplitRequest, viewer
   const [category, claim, employees] = await Promise.all([
     expense.categoryId ? Category.findByPk(expense.categoryId) : null,
     Claim.findByPk(expense.claimId),
-    lookupEmployees(employeeIds),
+    lookupEmployees(employeeIds, requestId),
   ]);
   const fields = expense.categoryId ? await CategoryField.findAll({ where: { categoryId: expense.categoryId }, order: [["position", "ASC"]] }) : [];
   const employeeById = new Map(employees.map((employee) => [employee.id, employee]));
@@ -331,7 +334,7 @@ export async function getSplitRequestDetail(req: AuthenticatedRequest, res: Resp
     return;
   }
 
-  const detail = await buildSplitRequestDetail(splitRequest, req.userId);
+  const detail = await buildSplitRequestDetail(splitRequest, req.userId, req.requestId);
   if (!detail) {
     res.status(404).json({ error: REQUEST_NOT_FOUND_MESSAGE });
     return;

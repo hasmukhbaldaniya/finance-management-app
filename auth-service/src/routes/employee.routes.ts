@@ -46,5 +46,10 @@ employeeRouter.patch("/:id/status", updateEmployeeStatus);
 employeeRouter.put("/:id/company-access", updateEmployeeCompanyAccess);
 employeeRouter.post("/:id/ff-numbers", addEmployeeFfNumbers);
 employeeRouter.post("/:id/approvals", saveEmployeeApprovals);
-employeeRouter.post("/:id/send-invite", sendEmployeeInvite);
-employeeRouter.post("/:id/resend", sendEmployeeInvite);
+// One resource-oriented route for both the initial invite and a later
+// resend — sending an invitation is idempotent from the caller's
+// perspective (it (re-)creates the same side effect), so there's no need
+// for two URLs mapped to the identical handler. The frontend still exposes
+// two distinctly-named functions (sendEmployeeInvite/resendEmployeeInvite)
+// for readability at their two different call sites.
+employeeRouter.post("/:id/invitations", sendEmployeeInvite);

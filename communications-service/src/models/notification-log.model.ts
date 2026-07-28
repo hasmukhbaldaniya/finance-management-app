@@ -36,4 +36,11 @@ const notificationLogSchema = new Schema<NotificationLogDocument>(
   { timestamps: true }
 );
 
+// This collection is a pure write-audit trail today (nothing queries it by
+// recipient yet) — added ahead of that need rather than after, since an
+// unindexed `to` lookup over every email/WhatsApp ever sent would be a full
+// collection scan the moment anyone builds a "notifications for this
+// employee" view.
+notificationLogSchema.index({ to: 1, channel: 1, createdAt: -1 });
+
 export const NotificationLog = model<NotificationLogDocument>("NotificationLog", notificationLogSchema);

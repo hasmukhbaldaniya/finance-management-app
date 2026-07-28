@@ -7,6 +7,7 @@ import { PlusIcon, TrashIcon } from "@phosphor-icons/react";
 import { SelectField } from "@/components/select-field";
 import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
+import { useStableListKeys } from "@/hooks/useStableListKeys";
 import { LIST_LIKE_FIELD_TYPES, NUMERIC_FIELD_TYPES } from "@/utils/constants/category.constant";
 import type { CategoryField, CategoryPolicy, CategoryPolicyRule } from "@/types/category.type";
 import { OPERATORS, type PolicyKind } from "./policy-shared-types";
@@ -36,6 +37,8 @@ function emptyRule(level: number, ruleType: "field_specific" | "combination"): C
 // Claim Policies have no fixed maximum level count; Exception/Project
 // Policies are capped at exactly one Level — 013's Rules section.
 export function PolicyRulesSection({ policy, policyKind, fields, onChange }: PolicyRulesSectionProps) {
+  const stableKeys = useStableListKeys();
+  const ruleKeys = stableKeys.keys(policy.rules.length);
   const fieldSpecificOptions = fields.filter((field) => field.addToPolicyRules);
   const listLikeFields = fields.filter((field) => LIST_LIKE_FIELD_TYPES.includes(field.fieldType));
   const numericFields = fields.filter((field) => NUMERIC_FIELD_TYPES.includes(field.fieldType));
@@ -57,6 +60,7 @@ export function PolicyRulesSection({ policy, policyKind, fields, onChange }: Pol
   }
 
   function removeRule(index: number): void {
+    stableKeys.removeAt(index);
     updateRules(policy.rules.filter((_, i) => i !== index));
   }
 
@@ -78,7 +82,7 @@ export function PolicyRulesSection({ policy, policyKind, fields, onChange }: Pol
               Level {level}
             </Typography>
             {rulesAtLevel.map(({ rule, index }) => (
-              <Stack direction="row" key={index} spacing={1} sx={{ alignItems: "center", flexWrap: "wrap", borderRadius: 1.5, bgcolor: "action.hover", p: 1 }}>
+              <Stack direction="row" key={ruleKeys[index]} spacing={1} sx={{ alignItems: "center", flexWrap: "wrap", borderRadius: 1.5, bgcolor: "action.hover", p: 1 }}>
                 <Typography variant="caption" sx={{ fontWeight: 500 }}>
                   {rule.ruleType === "field_specific" ? "Field Specific" : "Combination"}
                 </Typography>
