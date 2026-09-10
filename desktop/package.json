@@ -3,6 +3,11 @@
   "version": "0.1.0",
   "private": true,
   "description": "Electron + Rust desktop client for Finance Management",
+  "homepage": "https://github.com/hasmukhbaldaniya/finance-management-app",
+  "author": {
+    "name": "Hasmukh Baldaniya",
+    "email": "hasmukh.baldaniya@smartsensesolutions.com"
+  },
   "main": "./out/main/index.js",
   "scripts": {
     "dev": "electron-vite dev",

@@ -38,15 +38,18 @@ mac:
     - target: zip
       arch: [arm64]
 
+# No `arch:` listed here on purpose, unlike mac's targets above — an explicit
+# per-target arch array overrides the CLI's --x64/--arm64 flags entirely, which
+# would defeat the point of each CI job restricting itself to the one arch its
+# runner actually is. Arch is decided per invocation instead: pass --x64 or
+# --arm64 (see .github/workflows/desktop-release.yml), or omit it locally to
+# default to the host's own arch.
 win:
   target:
-    - target: nsis
-      arch: [x64, arm64]
+    - nsis
 
 linux:
   category: Office
   target:
-    - target: AppImage
-      arch: [x64, arm64]
-    - target: deb
-      arch: [x64, arm64]
+    - AppImage
+    - deb
