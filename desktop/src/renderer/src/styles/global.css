@@ -1,0 +1,18 @@
+/* --font-sans feeds theme.ts's typography.fontFamily, matching
+   frontend/src/app/layout.tsx's next/font/google Montserrat loader — here
+   served by the self-hosted @fontsource-variable/montserrat package
+   (imported in main.tsx) instead, since a packaged Electron app shouldn't
+   depend on a network font fetch for its baseline UI. */
+:root {
+  --font-sans: "Montserrat Variable";
+}
+
+html,
+body,
+#root {
+  height: 100%;
+}
+
+body {
+  margin: 0;
+}

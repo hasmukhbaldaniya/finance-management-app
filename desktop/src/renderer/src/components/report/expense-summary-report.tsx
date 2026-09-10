@@ -1,0 +1,162 @@
+"use client";
+
+import { useEffect, useState } from "react";
+import Alert from "@mui/material/Alert";
+import Box from "@mui/material/Box";
+import Stack from "@mui/material/Stack";
+import ToggleButton from "@mui/material/ToggleButton";
+import ToggleButtonGroup from "@mui/material/ToggleButtonGroup";
+import Typography from "@mui/material/Typography";
+import { DatePicker } from "@/components/date-picker";
+import { SelectField } from "@/components/select-field";
+import { Label } from "@/components/ui/label";
+import { Spinner } from "@/components/ui/spinner";
+import { Table, TableBody, TableCell, TableHead, TableHeader, TableRow } from "@/components/ui/table";
+import { getExpenseSummaryReport } from "@/apis/reports";
+import { getDepartments } from "@/apis/department";
+import type { ExpenseSummaryRow } from "@/types/report.type";
+import { ApiError, GENERIC_ERROR_MESSAGE } from "@/utils/apiManager/apiManager";
+import { formatInr, getDefaultReportDateRange, type EmployeeSummaryRow } from "@/utils/helpers/format.helper";
+
+type ReportView = "byCategory" | "byEmployee";
+
+export function ExpenseSummaryReport() {
+  const [from, setFrom] = useState(() => getDefaultReportDateRange().from);
+  const [to, setTo] = useState(() => getDefaultReportDateRange().to);
+  const [department, setDepartment] = useState("");
+  const [departmentOptions, setDepartmentOptions] = useState<{ value: string; label: string }[]>([]);
+  const [view, setView] = useState<ReportView>("byCategory");
+
+  const [rows, setRows] = useState<ExpenseSummaryRow[]>([]);
+  const [byEmployeeRows, setByEmployeeRows] = useState<EmployeeSummaryRow[]>([]);
+  const [isTruncated, setIsTruncated] = useState(false);
+  const [isLoading, setIsLoading] = useState(true);
+  const [loadError, setLoadError] = useState<string | undefined>();
+
+  useEffect(() => {
+    getDepartments({ pageSize: 100 })
+      .then(({ departments }) => setDepartmentOptions(departments.map((department) => ({ value: department.name, label: department.name }))))
+      .catch(() => undefined);
+  }, []);
+
+  useEffect(() => {
+    let isMounted = true;
+    setIsLoading(true);
+    setLoadError(undefined);
+
+    getExpenseSummaryReport({ from: from || undefined, to: to || undefined, department: department || undefined })
+      .then(({ rows: fetched, byEmployeeRows: fetchedByEmployee, truncated }) => {
+        if (isMounted) {
+          setRows(fetched);
+          setByEmployeeRows(fetchedByEmployee);
+          setIsTruncated(truncated);
+        }
+      })
+      .catch((error: unknown) => {
+        if (isMounted) setLoadError(error instanceof ApiError ? error.message : GENERIC_ERROR_MESSAGE);
+      })
+      .finally(() => {
+        if (isMounted) setIsLoading(false);
+      });
+
+    return () => {
+      isMounted = false;
+    };
+  }, [from, to, department]);
+
+  return (
+    <Stack spacing={3}>
+      <Stack direction="row" spacing={2} sx={{ flexWrap: "wrap", alignItems: "flex-end", justifyContent: "space-between" }}>
+        <Stack direction="row" spacing={2} sx={{ flexWrap: "wrap", alignItems: "flex-end" }}>
+          <Stack spacing={1}>
+            <Label htmlFor="expense-summary-from">From</Label>
+            <DatePicker id="expense-summary-from" value={from} onChange={setFrom} sx={{ height: 40, width: 200 }} />
+          </Stack>
+          <Stack spacing={1}>
+            <Label htmlFor="expense-summary-to">To</Label>
+            <DatePicker id="expense-summary-to" value={to} onChange={setTo} sx={{ height: 40, width: 200 }} />
+          </Stack>
+          <Stack spacing={1}>
+            <Label htmlFor="expense-summary-department">Department</Label>
+            <SelectField
+              id="expense-summary-department"
+              value={department}
+              onValueChange={setDepartment}
+              placeholder="All"
+              options={[{ value: "", label: "All" }, ...departmentOptions]}
+              sx={{ height: 40, width: 208 }}
+            />
+          </Stack>
+        </Stack>
+        <ToggleButtonGroup
+          value={view}
+          exclusive
+          onChange={(_event, value: ReportView | null) => value && setView(value)}
+          size="small"
+          aria-label="Report view"
+        >
+          <ToggleButton value="byCategory" aria-label="By category view">
+            By Category
+          </ToggleButton>
+          <ToggleButton value="byEmployee" aria-label="By employee view">
+            By Employee
+          </ToggleButton>
+        </ToggleButtonGroup>
+      </Stack>
+
+      {isTruncated && !isLoading && !loadError ? (
+        <Alert severity="warning">
+          This report only covers the first 2,000 matching rows per source. Narrow the date range to see a complete result.
+        </Alert>
+      ) : null}
+
+      {isLoading ? (
+        <Box sx={{ display: "flex", justifyContent: "center", py: 8 }}>
+          <Spinner size={24} />
+        </Box>
+      ) : loadError ? (
+        <Typography variant="body2" color="error" sx={{ py: 8, textAlign: "center" }}>
+          {loadError}
+        </Typography>
+      ) : view === "byEmployee" ? (
+        <Table>
+          <TableHeader>
+            <TableRow>
+              <TableHead>Employee</TableHead>
+              <TableHead align="right">Expense Count</TableHead>
+              <TableHead align="right">Total Amount</TableHead>
+            </TableRow>
+          </TableHeader>
+          <TableBody>
+            {byEmployeeRows.map((row) => (
+              <TableRow key={row.employeeName}>
+                <TableCell>{row.employeeName}</TableCell>
+                <TableCell align="right">{row.count}</TableCell>
+                <TableCell align="right">{formatInr(row.totalAmount)}</TableCell>
+              </TableRow>
+            ))}
+          </TableBody>
+        </Table>
+      ) : (
+        <Table>
+          <TableHeader>
+            <TableRow>
+              <TableHead>Category</TableHead>
+              <TableHead align="right">Expense Count</TableHead>
+              <TableHead align="right">Total Amount</TableHead>
+            </TableRow>
+          </TableHeader>
+          <TableBody>
+            {rows.map((row) => (
+              <TableRow key={row.categoryId}>
+                <TableCell>{row.categoryName}</TableCell>
+                <TableCell align="right">{row.expenseCount}</TableCell>
+                <TableCell align="right">{formatInr(row.totalAmount)}</TableCell>
+              </TableRow>
+            ))}
+          </TableBody>
+        </Table>
+      )}
+    </Stack>
+  );
+}

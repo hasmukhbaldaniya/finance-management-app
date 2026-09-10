@@ -1,21 +1,29 @@
 # Cypress End-to-End Testing Plan
 
-Status: **Phases 1 and 2 are built and green — 32/32 tests passing across all 9 spec files against
-the real stack** (Authentication, Organization Signup, Header Navigation, Employee Invitation,
-Employee Listing, Bulk Invite, Employee Onboarding, Employee Profile). `frontend/cypress/` holds the
-suite (`cypress.config.ts`, `cypress/support/commands.ts`'s `cy.loginAs`/`cy.apiRegisterOrganization`/
-`cy.apiInviteAndOnboardEmployee`/`cy.getLatestNotification`/`cy.selectMuiOption`, specs under
-`cypress/e2e/001-authentication/`, `cypress/e2e/002-organization-signup/`,
-`cypress/e2e/003-header-navigation/`, `cypress/e2e/008-011-employee-management/`, and
-`cypress/e2e/012-employee-profile/`) — see "Implementation notes from Phase 1" and "Implementation
-notes from Phase 2" near the end of this doc for the real environment gotchas and a11y gaps hit
-along the way. Every later phase (see "Phasing" below) proceeds the same way: its own PR, updating
-`frontend/CLAUDE.md` per the global rule that whoever introduces a new top-level convention
-documents it in the same PR (Phase 1 already did this for the `cypress/` convention itself).
+Status: **Phases 1-4 are built and green — 62/62 tests passing across all 17 spec files against the
+real stack** (Authentication, Organization Signup, Header Navigation, Employee Invitation, Employee
+Listing, Bulk Invite, Employee Onboarding, Employee Profile, Grade Management, Department
+Management, Roles & Privileges, Associated Organizations, Category Creation, Category Listing,
+Category Edit/Duplicate, Category Version History). `frontend/cypress/` holds the suite
+(`cypress.config.ts`, `cypress/support/commands.ts`'s `cy.loginAs`/`cy.apiRegisterOrganization`/
+`cy.apiInviteAndOnboardEmployee`/`cy.apiCreateCategory`/`cy.getLatestNotification`/`cy.selectMuiOption`,
+specs under `cypress/e2e/001-authentication/`, `cypress/e2e/002-organization-signup/`,
+`cypress/e2e/003-header-navigation/`, `cypress/e2e/004-grade-management/`,
+`cypress/e2e/005-department-management/`, `cypress/e2e/006-roles-and-privileges/`,
+`cypress/e2e/007-associated-organizations/`, `cypress/e2e/008-011-employee-management/`,
+`cypress/e2e/012-employee-profile/`, `cypress/e2e/013-category-creation/`,
+`cypress/e2e/014-category-listing/`, `cypress/e2e/015-category-edit-and-duplicate/`, and
+`cypress/e2e/016-category-version-history/`) — see "Implementation notes" for Phases 1-4 near the
+end of this doc for the real environment gotchas and a11y gaps hit along the way. Every later phase
+(see "Phasing" below) proceeds the same way: its own PR, updating `frontend/CLAUDE.md` per the
+global rule that whoever introduces a new top-level convention documents it in the same PR (Phase 1
+already did this for the `cypress/` convention itself).
 
-A full `cypress run` across all 9 spec files takes ~2 minutes once services are warm — real SMTP
-round-trips (~2-4s each) dominate individual OTP-dependent tests, but the suite as a whole is not
-slow enough to need splitting up.
+A full `cypress run` across all 17 spec files takes ~4 minutes once services are warm — real SMTP
+round-trips (~2-4s each) dominate individual OTP-dependent tests. **At this spec count, a full run
+can occasionally hit transient Ethereal SMTP flakiness under sustained concurrent send load** — see
+"Implementation notes from Phase 4" for what that looks like and how to tell it apart from a real
+failure before assuming a regression.
 
 ## Why Cypress, and why it lives in `frontend/`
 
@@ -207,8 +215,8 @@ verbatim afterward:
 | 1 | Authentication (`001`), Organization Signup (`002`) | nothing — introduces `cy.apiRegisterOrganization()` |
 | 2 | Header Navigation (`003`), Employee Management: Invitation/Listing/Bulk/Onboarding (`008`-`011`), Employee Profile (`012`) | `cy.apiRegisterOrganization()`; introduces `cy.apiInviteAndOnboardEmployee()` |
 | 3 | Grade (`004`), Department (`005`), Roles & Privileges (`006`), Associated Organizations (`007`) | `cy.apiRegisterOrganization()` |
-| 4 | Category Management: create/list/edit/duplicate/version history (`013`-`016`) | `cy.apiRegisterOrganization()` |
-| 5 | Trip Management: create/list/details/edit (`018`-`021`) | `cy.apiRegisterOrganization()`; a Category fixture (a trip-linked claim needs one — create inline via the Category APIs, not a whole Phase-4 dependency) |
+| 4 | Category Management: create/list/edit/duplicate/version history (`013`-`016`) | `cy.apiRegisterOrganization()`; introduces `cy.apiCreateCategory()` |
+| 5 | Trip Management: create/list/details/edit (`018`-`021`) | `cy.apiRegisterOrganization()`; `cy.apiCreateCategory()` (a trip-linked claim needs one) |
 | 6 | Claim Management: manual creation, AI-powered creation, listing, Split Claim/Split Expense (`022`-`025`) | Category + Trip fixtures, created inline the same way |
 | 7 | Reports/Dashboard (`028`) | Claim/Trip/Expense fixtures, created inline |
 | 8 | Zoho SalesIQ (`017`) — thin, presence-only check (widget mounts, degrades silently if env var unset) | `cy.apiRegisterOrganization()` |
@@ -370,10 +378,126 @@ Privileges/Associated Organizations), since every one of those screens reuses th
   `communications-service`'s access log) for continuous, healthy activity before concluding
   otherwise.
 
+## Implementation notes from Phase 3
+
+Phase 3 needed no new custom commands (confirming Phase 2's prediction) — `cy.apiInviteAndOnboardEmployee`
+gained optional `departmentId`/`gradeId` overrides so Grade/Department's Members-dialog tests could
+assign a real employee to a *specific*, already-known row instead of a throwaway one. Grade
+Management is the reference implementation for Department (a confirmed byte-for-byte copy, noun
+swapped) and closely related to Roles & Privileges; Associated Organizations turned out to be the
+odd one out. What surfaced:
+
+- **A grade/department/role's Members-count cell has no `aria-label` at all** — but unlike
+  `SelectField`/`Switch`, this is actually fine: it's a bare `<button>{count}</button>`, so the
+  visible number itself becomes the accessible name and `findByRole("button", {name: "1"})` works
+  unmodified. Worth checking what's actually rendered before assuming every unlabeled control needs
+  a workaround — some don't.
+- **`cy.contains("tr", text)` risks matching the header row** if used as the very *first* assertion
+  right after a page visit, since a `<thead>` row is a real `<tr>` too and the retry loop can
+  transiently resolve to it before the data finishes its first load. Scope the initial lookup to
+  `td` (data cells only — headers render as `th`) instead: `cy.contains("td", text).closest("tr")`.
+  Once the table has already rendered once (e.g. right after creating a row mid-test),
+  `cy.contains("tr", text)` directly is fine — this only bit the very first assertion in a fresh spec.
+- **Closing one dialog and immediately opening another can intermittently fail** with `"...not
+  visible because it has CSS property position: fixed and it's being covered by..."`, naming the
+  *new* dialog's own `MuiDialog-container` as the culprit — not a leftover old dialog, and not
+  something a longer timeout fixes on its own. Two related but distinct fixes were needed: (1) after
+  clicking a dialog's own "Cancel", assert `cy.findByRole("dialog").should("not.exist")` before
+  opening the next one; (2) after opening a *new* dialog, assert something inside it (e.g. its own
+  heading) is visible before asserting on content further down — Roles & Privileges' dialog is tall
+  enough (8 privilege checkboxes) that its lower content additionally needed `.scrollIntoView()`,
+  the same fix Phase 2 already used for the Zoho-widget-overlap issue, here caused by the dialog's
+  own scrollable content instead.
+- **MUI's `Checkbox` (unlike its `Switch`) correctly forwards a passed `id` to the actual
+  `<input type="checkbox">`** — confirmed via MUI's own `SwitchBase.js` source (`hasLabelFor = type
+  === 'checkbox' || type === 'radio'` gates whether `id` lands on the real input rather than being
+  dropped) — so `privilege-checkbox-list.tsx`'s real `<label htmlFor>`/`<input id>` pairing works
+  with plain `findByLabelText`, no `selectMuiOption`-style workaround needed. Don't assume every MUI
+  form control has the same accessible-name gap `Select`/`Switch` do; check the specific component.
+- **Associated Organizations (007) is genuinely unseedable, and its empty state hides more than
+  expected**: `auth-service` has no create/invite endpoint for `AssociatedOrganization` at all (only
+  `GET /`/`PATCH /:id/status`), so a Cypress-registered org's list is permanently empty — matching
+  the story's own Out of Scope note. Worse, `page.tsx`'s `rows.length === 0 ? <EmptyText/> :
+  <Table>...</Table>` swaps out the *entire* table, not just the body rows, which
+  `frontend/CLAUDE.md` already separately flags as a known, deliberately-unfixed bug shared with
+  Employee Listing's own (fixed) version of the same mistake — so the sortable headers and the
+  per-column filter row **never render at all** for a fresh org. Rather than fabricate seed data via
+  a raw DB write (the anti-pattern this whole plan avoids elsewhere) or silently skip coverage, the
+  spec says so directly in its own header comment and tests only what's actually reachable: the
+  empty state itself, and the filter-toggle button's own state (which sits outside that
+  conditional). If 007 ever gains a create/invite flow, or the empty-table bug gets fixed, this spec
+  should be revisited to add the sort/filter coverage that's currently impossible.
+
+## Implementation notes from Phase 4
+
+Category Management is the largest single feature in the frontend, but building
+`cy.apiCreateCategory()` against claim-service's real REST contract (create → fields → policies →
+project-policies) made most of it tractable without a full UI walkthrough of the more complex wizard
+steps. What surfaced:
+
+- **The minimal valid payload for each step had to come from reading claim-service's actual
+  validation code, not the frontend** — e.g. `PUT /:id/policies` requires >=1 Claim Policy
+  **even when `isDraftSave: true`** (only duplicate-name/rule checks are skipped by that flag, not
+  "at least one policy exists" itself), and a Default Approval Flow with `autoApprove: true` needs
+  zero approvers (`stages: []`) — the per-stage minimum-approver check is skipped entirely for
+  auto-approve flows. Guessing a "reasonable-looking" payload instead of reading the validator would
+  very likely have produced a fixture that only worked by accident, or not at all.
+- **Steps 3-4's UI (eligibility/rules/approval-flow editors) is complex enough that a UI-driven
+  creation test was deliberately not attempted** — `cy.apiCreateCategory()` bypasses it entirely,
+  the same "bypass the wizard, not the backend contract" posture `cy.apiInviteAndOnboardEmployee`
+  already uses for Employee Onboarding. Only Step 1 (Basic Details) is driven for real through the
+  browser (013's spec) — it's this app's actual entry point and simple enough to justify the UI
+  coverage.
+- **A "Save & Continue" on a *new* category during the Duplicate flow (015) does NOT yet persist the
+  duplicated fields/policies server-side** — Step 1's own save only ever calls `createCategory`; the
+  copied fields/policies exist solely in client-side `CategoryWizardContext` until each later step is
+  itself saved. A test asserting duplication "worked" right after Step 1 has to check the Step 2 UI
+  (which renders from context, guarded by `startSkippingLoadsFor` against being clobbered by its own
+  fetch of the still-empty new category) rather than querying the API for fields that don't exist
+  there yet.
+- **Two more curly-quotes/multiple-match gaps, same family as Phase 2/3's**: `DeleteCategoryDialog`
+  renders its confirmation text with real `&ldquo;`/`&rdquo;` curly quotes, not straight ones —
+  `findByText` needs the actual Unicode characters (`“`/`”`) to match. Several field/status labels
+  (e.g. "Amount", "Draft") appear in more than one place on the same page (a field-type-library
+  option *and* an already-added field's name; a card's status Chip *and* the version-history
+  dialog's own text) — use `findAllByText` with a length assertion, or scope via
+  `findByRole("dialog").should("contain.text", ...)`, rather than a bare `findByText` expecting
+  exactly one match.
+- **A `Button` rendered via `component={Link}` has role `"link"`, not `"button"`**, regardless of
+  it visually looking like a button — `findByRole("button", {name: "Create Category"})` fails
+  silently (times out looking for a role that was never there); use `findByRole("link", ...)`
+  instead. The empty-state page renders *two* such Create Category links simultaneously (top-right +
+  centered empty-state), so that assertion also needs `findAllByRole`.
+- **`isEnabled` defaults to `true` even for a still-draft category** (claim-service's own model
+  default) — a draft's Switch renders visually unchecked *and* disabled, but its `aria-label` still
+  reads "Disable {name}", never "Enable {name}". Don't assume a visually-off toggle implies an
+  "Enable" label; check the actual default value server-side.
+- **A full local run across 17 spec files can transiently 500 on `POST /auth/registrations`** with
+  the exact same generic "Something went wrong" error Phase 1 first diagnosed as a missing-SMTP-config
+  problem — except SMTP *is* configured here (Ethereal). `communications-service`'s own access log
+  showed a couple of `POST /api/notifications/email` lines with no completion status logged at all
+  (Morgan logs `-`/`-` when a request errors out before the response completes) during the affected
+  window — consistent with Ethereal's free tier occasionally dropping a send under sustained
+  concurrent load (~100+ real SMTP sends in a few minutes across the full suite), not a code bug.
+  Confirmed by re-running the exact same specs that failed, isolated from the rest of the suite —
+  they passed cleanly. **Before treating a full-suite failure as a regression, re-run just the failed
+  spec file(s) on their own first** — if they pass isolated, it's very likely this same class of
+  transient SMTP flakiness, not something to debug in the app or test code.
+- **A real bug, not flakiness, on a second full run: `cy.apiRegisterOrganization()`'s generated GST
+  number had too small a keyspace** — it derived its 4 varying digits from a `Date.now()` +
+  3-digit-random string but kept all 5 letters fixed (`"CYPRS"`), giving only 10,000 possible GST
+  numbers. A full-suite run registers several dozen organizations in quick succession, and a genuine
+  409 (`"This GST number is already registered."`) surfaced as a `before` hook failure once that was
+  actually a same-org-name collision, not SMTP-related at all. Fixed by deriving 3 of the 5 letters
+  from a *different* digit window of the same unique string (`~175M` combinations instead of
+  `10,000`) — confirmed fixed by re-running the affected spec plus 001/002 (which also assert GST
+  format/uniqueness) together. Worth remembering: **not every full-suite-only failure is SMTP
+  flakiness** — check the actual error status/body first (409 "already registered" is a real
+  collision; a bare 500 with no error detail is the SMTP-flakiness pattern above).
+
 ## Next step
 
-Phases 1 and 2 are done (see Status above). Phase 3 (Grade `004`, Department `005`, Roles &
-Privileges `006`, Associated Organizations `007`) is next — all four are org-scoped CRUD screens
-reusing the same `SelectField`/dialog/status-toggle primitives Phase 2 already worked around, so no
-new custom commands should be needed, just specs under `cypress/e2e/004-grade-management/` (etc.)
-per the folder convention above.
+Phases 1-4 are done (see Status above). Phase 5 (Trip Management: `018`-`021`) is next. It needs a
+Category to exist (via `cy.apiCreateCategory()`) before a trip-linked claim can reference one, but
+Trip creation/listing themselves are simpler, single-screen flows per `frontend/CLAUDE.md`'s own
+description (no multi-step wizard) — expect this phase to be lighter than Phase 4.

@@ -117,7 +117,13 @@ Cypress.Commands.add("extractToken", { prevSubject: true } as const, (notificati
 Cypress.Commands.add("apiRegisterOrganization", (overrides: Partial<RegisteredOrganization> = {}) => {
   const unique = `${Date.now()}${Cypress._.random(100, 999)}`;
   const organizationName = overrides.organizationName ?? `Cypress Org ${unique}`;
-  const gstNumber = overrides.gstNumber ?? `27CYPRS${unique.slice(-4)}A1Z9`;
+  // GST_REGEX only allows a fixed 5-letter/4-digit shape, so the digit slice
+  // alone (10,000 values) is too small a keyspace for a full-suite run that
+  // registers dozens of orgs — observed colliding (a real 409) once in
+  // practice. Deriving 3 of the 5 letters from a different digit window too
+  // widens this to ~175M combinations.
+  const gstLetters = "CY" + unique.slice(-7, -4).split("").map((d) => String.fromCharCode(65 + (Number(d) % 26))).join("");
+  const gstNumber = overrides.gstNumber ?? `27${gstLetters}${unique.slice(-4)}A1Z9`;
   const ownerEmail = overrides.ownerEmail ?? `cypress-${unique}@example.com`;
   const ownerPassword = overrides.ownerPassword ?? "Cypress@123";
   const ownerFirstName = overrides.ownerFirstName ?? "Cypress";
@@ -175,6 +181,9 @@ export type InviteAndOnboardOverrides = {
   password?: string;
   /** Set false to stop after sending the invite (008) — skips 011's onboarding chain entirely, leaving the employee in "Pending Invitation" status. Defaults true. */
   onboard?: boolean;
+  /** Reuse an existing Department/Grade instead of creating a throwaway one — e.g. so a Grade/Department Management test can assert its own Members dialog against a real assigned employee. */
+  departmentId?: number;
+  gradeId?: number;
 };
 
 // Invites a brand-new employee (008's 5-call sequence) and immediately
@@ -217,16 +226,22 @@ Cypress.Commands.add("apiInviteAndOnboardEmployee", (overrides: InviteAndOnboard
         return { ownerId, roleId: role.id };
       })
     )
-    .then(({ ownerId, roleId }) =>
-      cy
+    .then(({ ownerId, roleId }) => {
+      if (overrides.departmentId) {
+        return cy.wrap({ ownerId, roleId, departmentId: overrides.departmentId });
+      }
+      return cy
         .request("POST", `${GATEWAY_URL}/departments`, { name: `Cypress Dept ${unique}` })
-        .then(({ body }) => ({ ownerId, roleId, departmentId: (body as { department: { id: number } }).department.id }))
-    )
-    .then(({ ownerId, roleId, departmentId }) =>
-      cy
+        .then(({ body }) => ({ ownerId, roleId, departmentId: (body as { department: { id: number } }).department.id }));
+    })
+    .then(({ ownerId, roleId, departmentId }) => {
+      if (overrides.gradeId) {
+        return cy.wrap({ ownerId, roleId, departmentId, gradeId: overrides.gradeId });
+      }
+      return cy
         .request("POST", `${GATEWAY_URL}/grades`, { name: `Cypress Grade ${unique}` })
-        .then(({ body }) => ({ ownerId, roleId, departmentId, gradeId: (body as { grade: { id: number } }).grade.id }))
-    )
+        .then(({ body }) => ({ ownerId, roleId, departmentId, gradeId: (body as { grade: { id: number } }).grade.id }));
+    })
     .then(({ ownerId, roleId, departmentId, gradeId }) =>
       cy
         .request("POST", `${GATEWAY_URL}/employees`, {
@@ -319,6 +334,122 @@ Cypress.Commands.add("apiInviteAndOnboardEmployee", (overrides: InviteAndOnboard
     });
 });
 
+export type CreatedCategory = {
+  categoryId: number;
+  name: string;
+  departmentId: number | null;
+  status: "draft" | "active";
+};
+
+export type CreateCategoryOverrides = {
+  name?: string;
+  /** Set false to stop right after Step 1 (category created, still "draft", no fields/policies) — e.g. for testing Delete, which is draft-only. Defaults true. */
+  activate?: boolean;
+};
+
+// Creates a category via claim-service's own REST contract directly (create
+// -> fields -> policies -> project-policies), the Phase 4 counterpart to
+// cy.apiRegisterOrganization/cy.apiInviteAndOnboardEmployee. The minimal
+// valid payload for each step was confirmed against claim-service's actual
+// validation code, not guessed:
+//   - fields: needs exactly one `useAsExpenseDate` date field and one
+//     `useAsClaimAmount` amount field when isDraftSave is false.
+//   - policies: needs >=1 Claim Policy even when isDraftSave is true (only
+//     duplicate-name/rule checks are skipped by that flag, not the "at
+//     least one policy" requirement) — eligibility needs a real Department,
+//     rules can be `[]`, and a Default Flow with `autoApprove: true` needs
+//     zero approvers (`stages: []`), the simplest possible valid flow.
+//   - project-policies: `{enableProjectPolicies: false}` alone is the
+//     terminal call that flips draft -> active, no projectPolicies array
+//     needed.
+// A freshly-registered org has zero categories (no seed data survives
+// org creation, see docs/PLANS/cypress-e2e-testing-plan.md), so this also
+// creates its own throwaway Department for the Claim Policy's eligibility —
+// same "call the real endpoint, don't fake it" posture every other
+// api-fixture command in this file already follows.
+Cypress.Commands.add("apiCreateCategory", (overrides: CreateCategoryOverrides = {}) => {
+  const unique = `${Date.now()}${Cypress._.random(100, 999)}`;
+  const name = overrides.name ?? `Cypress Category ${unique}`;
+  const activate = overrides.activate ?? true;
+
+  return cy
+    .request("POST", `${GATEWAY_URL}/categories`, {
+      name,
+      description: "Created by Cypress for E2E testing.",
+      ziptrripCategoryIds: [],
+      isDraftSave: false,
+    })
+    .then(({ body }) => {
+      const categoryId = (body as { id: number }).id;
+
+      if (!activate) {
+        const result: CreatedCategory = { categoryId, name, departmentId: null, status: "draft" };
+        return cy.wrap(result);
+      }
+
+      return cy
+        .request("POST", `${GATEWAY_URL}/departments`, { name: `Cypress Cat Dept ${unique}` })
+        .then(({ body: deptBody }) => (deptBody as { department: { id: number } }).department.id)
+        .then((departmentId) =>
+          cy
+            .request("PUT", `${GATEWAY_URL}/categories/${categoryId}/fields`, {
+              isDraftSave: false,
+              fields: [
+                {
+                  id: -1,
+                  fieldType: "amount",
+                  fieldName: "Amount",
+                  tooltip: null,
+                  isRequired: true,
+                  addToPolicyRules: true,
+                  conditionalVisibility: null,
+                  redFlagMode: null,
+                  redFlagValue: null,
+                  redFlagAction: null,
+                  config: { useAsClaimAmount: true },
+                },
+                {
+                  id: -2,
+                  fieldType: "date",
+                  fieldName: "Expense Date",
+                  tooltip: null,
+                  isRequired: true,
+                  addToPolicyRules: true,
+                  conditionalVisibility: null,
+                  redFlagMode: null,
+                  redFlagValue: null,
+                  redFlagAction: null,
+                  config: { useAsExpenseDate: true },
+                },
+              ],
+            })
+            .then(() => departmentId)
+        )
+        .then((departmentId) =>
+          cy
+            .request("PUT", `${GATEWAY_URL}/categories/${categoryId}/policies`, {
+              isDraftSave: false,
+              claimPolicies: [
+                {
+                  name: "Cypress Claim Policy",
+                  eligibility: [{ eligibilityType: "department", entityIds: [departmentId] }],
+                  rules: [],
+                  approvalLevels: [{ level: null, isDefaultFlow: true, autoApprove: true, stages: [] }],
+                },
+              ],
+              exceptionPolicies: [],
+            })
+            .then(() => departmentId)
+        )
+        .then((departmentId) =>
+          cy.request("PUT", `${GATEWAY_URL}/categories/${categoryId}/project-policies`, { enableProjectPolicies: false }).then(() => {
+            const result: CreatedCategory = { categoryId, name, departmentId, status: "active" };
+            return result;
+          })
+        );
+    });
+});
+
 declare global {
   // eslint-disable-next-line @typescript-eslint/no-namespace
   namespace Cypress {
@@ -330,6 +461,7 @@ declare global {
       extractToken(): Chainable<string>;
       apiRegisterOrganization(overrides?: Partial<RegisteredOrganization>): Chainable<RegisteredOrganization>;
       apiInviteAndOnboardEmployee(overrides?: InviteAndOnboardOverrides): Chainable<InvitedEmployee>;
+      apiCreateCategory(overrides?: CreateCategoryOverrides): Chainable<CreatedCategory>;
     }
   }
 }

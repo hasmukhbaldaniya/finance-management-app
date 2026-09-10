@@ -1,0 +1,11 @@
+{
+  "name": "native",
+  "version": "0.1.0",
+  "private": true,
+  "main": "index.js",
+  "types": "index.d.ts",
+  "napi": {
+    "binaryName": "native",
+    "targets": ["x86_64-apple-darwin", "aarch64-apple-darwin"]
+  }
+}

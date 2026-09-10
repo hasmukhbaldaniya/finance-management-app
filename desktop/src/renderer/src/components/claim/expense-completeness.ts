@@ -1,0 +1,73 @@
+import type { ClaimableCategory } from "@/types/claim.type";
+import type { LocalExpense } from "./local-expense.type";
+
+function isFieldValueFilled(value: unknown): boolean {
+  if (value === null || value === undefined || value === "") return false;
+  if (Array.isArray(value)) return value.length > 0;
+  return true;
+}
+
+// Before an expense has ever been saved, `expense.amount` (the denormalized
+// column) doesn't exist yet — it's only computed server-side, from whichever
+// field carries `config.useAsClaimAmount`, once the expense is actually
+// persisted. Read that same field's live value straight out of the
+// in-progress `fieldValues` so completeness can be judged before the first
+// save, not just after one. Falls back to the persisted `expense.amount`
+// once that's available (e.g. a formula-computed amount field, which isn't
+// re-derived here).
+export function getClientComputedAmount(expense: LocalExpense, category: ClaimableCategory | null | undefined): number | null {
+  if (category) {
+    const amountField = category.fields.find((field) => field.fieldType === "amount" && field.config.useAsClaimAmount === true);
+    if (amountField) {
+      const raw = expense.fieldValues[String(amountField.id)];
+      const value = typeof raw === "number" ? raw : typeof raw === "string" ? Number(raw) : NaN;
+      if (Number.isFinite(value)) return value;
+    }
+  }
+  if (expense.amount) {
+    const value = Number(expense.amount);
+    if (Number.isFinite(value)) return value;
+  }
+  return null;
+}
+
+// 027's Split Expense/Split Claim trigger-button gate — every one of the
+// expense's own Category-configured required fields must be filled, not
+// just Category + Amount. Deliberately independent of whether the expense
+// has been saved yet (persistence is ensured separately, right before the
+// split dialog actually opens) — a brand-new, never-saved expense with every
+// field filled in is just as "complete" as one that's already been saved.
+export function isExpenseComplete(expense: LocalExpense, category: ClaimableCategory | null | undefined): boolean {
+  if (!expense.categoryId || !category) return false;
+  if (!expense.paidBy) return false;
+
+  const amount = getClientComputedAmount(expense, category);
+  if (!amount || amount <= 0) return false;
+
+  return category.fields
+    .filter((field) => field.isRequired)
+    .every((field) => isFieldValueFilled(expense.fieldValues[String(field.id)]));
+}
+
+// 023's own Flow point 5 / Acceptance Criteria: switching Category on an
+// AI-reviewed expense maps already-extracted values onto identically-
+// named/typed fields in the new category, rather than wiping the form —
+// any field that doesn't have a same-name/same-type match in the new
+// category simply starts blank, no attempt to force-fit mismatched data.
+export function carryOverFieldValues(
+  previousCategory: ClaimableCategory | null | undefined,
+  nextCategory: ClaimableCategory | null | undefined,
+  previousFieldValues: Record<string, unknown>
+): Record<string, unknown> {
+  if (!previousCategory || !nextCategory) return {};
+
+  const previousFieldByKey = new Map(previousCategory.fields.map((field) => [`${field.fieldName}::${field.fieldType}`, field]));
+  const next: Record<string, unknown> = {};
+  for (const field of nextCategory.fields) {
+    const match = previousFieldByKey.get(`${field.fieldName}::${field.fieldType}`);
+    if (!match) continue;
+    const value = previousFieldValues[String(match.id)];
+    if (isFieldValueFilled(value)) next[String(field.id)] = value;
+  }
+  return next;
+}

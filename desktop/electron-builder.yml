@@ -1,0 +1,38 @@
+# macOS only, deliberately — see desktop/CLAUDE.md's "Packaging" section.
+# The Rust native addon (native/*.node) is a compiled binary tied to one
+# OS+CPU architecture; shipping Windows/Linux too means cross-compiling that
+# crate for each target (napi-rs supports this via cargo-xwin/cargo-zigbuild),
+# which belongs in a real CI matrix where the resulting binaries can actually
+# be launched and verified — not produced blind from a single Mac.
+appId: com.financemanagement.desktop
+productName: Finance Management
+directories:
+  output: dist
+  buildResources: build
+
+# electron-vite's own build output, plus the compiled Rust addon and its
+# package.json/generated bindings — nothing else from the repo (node_modules
+# is reconstructed by electron-builder itself from package.json).
+files:
+  - out/**/*
+  - native/index.js
+  - native/index.d.ts
+  - native/package.json
+  - native/*.node
+  - package.json
+
+# The .node file can't be dlopen()'d from inside an asar archive — this is
+# the same reason src/main/native.ts requires() it via a real filesystem
+# path rather than a bundled import. asarUnpack extracts it (and the rest of
+# native/) to app.asar.unpacked at build time so that path still resolves
+# correctly once packaged.
+asarUnpack:
+  - native/**/*
+
+mac:
+  category: public.app-category.finance
+  target:
+    - target: dmg
+      arch: [arm64]
+    - target: zip
+      arch: [arm64]
