@@ -44,7 +44,7 @@ no equivalent of `frontend/`'s Storybook/Cypress setup built out).
 ```
 desktop/
 ├── electron.vite.config.ts   # main / preload / renderer build targets
-├── electron-builder.yml      # macOS packaging (see "Packaging" below)
+├── electron-builder.yml      # macOS/Windows/Linux packaging (see "Packaging" below)
 ├── tsconfig.json / .node.json / .web.json
 ├── src/
 │   ├── main/
@@ -184,20 +184,47 @@ Management's own invoice-file handling). Add new native functions to `native/src
 `npm run build:native`, then wire a channel in `src/main/ipc/native.ipc.ts` — same pattern both
 existing functions already follow.
 
-Only `darwin-arm64` is built today (this machine's platform). Cross-compiling for other
-platform+arch combinations is a `@napi-rs/cli` CI-matrix job, not something to attempt by hand from
-one machine — see "Packaging" below for why that matters for distribution, not just this build step.
+`npm run build:native` only ever builds for the host you run it on — locally that means
+`darwin-arm64` on this machine. `native/package.json`'s `napi.targets` array lists every target this
+app ships (`x86_64`/`aarch64` × `apple-darwin`/`pc-windows-msvc`/`unknown-linux-gnu`), but that array
+only documents intent — it doesn't make `napi build --platform` cross-compile. Every non-host target
+is built by `.github/workflows/desktop-release.yml`'s CI matrix, one job per OS+arch, each running
+natively on its own runner (including GitHub's hosted `windows-11-arm` and `ubuntu-24.04-arm`
+runners for the arm64 Windows/Linux jobs) — never cross-compiled from a single machine. See
+"Packaging" below.
 
 ## Packaging
 
-**macOS only, deliberately** (`electron-builder.yml`'s `mac.target` is `dmg`+`zip`, `arm64` only).
-The Rust native addon is a compiled binary tied to one OS+CPU architecture — shipping Windows/Linux
-too means cross-compiling that crate for each target (`@napi-rs/cli` supports this via
-`cargo-xwin`/`cargo-zigbuild`), and that belongs in a real CI matrix where the resulting binaries can
-actually be launched and verified, not produced blind from a single Mac with no way to test them.
+**Built for macOS, Windows, and Linux — always natively, never cross-compiled.** The Rust native
+addon is a compiled binary tied to one OS+CPU architecture, so `.github/workflows/desktop-release.yml`
+builds every target on its own real OS+arch runner and nowhere else: `macos-latest` (arm64),
+`windows-latest` (x64) + `windows-11-arm` (arm64), `ubuntu-latest` (x64) + `ubuntu-24.04-arm` (arm64).
+This is the CI matrix referenced in earlier versions of this doc as the right way to add non-macOS
+targets — cross-compiling the addon with `cargo-xwin`/`cargo-zigbuild` was considered and rejected,
+since a binary produced that way can't be launched or verified from the machine that built it.
 
-`npm run build:mac` runs `electron-vite build` then `electron-builder --mac --arm64`, producing
-`dist/*.dmg` and `dist/*.zip`.
+Locally, each `npm run build:mac` / `build:win` / `build:linux` only ever produces a package for the
+OS you're actually running it on — running `build:win` on this Mac will fail (no Windows toolchain,
+no `aarch64`/`x86_64-pc-windows-msvc` Rust target installed), by design. Windows and Linux packages
+only come from CI.
+
+- `npm run build:mac` → `electron-vite build && electron-builder --mac --arm64` → `dist/*.dmg`, `dist/*.zip`.
+- `npm run build:win` → `electron-builder --win` → `dist/*.exe` (NSIS installer). CI passes
+  `--x64`/`--arm64` explicitly per matrix job so each Windows runner only builds the arch it can
+  actually run natively — see `electron-builder.yml`'s `win.target.arch: [x64, arm64]`.
+- `npm run build:linux` → `electron-builder --linux` → `dist/*.AppImage`, `dist/*.deb`. Same
+  per-job `--x64`/`--arm64` split as Windows.
+
+**A real dependency bug hit while wiring this up**: `electron-builder@26.15.3`'s bundled
+`app-builder-lib` depended on `@noble/hashes@^2.2.0`, but `@noble/hashes` 2.x is pure ESM
+(`"type": "module"`) while `app-builder-lib`'s blockmap step still does a plain CommonJS
+`require("@noble/hashes/blake2.js")` — every `zip`/blockmap-producing build (which includes the
+existing macOS `zip` target, so this wasn't new to Windows/Linux) failed with `ERR_REQUIRE_ESM`.
+Confirmed via the registry that this was already fixed upstream: `app-builder-lib`'s `v26` dist-tag
+(`26.16.1`) reverted to `@noble/hashes: ^1.8.0`, whose `1.8.0`+ releases ship a dual
+`{"require": "./blake2.js", "import": "./esm/blake2.js"}` export the older 1.x line didn't have.
+Fixed by bumping `electron-builder` to `^26.16.1` — no `overrides` field needed once the real
+version-compatible range is pulled in directly.
 
 **The one packaging-specific bug this app already hit and fixed**: `native.ts` resolves the addon's
 path via `__dirname`, but inside a packaged app, `__dirname` still reports a path *into* `app.asar`

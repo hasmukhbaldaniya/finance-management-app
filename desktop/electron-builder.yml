@@ -1,9 +1,10 @@
-# macOS only, deliberately — see desktop/CLAUDE.md's "Packaging" section.
+# macOS, Windows, and Linux — see desktop/CLAUDE.md's "Packaging" section.
 # The Rust native addon (native/*.node) is a compiled binary tied to one
-# OS+CPU architecture; shipping Windows/Linux too means cross-compiling that
-# crate for each target (napi-rs supports this via cargo-xwin/cargo-zigbuild),
-# which belongs in a real CI matrix where the resulting binaries can actually
-# be launched and verified — not produced blind from a single Mac.
+# OS+CPU architecture, so every target here is built natively on its own OS
+# in the GitHub Actions matrix (.github/workflows/desktop-release.yml) —
+# never cross-compiled from a single machine. A local `npm run build:mac` /
+# `build:win` / `build:linux` only ever produces a package for the OS you're
+# actually running it on.
 appId: com.financemanagement.desktop
 productName: Finance Management
 directories:
@@ -36,3 +37,16 @@ mac:
       arch: [arm64]
     - target: zip
       arch: [arm64]
+
+win:
+  target:
+    - target: nsis
+      arch: [x64, arm64]
+
+linux:
+  category: Office
+  target:
+    - target: AppImage
+      arch: [x64, arm64]
+    - target: deb
+      arch: [x64, arm64]

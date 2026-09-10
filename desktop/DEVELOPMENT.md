@@ -51,7 +51,7 @@ for CPU-bound local work.
 | Icons | [@phosphor-icons/react](https://phosphoricons.com/) | ^2.1.10 | Matches `frontend/` |
 | Native layer | [Rust](https://www.rust-lang.org/) via [napi-rs](https://napi.rs/) | napi 3.12.2 / @napi-rs/cli 3.9.0 | Compiles to a `.node` addon loaded directly by the main process |
 | Content hashing | [blake3](https://crates.io/crates/blake3) (Rust crate) | — | Used for receipt-folder duplicate detection |
-| Packaging | [electron-builder](https://www.electron.build/) | ^26.15.3 | Produces `.dmg`/`.zip`, macOS arm64 only for now |
+| Packaging | [electron-builder](https://www.electron.build/) | ^26.16.1 | Produces `.dmg`/`.zip` (macOS), `.exe` (Windows), `.AppImage`/`.deb` (Linux) — each built natively per-OS in CI |
 
 Electron itself bundles a specific Node.js version internally, and napi's stable ABI (N-API) is what
 lets the same compiled Rust binary run correctly under both plain Node (used by build tooling) and
@@ -59,8 +59,9 @@ Electron's bundled Node — no recompiling per Electron version.
 
 ## Prerequisites
 
-- **macOS on Apple Silicon (arm64)** — the only platform this is currently built and packaged for.
-  See [Packaging](#packaging) for why.
+- **macOS on Apple Silicon (arm64)** — this repo's dev machine, and the only platform local `npm run
+  dev`/`build:mac` work on. Windows and Linux packages are built by CI, not locally — see
+  [Packaging](#packaging).
 - **Node.js 22.19.0**, pinned in [`.nvmrc`](./.nvmrc) — Electron 44 requires Node `>=22.12.0`; run
   `nvm use` in this directory before any `npm` command.
 - **Xcode Command Line Tools** (`xcode-select --install`) — needed to compile the Rust addon and for
@@ -94,6 +95,8 @@ platform+arch. If you ever see errors about a missing or stale `.node` file, re-
 | `npm run typecheck` | Project-references `tsc -b --noEmit` across main/preload and renderer configs |
 | `npm run build:native` | Rebuilds the Rust addon only (`native/*.node` + `index.d.ts`) |
 | `npm run build:mac` | Full production build + `electron-builder --mac --arm64` → `dist/*.dmg`, `dist/*.zip` |
+| `npm run build:win` | Same, packaged for Windows → `dist/*.exe` (only succeeds on a Windows machine) |
+| `npm run build:linux` | Same, packaged for Linux → `dist/*.AppImage`, `dist/*.deb` (only succeeds on Linux) |
 
 Editing a renderer file (anything under `src/renderer/src/`) hot-reloads instantly while `npm run
 dev` is running. Editing `src/main/**` or `src/preload/**` requires an Electron restart —
@@ -326,20 +329,39 @@ exported signatures, so nothing that calls it needs to change.
 
 ## Packaging
 
-macOS only, for now (arm64) — a deliberate scope decision, not an oversight. The Rust addon compiles
-to a binary tied to one OS+CPU architecture; shipping Windows/Linux means cross-compiling that crate
-per target (napi-rs supports this via `cargo-xwin`/`cargo-zigbuild`), which belongs in a real CI
-matrix where the resulting binaries can actually be launched and verified — not produced blind from a
-single Mac. See `electron-builder.yml`'s comments for the same reasoning in context.
+Packages ship for **macOS, Windows, and Linux** — but every one of them is built natively on its own
+OS, never cross-compiled. The Rust addon compiles to a binary tied to one OS+CPU architecture, so
+there's no single machine that can honestly produce (let alone verify) a binary for an OS it isn't
+running. `.github/workflows/desktop-release.yml` is a GitHub Actions matrix with one job per
+OS+arch — `macos-latest` (arm64), `windows-latest` (x64), `windows-11-arm` (arm64), `ubuntu-latest`
+(x64), `ubuntu-24.04-arm` (arm64) — each installing its own Rust toolchain and running
+`napi build --platform` for whatever platform it actually is. Trigger it manually from the Actions
+tab, or push a tag like `desktop-v0.1.0`.
+
+Locally, you can only build a package for the OS you're on:
 
 ```bash
-npm run build:mac
+npm run build:mac     # macOS (dmg + zip, arm64) — works on this repo's dev machine
+npm run build:win     # Windows (NSIS .exe) — only succeeds on a Windows machine/runner
+npm run build:linux   # Linux (AppImage + deb) — only succeeds on a Linux machine/runner
 ```
 
-produces `dist/*.dmg` and `dist/*.zip`. `electron-builder.yml`'s `asarUnpack: ["native/**/*"]`
-extracts the Rust addon out of the asar archive at build time — required, since a `.node` binary
-can't be loaded from inside an asar (see [The Rust addon](#the-rust-addon-native) above for the
-matching runtime-side fix).
+`electron-builder.yml`'s `asarUnpack: ["native/**/*"]` extracts the Rust addon out of the asar
+archive at build time on every platform — required, since a `.node` binary can't be loaded from
+inside an asar (see [The Rust addon](#the-rust-addon-native) above for the matching runtime-side
+fix). `win.target.arch`/`linux.target.arch` each list `[x64, arm64]`; CI passes an explicit
+`--x64`/`--arm64` flag per job so a given runner only ever builds the one arch it's actually running,
+never both.
+
+**A real bug found while adding Windows/Linux targets, worth knowing about**: `electron-builder@26.15.3`
+shipped with a bundled `app-builder-lib` that depended on a pure-ESM `@noble/hashes@2.x`, while its
+own blockmap-generation code still used a CommonJS `require()` — breaking with `ERR_REQUIRE_ESM` on
+*every* build that produces a `zip`/blockmap output (including the pre-existing macOS `zip` target,
+so this wasn't a new-platform-specific bug). Fixed by bumping to `electron-builder@^26.16.1`, whose
+`app-builder-lib` reverted to a CJS-compatible `@noble/hashes@^1.8.0` range. If you ever see
+`ERR_REQUIRE_ESM` mentioning `@noble/hashes` again, it's this same class of issue — check
+`app-builder-lib`'s declared `@noble/hashes` range before reaching for a package-level `overrides`
+hack (which risks resolving to a version missing the specific export subpath entirely).
 
 ## Conventions
 

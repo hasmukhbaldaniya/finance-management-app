@@ -1,0 +1,74 @@
+name: desktop-release
+
+# Builds the desktop app's native packages for macOS, Windows, and Linux.
+#
+# Every job builds NATIVELY on its own OS+arch runner — none of them
+# cross-compile the Rust addon. That's the whole reason this is a CI matrix
+# rather than something run from one machine: see desktop/CLAUDE.md's
+# "Packaging" section for why. The Windows-arm64 and Linux-arm64 jobs use
+# GitHub's hosted arm64 runners (windows-11-arm, ubuntu-24.04-arm) so those
+# builds are native too, not emulated.
+#
+# Trigger manually from the Actions tab, or push a tag like `desktop-v0.1.0`.
+
+on:
+  workflow_dispatch: {}
+  push:
+    tags:
+      - "desktop-v*"
+
+defaults:
+  run:
+    working-directory: desktop
+
+jobs:
+  build:
+    strategy:
+      fail-fast: false
+      matrix:
+        include:
+          - os: macos-latest
+            build-script: build:mac
+            artifact: desktop-macos-arm64
+          - os: windows-latest
+            build-script: build:win -- --x64
+            artifact: desktop-windows-x64
+          - os: windows-11-arm
+            build-script: build:win -- --arm64
+            artifact: desktop-windows-arm64
+          - os: ubuntu-latest
+            build-script: build:linux -- --x64
+            artifact: desktop-linux-x64
+          - os: ubuntu-24.04-arm
+            build-script: build:linux -- --arm64
+            artifact: desktop-linux-arm64
+
+    runs-on: ${{ matrix.os }}
+
+    steps:
+      - uses: actions/checkout@v4
+
+      - uses: actions/setup-node@v4
+        with:
+          node-version-file: desktop/.nvmrc
+
+      - uses: dtolnay/rust-toolchain@stable
+
+      # electron-builder's `deb`/AppImage targets need dpkg-deb and fuse-adjacent
+      # tooling that Ubuntu runners already ship — nothing extra to install here.
+      - name: Install dependencies
+        run: npm ci
+
+      - name: Build and package
+        run: npm run ${{ matrix.build-script }}
+
+      - uses: actions/upload-artifact@v4
+        with:
+          name: ${{ matrix.artifact }}
+          path: |
+            desktop/dist/*.dmg
+            desktop/dist/*.zip
+            desktop/dist/*.exe
+            desktop/dist/*.AppImage
+            desktop/dist/*.deb
+          if-no-files-found: error

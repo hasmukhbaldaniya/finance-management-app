@@ -11,7 +11,9 @@
     "typecheck": "tsc -b --noEmit",
     "build:native": "cd native && napi build --platform --release --js index.js --dts index.d.ts",
     "postinstall": "npm run build:native",
-    "build:mac": "electron-vite build && electron-builder --mac --arm64"
+    "build:mac": "electron-vite build && electron-builder --mac --arm64",
+    "build:win": "electron-vite build && electron-builder --win",
+    "build:linux": "electron-vite build && electron-builder --linux"
   },
   "devDependencies": {
     "@electron-toolkit/tsconfig": "^2.0.0",
@@ -21,7 +23,7 @@
     "@types/react-dom": "^19.3.0",
     "@vitejs/plugin-react": "^4.7.0",
     "electron": "44.3.0",
-    "electron-builder": "^26.15.3",
+    "electron-builder": "^26.16.1",
     "electron-vite": "^5.0.0",
     "typescript": "^5.9.3",
     "vite": "^7.3.6"

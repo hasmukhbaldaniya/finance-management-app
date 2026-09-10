@@ -50,9 +50,18 @@ together.
 
 ## Building a release
 
+Packages ship for macOS, Windows, and Linux, each built natively on its own OS — see
+[`DEVELOPMENT.md`](./DEVELOPMENT.md#packaging) for why cross-compiling the Rust addon isn't done.
+
 ```bash
-npm run build:mac      # produces a .dmg and .zip under dist/ (arm64 only, see CLAUDE.md)
+npm run build:mac      # this machine — produces a .dmg and .zip under dist/ (arm64)
+npm run build:win      # only succeeds on Windows — produces a .exe
+npm run build:linux    # only succeeds on Linux — produces an .AppImage and .deb
 ```
+
+Windows and Linux packages are normally produced by
+[`.github/workflows/desktop-release.yml`](../.github/workflows/desktop-release.yml) (trigger it from
+the Actions tab, or push a `desktop-v*` tag), not by hand.
 
 ## Learn more
 
