@@ -13,6 +13,7 @@ import { EmptyExpenseList } from "@/components/trip/empty-expense-list";
 import { TripExpenseList } from "@/components/trip/trip-expense-list";
 import { TripOverviewCard } from "@/components/trip/trip-overview-card";
 import { Spinner } from "@/components/ui/spinner";
+import { useIdRemap } from "@/hooks/useIdRemap";
 import { ApiError, GENERIC_ERROR_MESSAGE } from "@/utils/apiManager/apiManager";
 import { ROUTES } from "@/utils/constants/route.constant";
 import type { TripDetail, TripExpenseRow } from "@/types/trip.type";
@@ -20,6 +21,7 @@ import type { TripDetail, TripExpenseRow } from "@/types/trip.type";
 export function TripDetailsScreen() {
   const params = useParams<{ id: string }>();
   const tripId = Number(params.id);
+  useIdRemap(tripId, ROUTES.tripDetails);
 
   const [trip, setTrip] = useState<TripDetail | null>(null);
   const [expenses, setExpenses] = useState<TripExpenseRow[]>([]);

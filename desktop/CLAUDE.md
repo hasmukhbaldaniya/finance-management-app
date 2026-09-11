@@ -203,6 +203,10 @@ This is the CI matrix referenced in earlier versions of this doc as the right wa
 targets — cross-compiling the addon with `cargo-xwin`/`cargo-zigbuild` was considered and rejected,
 since a binary produced that way can't be launched or verified from the machine that built it.
 
+The workflow runs automatically on every push to `main` — deliberately repo-wide, not scoped to
+`desktop/`'s own path, per an explicit choice to always have a fresh set of packages regardless of
+which app changed — plus manually from the Actions tab, or by pushing a `desktop-v*` tag.
+
 Locally, each `npm run build:mac` / `build:win` / `build:linux` only ever produces a package for the
 OS you're actually running it on — running `build:win` on this Mac will fail (no Windows toolchain,
 no `aarch64`/`x86_64-pc-windows-msvc` Rust target installed), by design. Windows and Linux packages

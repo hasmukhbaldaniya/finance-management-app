@@ -2,8 +2,12 @@
 // next/navigation's useParams -> react-router's useParams (identical shape).
 import { useParams } from "react-router";
 import { ClaimManualForm } from "@/components/claim/claim-manual-form";
+import { useIdRemap } from "@/hooks/useIdRemap";
+import { ROUTES } from "@/utils/constants/route.constant";
 
 export function ClaimManualEditScreen() {
   const params = useParams<{ id: string }>();
-  return <ClaimManualForm mode="edit" claimId={Number(params.id)} />;
+  const claimId = Number(params.id);
+  useIdRemap(claimId, ROUTES.claimManualEdit);
+  return <ClaimManualForm mode="edit" claimId={claimId} />;
 }

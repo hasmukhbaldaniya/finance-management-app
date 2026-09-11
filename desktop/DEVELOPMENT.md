@@ -335,8 +335,10 @@ there's no single machine that can honestly produce (let alone verify) a binary 
 running. `.github/workflows/desktop-release.yml` is a GitHub Actions matrix with one job per
 OS+arch — `macos-latest` (arm64), `windows-latest` (x64), `windows-11-arm` (arm64), `ubuntu-latest`
 (x64), `ubuntu-24.04-arm` (arm64) — each installing its own Rust toolchain and running
-`napi build --platform` for whatever platform it actually is. Trigger it manually from the Actions
-tab, or push a tag like `desktop-v0.1.0`.
+`napi build --platform` for whatever platform it actually is. It runs automatically on every push to
+`main` — repo-wide, not scoped to `desktop/` — so a change anywhere in the monorepo produces a fresh
+set of packages; it can also be triggered manually from the Actions tab, or by pushing a tag like
+`desktop-v0.1.0`.
 
 Locally, you can only build a package for the OS you're on:
 

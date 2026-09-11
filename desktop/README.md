@@ -60,8 +60,9 @@ npm run build:linux    # only succeeds on Linux — produces an .AppImage and .d
 ```
 
 Windows and Linux packages are normally produced by
-[`.github/workflows/desktop-release.yml`](../.github/workflows/desktop-release.yml) (trigger it from
-the Actions tab, or push a `desktop-v*` tag), not by hand.
+[`.github/workflows/desktop-release.yml`](../.github/workflows/desktop-release.yml), not by hand — it
+runs automatically on every push to `main` (repo-wide, any app), and can also be triggered manually
+from the Actions tab or by pushing a `desktop-v*` tag.
 
 ## Learn more
 

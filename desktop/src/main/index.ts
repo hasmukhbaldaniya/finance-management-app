@@ -1,8 +1,10 @@
 import path from "node:path";
 import { app, BrowserWindow } from "electron";
 import { is } from "@electron-toolkit/utils";
+import { initLocalDb } from "./db";
 import { registerNativeIpcHandlers } from "./ipc/native.ipc";
 import { registerGatewayIpcHandlers } from "./ipc/gateway.ipc";
+import { registerOfflineIpcHandlers } from "./ipc/offline.ipc";
 
 /**
  * A single window loading the Vite-built renderer (dev: the Vite dev server;
@@ -43,9 +45,15 @@ function createWindow(): BrowserWindow {
 }
 
 app.whenReady().then(() => {
+  // Must run before registerOfflineIpcHandlers — every offline:* channel
+  // calls into the native addon's DB functions, which throw until initDb()
+  // has been called once.
+  initLocalDb();
+
   registerNativeIpcHandlers();
   registerGatewayIpcHandlers();
-  createWindow();
+  const window = createWindow();
+  registerOfflineIpcHandlers(window);
 
   // macOS: clicking the dock icon with no windows open re-creates one.
   app.on("activate", () => {

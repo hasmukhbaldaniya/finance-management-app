@@ -700,5 +700,19 @@ if (!nativeBinding) {
 }
 
 module.exports = nativeBinding
+module.exports.cacheGet = nativeBinding.cacheGet
+module.exports.cacheInvalidatePrefix = nativeBinding.cacheInvalidatePrefix
+module.exports.cachePut = nativeBinding.cachePut
+module.exports.enqueueOperation = nativeBinding.enqueueOperation
+module.exports.getPendingCount = nativeBinding.getPendingCount
+module.exports.initDb = nativeBinding.initDb
+module.exports.listPendingOperations = nativeBinding.listPendingOperations
+module.exports.listStuckOperations = nativeBinding.listStuckOperations
+module.exports.markOperationFailed = nativeBinding.markOperationFailed
+module.exports.markOperationSyncing = nativeBinding.markOperationSyncing
+module.exports.nextLocalId = nativeBinding.nextLocalId
 module.exports.ping = nativeBinding.ping
+module.exports.remapNegativeId = nativeBinding.remapNegativeId
+module.exports.removeOperation = nativeBinding.removeOperation
+module.exports.resolveStuckOperation = nativeBinding.resolveStuckOperation
 module.exports.scanFolder = nativeBinding.scanFolder

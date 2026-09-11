@@ -9,11 +9,16 @@ name: desktop-release
 # GitHub's hosted arm64 runners (windows-11-arm, ubuntu-24.04-arm) so those
 # builds are native too, not emulated.
 #
-# Trigger manually from the Actions tab, or push a tag like `desktop-v0.1.0`.
+# Triggers: manually from the Actions tab, on any push to `main` (repo-wide —
+# deliberately not scoped to desktop/ specifically, so every app's changes
+# get a fresh set of packages, per an explicit choice over the narrower
+# desktop/-only alternative), or by pushing a tag like `desktop-v0.1.0`.
 
 on:
   workflow_dispatch: {}
   push:
+    branches:
+      - main
     tags:
       - "desktop-v*"
 

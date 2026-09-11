@@ -6,10 +6,12 @@
 // is unchanged.
 import { Link, useLocation, useNavigate } from "react-router";
 import Box from "@mui/material/Box";
+import Chip from "@mui/material/Chip";
 import Stack from "@mui/material/Stack";
 import Typography from "@mui/material/Typography";
-import { toast } from "@/components/ui/toast";
+import { WifiHighIcon, WifiSlashIcon } from "@phosphor-icons/react";
 import { logout } from "@/apis/auth";
+import { Button } from "@/components/ui/button";
 import { Logo } from "@/components/logo";
 import {
   DropdownMenu,
@@ -18,9 +20,9 @@ import {
   DropdownMenuSeparator,
   DropdownMenuTrigger,
 } from "@/components/ui/dropdown-menu";
+import { useOffline } from "@/contexts/OfflineContext";
 import type { AuthUser } from "@/types/auth.type";
 import type { Organization } from "@/types/organization.type";
-import { ApiError, GENERIC_ERROR_MESSAGE } from "@/utils/apiManager/apiManager";
 import { ROUTES } from "@/utils/constants/route.constant";
 
 type HeaderProps = {
@@ -87,6 +89,7 @@ const subNavLinkSx = {
 export function Header({ user, organization, isOwner }: HeaderProps) {
   const { pathname } = useLocation();
   const navigate = useNavigate();
+  const { isOnline, pendingCount, isSyncing, syncNow } = useOffline();
 
   const companySettingsLinks = isOwner
     ? [...COMPANY_SETTINGS_LINKS, ASSOCIATED_ORGANIZATIONS_NETWORK_LINK]
@@ -95,13 +98,15 @@ export function Header({ user, organization, isOwner }: HeaderProps) {
   const isOnCompanySettings = pathname.startsWith(COMPANY_SETTINGS_BASE_PATH);
 
   async function handleLogout(): Promise<void> {
+    // Best-effort: logging out must always work locally, online or not — a
+    // stale session cookie left on the server (the only way this can fail
+    // while offline) just gets overwritten the next time someone logs in.
     try {
       await logout();
-      navigate(ROUTES.LOGIN);
-    } catch (error) {
-      const message = error instanceof ApiError ? error.message : GENERIC_ERROR_MESSAGE;
-      toast.error(message);
+    } catch {
+      // Ignored — see above.
     }
+    navigate(ROUTES.LOGIN);
   }
 
   return (
@@ -134,6 +139,28 @@ export function Header({ user, organization, isOwner }: HeaderProps) {
               );
             })}
           </Stack>
+
+          {!isOnline || pendingCount > 0 ? (
+            <Stack direction="row" spacing={1} sx={{ alignItems: "center" }}>
+              <Chip
+                size="small"
+                icon={isOnline ? <WifiHighIcon /> : <WifiSlashIcon />}
+                color={isOnline ? "default" : "warning"}
+                label={
+                  isOnline
+                    ? `${pendingCount} change${pendingCount === 1 ? "" : "s"} pending`
+                    : pendingCount > 0
+                      ? `Offline — ${pendingCount} pending`
+                      : "Offline"
+                }
+              />
+              {isOnline && pendingCount > 0 ? (
+                <Button variant="outline" size="sm" onClick={syncNow} disabled={isSyncing}>
+                  {isSyncing ? "Syncing…" : "Sync now"}
+                </Button>
+              ) : null}
+            </Stack>
+          ) : null}
 
           <DropdownMenu>
             <DropdownMenuTrigger

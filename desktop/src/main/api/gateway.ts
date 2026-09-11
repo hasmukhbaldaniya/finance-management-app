@@ -28,6 +28,12 @@ function requireApiBaseUrl(): string {
 const API_BASE_URL = requireApiBaseUrl();
 const GENERIC_ERROR_MESSAGE = "Something went wrong. Please try again.";
 
+// Without this, a hung connection (captive portal, dead proxy) never
+// rejects — offline-fallback logic in apiManager.ts and the network
+// reachability poll in src/main/network.ts both depend on a fetch that
+// actually throws within a bounded time, not one that hangs indefinitely.
+const REQUEST_TIMEOUT_MS = 10_000;
+
 function gatewaySession(): Electron.Session {
   return session.fromPartition(GATEWAY_SESSION_PARTITION);
 }
@@ -70,6 +76,7 @@ export async function gatewayRequest(path: string, options: GatewayRequestOption
         ...options.headers,
       },
       body: options.body,
+      signal: AbortSignal.timeout(REQUEST_TIMEOUT_MS),
     });
   } catch {
     return { ok: false, status: 0, message: GENERIC_ERROR_MESSAGE };
@@ -106,6 +113,7 @@ export async function gatewayUpload(path: string, entries: GatewayUploadEntry[])
       method: "POST",
       credentials: "include",
       body: formData,
+      signal: AbortSignal.timeout(REQUEST_TIMEOUT_MS),
     });
   } catch {
     return { ok: false, status: 0, message: GENERIC_ERROR_MESSAGE };
@@ -128,6 +136,7 @@ export async function gatewayDownload(path: string): Promise<GatewayDownloadResu
   try {
     response = await gatewaySession().fetch(`${API_BASE_URL}${path}`, {
       credentials: "include",
+      signal: AbortSignal.timeout(REQUEST_TIMEOUT_MS),
     });
   } catch {
     return { ok: false, status: 0, message: GENERIC_ERROR_MESSAGE };

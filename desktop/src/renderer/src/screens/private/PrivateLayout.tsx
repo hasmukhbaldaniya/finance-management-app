@@ -4,12 +4,15 @@
 // "private" branch of routes.tsx, with an <Outlet/> standing in for
 // Next's implicit `children`.
 import { Outlet } from "react-router";
+import { OfflineProvider } from "@/contexts/OfflineContext";
 import { SessionProvider } from "@/contexts/SessionContext";
 
 export function PrivateLayout() {
   return (
-    <SessionProvider>
-      <Outlet />
-    </SessionProvider>
+    <OfflineProvider>
+      <SessionProvider>
+        <Outlet />
+      </SessionProvider>
+    </OfflineProvider>
   );
 }
