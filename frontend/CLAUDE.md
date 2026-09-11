@@ -12,8 +12,11 @@ npm run build                 # next build
 npm run lint                  # eslint
 npm run storybook             # storybook dev on :6006
 npm run build-storybook       # storybook build -> storybook-static/
+npm run cypress:open          # Cypress interactive runner
+npm run cypress:run           # Cypress headless run
 ```
-No test runner is configured yet.
+No unit/component test runner is configured yet — see "Testing (Cypress)" below for the one test
+runner this project does have.
 
 ## Project Structure
 
@@ -183,6 +186,46 @@ Claim Management itself (`022`-`024`: Manual Add Claim, the AI-Powered flow, My 
 **"By Employee" view** (added after the four reports first shipped): every report's filter row has a `ToggleButtonGroup` (`Detail | By Employee`, or `By Category | By Employee` for Expense Summary) switching to a per-employee breakdown (Employee, Count, Total Amount, sorted by Total Amount descending). For Claim Cost/Trip Cost/Red-Flagged Expenses, this is computed **client-side** from the same `rows` already fetched for the Detail view via `groupByEmployee()` (`src/utils/helpers/format.helper.ts`) — switching the toggle never refetches. Expense Summary is the one exception: it only ever returns category-level aggregates (no per-expense row reaches the frontend at all for that report), so its `byEmployeeRows` breakdown is computed server-side in `reports-service`'s `getExpenseSummary` instead and arrives as a separate field in the API response. Adding this toggle to a future report: reuse `groupByEmployee` if the report's rows already carry an employee name; only add a server-side `byEmployeeRows` field if the report is pre-aggregated with no per-employee dimension in its rows (Expense Summary's own shape).
 
 **Default date range**: every report's date filters default to a rolling trailing-365-day window ending today (`getDefaultReportDateRange()`, same file) — recomputed on every mount, not a fixed calendar range, so it advances day-by-day on its own.
+
+### Testing (Cypress)
+
+Full approach/rationale lives in `docs/PLANS/cypress-e2e-testing-plan.md` — this section is just the
+in-repo convention summary. `cypress/` (config `cypress.config.ts`, `baseUrl: http://localhost:3000`)
+holds the whole suite; specs live under `cypress/e2e/<story-number>-<slug>/*.cy.ts`, one folder per
+`user-stories/*.md` entry, `describe` titles prefixed with that same story number. The suite needs
+the full stack running (all services + `docker compose up -d`'s databases), not just `frontend` —
+every request under test still goes through `gateway-service`, matching how the real app calls it.
+
+**No `data-testid`/`data-cy` convention exists project-wide** — selectors prefer
+`@testing-library/cypress`'s role/label queries (`cy.findByRole`/`cy.findByLabelText`) first, which
+doubles as a cheap accessibility regression check; a `data-cy="<kebab-name>"` attribute is added to a
+component only when a query is genuinely ambiguous (e.g. picking one row out of a dynamic table),
+added in the same PR as the test that needs it.
+
+**`cypress/support/commands.ts`** holds the commands every module's spec relies on: `cy.loginAs`
+(session-cached login via a direct `POST /auth/login`, not the UI — only `001-authentication`'s own
+spec drives the real login form), `cy.apiRegisterOrganization` (creates a brand-new org via the real
+registration endpoints, called through the gateway, for every module to run its tests inside — no
+module's tests mutate the shared demo org), `cy.apiInviteAndOnboardEmployee` (008's invite chain +
+011's onboarding chain via direct API calls, with an `onboard: false` option to stop after just the
+invite — e.g. for testing Employee Listing's Pending/Resend state), `cy.getLatestNotification` (reads
+a delivered OTP/invite-link body back from `communications-service`'s `NotificationLog` directly,
+bypassing the gateway — the one deliberate exception to "tests only call the gateway", since there's
+no real inbox in this loop and `auth-service` only ever stores a one-way hash of the OTP, never the
+plaintext), and `cy.selectMuiOption` (opens/picks a `select-field.tsx` `SelectField` dropdown by its
+sibling `<label>` text — necessary because that component currently has no accessible name at all,
+a real a11y gap; see the plan doc's "Implementation notes from Phase 2" for the full writeup and two
+further gaps found the same way: filter-row `Input`s with only a shared, non-unique
+`placeholder="Search"`, and MUI's `Switch` putting a passed `aria-label` on the wrong DOM node).
+`communications-service`'s `INTERNAL_API_KEY` must be copied into `frontend/cypress.env.json`
+(gitignored — see `cypress.env.json.example`) for `cy.getLatestNotification` to authenticate.
+
+Every module past `001`/`002` bootstraps its own organization in a `before` hook via
+`cy.apiRegisterOrganization()` rather than sharing one fixture — this keeps spec files independent
+of each other's run order (test isolation clears cookies before every test regardless, so a
+`beforeEach` calling `cy.loginAs(...)` is still needed to re-establish the session even when the org
+itself was only created once in a `before`). See the plan doc's phasing table for which stories are
+covered and in what order they're being built out.
 
 **Truncation**: `reports-service` caps each upstream source at 2,000 rows (`MAX_PAGES`/`PAGE_SIZE` in its own `upstream-client.ts`) and returns `truncated: boolean` alongside `rows` — every report component shows an `Alert severity="warning"` when true, telling the admin to narrow the date range for a complete result.
 

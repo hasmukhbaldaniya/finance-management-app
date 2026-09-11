@@ -1,0 +1,55 @@
+# macOS, Windows, and Linux — see desktop/CLAUDE.md's "Packaging" section.
+# The Rust native addon (native/*.node) is a compiled binary tied to one
+# OS+CPU architecture, so every target here is built natively on its own OS
+# in the GitHub Actions matrix (.github/workflows/desktop-release.yml) —
+# never cross-compiled from a single machine. A local `npm run build:mac` /
+# `build:win` / `build:linux` only ever produces a package for the OS you're
+# actually running it on.
+appId: com.financemanagement.desktop
+productName: Finance Management
+directories:
+  output: dist
+  buildResources: build
+
+# electron-vite's own build output, plus the compiled Rust addon and its
+# package.json/generated bindings — nothing else from the repo (node_modules
+# is reconstructed by electron-builder itself from package.json).
+files:
+  - out/**/*
+  - native/index.js
+  - native/index.d.ts
+  - native/package.json
+  - native/*.node
+  - package.json
+
+# The .node file can't be dlopen()'d from inside an asar archive — this is
+# the same reason src/main/native.ts requires() it via a real filesystem
+# path rather than a bundled import. asarUnpack extracts it (and the rest of
+# native/) to app.asar.unpacked at build time so that path still resolves
+# correctly once packaged.
+asarUnpack:
+  - native/**/*
+
+mac:
+  category: public.app-category.finance
+  target:
+    - target: dmg
+      arch: [arm64]
+    - target: zip
+      arch: [arm64]
+
+# No `arch:` listed here on purpose, unlike mac's targets above — an explicit
+# per-target arch array overrides the CLI's --x64/--arm64 flags entirely, which
+# would defeat the point of each CI job restricting itself to the one arch its
+# runner actually is. Arch is decided per invocation instead: pass --x64 or
+# --arm64 (see .github/workflows/desktop-release.yml), or omit it locally to
+# default to the host's own arch.
+win:
+  target:
+    - nsis
+
+linux:
+  category: Office
+  target:
+    - AppImage
+    - deb

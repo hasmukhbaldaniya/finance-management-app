@@ -1,0 +1,94 @@
+// Indian Rupee formatting — confirmed by 019-trip-listing.md's reference
+// screenshot: Indian digit grouping (₹1,50,000.00, not ₹150,000.00), not a
+// generic Intl.NumberFormat("en-US") pattern.
+export function formatInr(amount: string | number): string {
+  const value = typeof amount === "string" ? Number(amount) : amount;
+  return new Intl.NumberFormat("en-IN", { minimumFractionDigits: 2, maximumFractionDigits: 2 }).format(value);
+}
+
+export function formatDateTime(value: string | Date): string {
+  return new Date(value).toLocaleString("en-US", { month: "short", day: "numeric", year: "numeric", hour: "numeric", minute: "2-digit" });
+}
+
+// 020-trip-details.md's own date/time format for the Trip Overview panel —
+// deliberately different from formatDateTime above, since the reference
+// screenshots use two different formats across the listing vs. this page
+// (reproduced faithfully rather than unified — see that story's Open
+// Questions).
+export function formatTripOverviewDateTime(value: string | Date): string {
+  const formatted = new Date(value).toLocaleString("en-US", { day: "2-digit", month: "short", year: "numeric", hour: "2-digit", minute: "2-digit", hour12: true });
+  return formatted.replace(",", " at");
+}
+
+export function formatTripOverviewDate(value: string | Date): string {
+  return new Date(value).toLocaleDateString("en-US", { day: "2-digit", month: "short", year: "numeric" });
+}
+
+// ISO string → the local-time value an <input type="datetime-local"> expects
+// ("YYYY-MM-DDTHH:mm") — used to pre-fill 021's Edit Trip form from a trip's
+// saved startAt/endAt. Built from the Date object's local getters (not a
+// slice of the ISO string itself), so it reflects the browser's local time
+// the same way the input's own value always does.
+export function toDatetimeLocalValue(value: string): string {
+  const date = new Date(value);
+  const pad = (num: number): string => String(num).padStart(2, "0");
+  return `${date.getFullYear()}-${pad(date.getMonth() + 1)}-${pad(date.getDate())}T${pad(date.getHours())}:${pad(date.getMinutes())}`;
+}
+
+// A trip-linked claim has no Claim Name of its own — the trip's own name
+// stands in for it (022's own Open Question, resolved this way).
+export function formatClaimName(claim: { name: string | null; tripName: string | null }): string {
+  return claim.name ?? claim.tripName ?? "Untitled Claim";
+}
+
+// 028-reports.md's default filter window — a rolling trailing 365 days
+// ending today (not a fixed calendar range), per explicit request: today
+// 2026-07-24 → from 2025-07-25 to 2026-07-24, recomputed fresh every time a
+// report mounts so the window advances with "today" on its own, day by day.
+export function getDefaultReportDateRange(): { from: string; to: string } {
+  const pad = (num: number): string => String(num).padStart(2, "0");
+  const toDateOnly = (date: Date): string => `${date.getFullYear()}-${pad(date.getMonth() + 1)}-${pad(date.getDate())}`;
+
+  const to = new Date();
+  const from = new Date(to);
+  from.setFullYear(from.getFullYear() - 1);
+  from.setDate(from.getDate() + 1);
+
+  return { from: toDateOnly(from), to: toDateOnly(to) };
+}
+
+export type EmployeeSummaryRow = {
+  employeeName: string;
+  count: number;
+  totalAmount: number;
+};
+
+// Shared "By Employee" grouping for the four Dashboard reports — reduces
+// the already-fetched detail rows into one row per employee, client-side,
+// so the Detail/By Employee toggle is instant and needs no extra API call.
+export function groupByEmployee<T>(rows: T[], getEmployeeName: (row: T) => string | null, getAmount: (row: T) => number): EmployeeSummaryRow[] {
+  const totals = new Map<string, { count: number; totalAmount: number }>();
+  for (const row of rows) {
+    const employeeName = getEmployeeName(row) ?? "Unknown";
+    const current = totals.get(employeeName) ?? { count: 0, totalAmount: 0 };
+    current.count += 1;
+    current.totalAmount += getAmount(row);
+    totals.set(employeeName, current);
+  }
+  return Array.from(totals.entries())
+    .map(([employeeName, current]) => ({ employeeName, ...current }))
+    .sort((a, b) => b.totalAmount - a.totalAmount);
+}
+
+// ISO alpha-2 country code → flag emoji, via Unicode regional indicator
+// symbols (each letter maps to U+1F1E6 + offset from 'A'). Standard,
+// widely-used technique — no external flag-icon library needed since every
+// modern OS font renders these natively.
+export function countryCodeToFlagEmoji(code: string): string {
+  if (code.length !== 2) return "";
+  const codePoints = code
+    .toUpperCase()
+    .split("")
+    .map((char) => 0x1f1e6 + (char.charCodeAt(0) - "A".charCodeAt(0)));
+  return String.fromCodePoint(...codePoints);
+}

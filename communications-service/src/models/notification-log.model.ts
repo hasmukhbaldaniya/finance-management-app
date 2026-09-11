@@ -13,6 +13,8 @@ export type NotificationLogDocument = {
   errorMessage: string | null;
   requestedAt: Date;
   respondedAt: Date;
+  createdAt: Date;
+  updatedAt: Date;
 };
 
 // One collection for every channel (email today, WhatsApp once a real

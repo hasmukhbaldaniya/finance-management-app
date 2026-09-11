@@ -1,0 +1,22 @@
+[package]
+name = "native"
+version = "0.1.0"
+edition = "2024"
+
+[lib]
+# cdylib: build a dynamic library napi can load as Node's .node addon.
+crate-type = ["cdylib"]
+
+[dependencies]
+napi = { version = "3.12.2", default-features = false, features = ["napi4"] }
+napi-derive = "3.6.3"
+blake3 = "1.8.7"
+walkdir = "2.5.0"
+# "bundled" compiles SQLite's own C amalgamation into this crate — no system
+# SQLite dependency, so every CI target (native per-OS, never cross-compiled)
+# builds identically. See desktop/CLAUDE.md's "Local DB" section.
+rusqlite = { version = "0.37.0", features = ["bundled"] }
+serde_json = "1.0.145"
+
+[build-dependencies]
+napi-build = "2.4.1"
